@@ -1,43 +1,55 @@
 import React, { useState } from 'react';
 import { Target, ChevronLeft, ChevronRight, Dumbbell, Heart, Zap, Clock, Activity, AlertTriangle, Battery, Moon, Brain, Settings, Info, Sparkles, ArrowRight } from 'lucide-react';
+import { PageHeader } from './shared';
+import { 
+  WorkoutFocusData, 
+  workoutFocusSchema,
+  quickWorkoutSchema,
+  workoutSectionSchemas,
+  defaultWorkoutFocusData,
+  WORKOUT_FOCUS_OPTIONS,
+  WORKOUT_INTENSITY_OPTIONS,
+  WORKOUT_TYPE_OPTIONS,
+  DURATION_OPTIONS,
+  FOCUS_AREAS_OPTIONS,
+  EQUIPMENT_OPTIONS,
+  ENERGY_LEVEL_OPTIONS,
+  SORENESS_OPTIONS,
+  INCLUDE_EXERCISES_OPTIONS,
+  EXCLUDE_EXERCISES_OPTIONS
+} from '../schemas/workoutFocusSchema';
+import { useFormValidation } from '../hooks/useFormValidation';
 
 interface WorkoutFocusPageProps {
   onNavigate: (page: 'profile' | 'focus' | 'review' | 'results') => void;
 }
 
-interface WorkoutFocusData {
-  workoutFocus: string;
-  workoutIntensity: string;
-  workoutType: string;
-  focusAreas: string[];
-  currentSoreness: string[];
-  equipment: string[];
-  energyLevel: string;
-  sleepQuality: string;
-  stressLevel: string;
-  includeExercises: string[];
-  excludeExercises: string[];
-  duration: string;
-}
-
 const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
   const [viewMode, setViewMode] = useState<'selection' | 'quick' | 'detailed'>('selection');
-  const [focusData, setFocusData] = useState<WorkoutFocusData>({
-    workoutFocus: '',
-    workoutIntensity: '',
-    workoutType: '',
-    focusAreas: [],
-    currentSoreness: [],
-    equipment: [],
-    energyLevel: '',
-    sleepQuality: 'Good (6-8 hours)',
-    stressLevel: 'Moderate Stress',
-    includeExercises: [],
-    excludeExercises: [],
-    duration: ''
-  });
-
+  const [focusData, setFocusData] = useState<WorkoutFocusData>(defaultWorkoutFocusData);
   const [currentSection, setCurrentSection] = useState(0);
+
+  // Validation hooks
+  const { validate: validateFull, validateField: validateFullField } = useFormValidation(workoutFocusSchema);
+  const { validate: validateQuick, validateField: validateQuickField } = useFormValidation(quickWorkoutSchema);
+  
+  // Memoize validation to prevent re-renders
+  const isQuickWorkoutValid = React.useMemo(() => {
+    if (viewMode !== 'quick') return false;
+    return validateQuick(focusData);
+  }, [viewMode, focusData, validateQuick]);
+  
+  const isDetailedWorkoutValid = React.useMemo(() => {
+    if (viewMode !== 'detailed') return false;
+    // For detailed form, we need non-empty required fields and at least one equipment/focus area
+    const hasRequiredFields = focusData.workoutFocus && focusData.workoutIntensity && 
+                            focusData.workoutType && focusData.energyLevel && 
+                            focusData.duration;
+    const hasEquipment = focusData.equipment.length > 0;
+    const hasFocusAreas = focusData.focusAreas.length > 0;
+    
+    return hasRequiredFields && hasEquipment && hasFocusAreas && validateFull(focusData);
+  }, [viewMode, focusData, validateFull]);
 
   const handleInputChange = (field: keyof WorkoutFocusData, value: any) => {
     setFocusData(prev => ({
@@ -46,34 +58,30 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
     }));
   };
 
-  const handleCheckboxChange = (field: 'focusAreas' | 'currentSoreness' | 'equipment' | 'includeExercises' | 'excludeExercises', value: string) => {
+  const handleCheckboxChange = (field: 'focusAreas' | 'currentSoreness' | 'equipment' | 'includeExercises' | 'excludeExercises', value: any) => {
     setFocusData(prev => ({
       ...prev,
-      [field]: prev[field].includes(value)
-        ? prev[field].filter(item => item !== value)
-        : [...prev[field], value]
+      [field]: (prev[field] as any[]).includes(value)
+        ? (prev[field] as any[]).filter(item => item !== value)
+        : [...(prev[field] as any[]), value]
     }));
   };
 
   const isFormValid = () => {
-    if (viewMode === 'quick') {
-      // For quick workout, only basic fields are required
-      return focusData.workoutFocus && focusData.workoutIntensity && focusData.energyLevel;
-    }
-    
-    // For detailed workout, all fields are required
-    const requiredFields = ['workoutFocus', 'workoutIntensity', 'workoutType', 'energyLevel', 'duration'];
-    const hasRequiredFields = requiredFields.every(field => focusData[field as keyof WorkoutFocusData]);
-    const hasEquipment = focusData.equipment.length > 0;
-    const hasFocusAreas = focusData.focusAreas.length > 0;
-    
-    return hasRequiredFields && hasEquipment && hasFocusAreas;
+    return viewMode === 'quick' ? isQuickWorkoutValid : isDetailedWorkoutValid;
   };
 
   const handleQuickWorkout = () => {
-    // Set some default values for quick workout
+    // Reset to default values first
+    setFocusData(defaultWorkoutFocusData);
+    // Then set quick workout specific defaults
     setFocusData(prev => ({
       ...prev,
+      // Required fields for quick workout schema
+      workoutFocus: '',  // User must choose this
+      workoutIntensity: '', // User must choose this
+      energyLevel: '', // User must choose this
+      // Default values for other fields
       workoutType: 'Circuit Training',
       duration: '30 minutes',
       focusAreas: ['Full Body'],
@@ -115,15 +123,12 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
     return (
       <div className="space-y-8">
         {/* Page Header */}
-        <div className="text-center">
-          <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
-            <Target className="w-10 h-10 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Choose Your Workout Path</h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Select how you'd like to create your workout routine
-          </p>
-        </div>
+        <PageHeader
+          title="Choose Your Workout Path"
+          subtitle="Select how you'd like to create your workout routine"
+          icon={Target}
+          gradient="from-green-500 to-blue-600"
+        />
 
         {/* Selection Cards */}
         <div className="max-w-4xl mx-auto">
@@ -246,11 +251,11 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-4">What's your main goal for today's workout?</label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {[
-                    { value: 'Weight Loss', icon: Activity, color: 'from-red-500 to-pink-500' },
-                    { value: 'Strength Building', icon: Dumbbell, color: 'from-blue-500 to-purple-500' },
-                    { value: 'Endurance', icon: Heart, color: 'from-green-500 to-teal-500' },
-                    { value: 'General Fitness', icon: Target, color: 'from-purple-500 to-indigo-500' }
-                  ].map(option => (
+                    { value: 'Weight Loss' as const, icon: Activity, color: 'from-red-500 to-pink-500' },
+                    { value: 'Strength Building' as const, icon: Dumbbell, color: 'from-blue-500 to-purple-500' },
+                    { value: 'Endurance' as const, icon: Heart, color: 'from-green-500 to-teal-500' },
+                    { value: 'General Fitness' as const, icon: Target, color: 'from-purple-500 to-indigo-500' }
+                  ].filter(option => WORKOUT_FOCUS_OPTIONS.includes(option.value)).map(option => (
                     <label key={option.value} className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 hover:shadow-lg ${
                       focusData.workoutFocus === option.value
                         ? 'border-emerald-500 bg-gradient-to-br from-emerald-50/80 to-blue-50/80 backdrop-blur-sm shadow-xl scale-105'
@@ -279,11 +284,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">How intense do you want your workout?</label>
                 <div className="space-y-2">
-                  {[
-                    'Low Intensity',
-                    'Moderate Intensity',
-                    'High Intensity'
-                  ].map(intensity => (
+                  {WORKOUT_INTENSITY_OPTIONS.filter(intensity => intensity !== 'Maximum Intensity').map(intensity => (
                     <label key={intensity} className="group relative flex items-center p-4 bg-white/40 backdrop-blur-sm border border-white/20 rounded-xl hover:bg-white/60 hover:border-white/30 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02]">
                       <input
                         type="radio"
@@ -317,11 +318,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
                   How's your energy level right now?
                 </label>
                 <div className="space-y-2">
-                  {[
-                    'Low Energy',
-                    'Moderate Energy',
-                    'High Energy'
-                  ].map(energy => (
+                  {ENERGY_LEVEL_OPTIONS.map(energy => (
                     <label key={energy} className="group relative flex items-center p-4 bg-white/40 backdrop-blur-sm border border-white/20 rounded-xl hover:bg-white/60 hover:border-white/30 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02]">
                       <input
                         type="radio"
@@ -388,12 +385,12 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
               <label className="block text-sm font-medium text-gray-700 mb-4">Primary Workout Focus</label>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[
-                  { value: 'Weight Loss', icon: Activity, color: 'from-red-500 to-pink-500' },
-                  { value: 'Strength Building', icon: Dumbbell, color: 'from-blue-500 to-purple-500' },
-                  { value: 'Endurance', icon: Heart, color: 'from-green-500 to-teal-500' },
-                  { value: 'Muscle Gain', icon: Zap, color: 'from-orange-500 to-red-500' },
-                  { value: 'General Fitness', icon: Target, color: 'from-purple-500 to-indigo-500' }
-                ].map(option => (
+                  { value: 'Weight Loss' as const, icon: Activity, color: 'from-red-500 to-pink-500' },
+                  { value: 'Strength Building' as const, icon: Dumbbell, color: 'from-blue-500 to-purple-500' },
+                  { value: 'Endurance' as const, icon: Heart, color: 'from-green-500 to-teal-500' },
+                  { value: 'Muscle Gain' as const, icon: Zap, color: 'from-orange-500 to-red-500' },
+                  { value: 'General Fitness' as const, icon: Target, color: 'from-purple-500 to-indigo-500' }
+                ].filter(option => WORKOUT_FOCUS_OPTIONS.includes(option.value)).map(option => (
                   <label key={option.value} className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 hover:shadow-lg ${
                     focusData.workoutFocus === option.value
                       ? 'border-blue-500 bg-gradient-to-br from-blue-50/80 to-purple-50/80 backdrop-blur-sm shadow-xl scale-105'
@@ -423,12 +420,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">Workout Intensity</label>
                 <div className="space-y-2">
-                  {[
-                    'Low Intensity',
-                    'Moderate Intensity',
-                    'High Intensity',
-                    'Maximum Intensity'
-                  ].map(intensity => (
+                  {WORKOUT_INTENSITY_OPTIONS.map(intensity => (
                     <label key={intensity} className="group relative flex items-center p-4 bg-white/40 backdrop-blur-sm border border-white/20 rounded-xl hover:bg-white/60 hover:border-white/30 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02]">
                       <input
                         type="radio"
@@ -464,11 +456,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
                   Current Energy Level
                 </label>
                 <div className="space-y-2">
-                  {[
-                    'Low Energy',
-                    'Moderate Energy',
-                    'High Energy'
-                  ].map(energy => (
+                  {ENERGY_LEVEL_OPTIONS.map(energy => (
                     <label key={energy} className="group relative flex items-center p-4 bg-white/40 backdrop-blur-sm border border-white/20 rounded-xl hover:bg-white/60 hover:border-white/30 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02]">
                       <input
                         type="radio"
@@ -509,11 +497,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">Workout Type</label>
                 <div className="space-y-2">
-                  {[
-                    'HIIT',
-                    'Straight Sets',
-                    'Circuit Training'
-                  ].map(type => (
+                  {WORKOUT_TYPE_OPTIONS.map(type => (
                     <label key={type} className="group relative flex items-center p-4 bg-white/40 backdrop-blur-sm border border-white/20 rounded-xl hover:bg-white/60 hover:border-white/30 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02]">
                       <input
                         type="radio"
@@ -549,12 +533,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
                   Workout Duration
                 </label>
                 <div className="space-y-2">
-                  {[
-                    '30 minutes',
-                    '45 minutes',
-                    '60 minutes',
-                    '90+ minutes'
-                  ].map(duration => (
+                  {DURATION_OPTIONS.map(duration => (
                     <label key={duration} className="group relative flex items-center p-4 bg-white/40 backdrop-blur-sm border border-white/20 rounded-xl hover:bg-white/60 hover:border-white/30 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02]">
                       <input
                         type="radio"
@@ -589,14 +568,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">Focus Areas (Select all that apply)</label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {[
-                  'Cardio',
-                  'Full Body',
-                  'Upper Body',
-                  'Lower Body',
-                  'Core',
-                  'Flexibility'
-                ].map(area => (
+                                  {FOCUS_AREAS_OPTIONS.map(area => (
                   <label key={area} className="group relative flex items-center p-3 bg-white/40 backdrop-blur-sm border border-white/20 rounded-xl hover:bg-white/60 hover:border-white/30 cursor-pointer transition-all duration-300 hover:shadow-md hover:scale-[1.02]">
                     <input
                       type="checkbox"
@@ -660,14 +632,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">Available Equipment (Select all that apply)</label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {[
-                  'Full Gym',
-                  'Dumbbells',
-                  'Resistance Bands',
-                  'Yoga Mat',
-                  'Bodyweight Only',
-                  'Kettlebell'
-                ].map(equipment => (
+                {EQUIPMENT_OPTIONS.map(equipment => (
                   <label key={equipment} className="group relative flex items-center p-3 bg-white/40 backdrop-blur-sm border border-white/20 rounded-xl hover:bg-white/60 hover:border-white/30 cursor-pointer transition-all duration-300 hover:shadow-md hover:scale-[1.02]">
                     <input
                       type="checkbox"
@@ -704,14 +669,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
                 Current Soreness/Areas to Avoid (Select all that apply)
               </label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {[
-                  'No Soreness',
-                  'Back',
-                  'Legs',
-                  'Shoulders',
-                  'Upper Body',
-                  'Lower Body'
-                ].map(soreness => (
+                {SORENESS_OPTIONS.map(soreness => (
                   <label key={soreness} className="group relative flex items-center p-3 bg-yellow-50/60 backdrop-blur-sm border border-yellow-200/50 rounded-xl hover:bg-yellow-100/60 hover:border-yellow-300/50 cursor-pointer transition-all duration-300 hover:shadow-md hover:scale-[1.02]">
                     <input
                       type="checkbox"
@@ -751,12 +709,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">Preferred Exercises (Optional)</label>
                 <div className="space-y-2 max-h-80 overflow-y-auto">
-                  {[
-                    'High Knees', 'Mountain Climbers', 'Plank', 'Russian Twists',
-                    'Squats', 'Lunges', 'Stretches', 'Core exercises',
-                    'Calf raises', 'Jumping Jacks', 'Burpees', 'Agility drills',
-                    'Core twists', 'Balance exercises', 'Kicks', 'Punches', 'Balance poses'
-                  ].map(exercise => (
+                  {INCLUDE_EXERCISES_OPTIONS.map(exercise => (
                     <label key={exercise} className="group relative flex items-center p-2 bg-green-50/60 backdrop-blur-sm border border-green-200/50 rounded-xl hover:bg-green-100/60 hover:border-green-300/50 cursor-pointer transition-all duration-300 hover:shadow-md hover:scale-[1.02]">
                       <input
                         type="checkbox"
@@ -789,12 +742,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">Exercises to Avoid (Optional)</label>
                 <div className="space-y-2 max-h-80 overflow-y-auto">
-                  {[
-                    'Deadlifts', 'Heavy squats', 'Sit-ups', 'Jumping exercises',
-                    'Deep squats', 'Overhead presses', 'Pull-ups', 'Heavy lifting',
-                    'Inverted exercises', 'Running', 'Plyometrics', 'Push-ups',
-                    'Hip flexor stretches'
-                  ].map(exercise => (
+                  {EXCLUDE_EXERCISES_OPTIONS.map(exercise => (
                     <label key={exercise} className="group relative flex items-center p-2 bg-red-50/60 backdrop-blur-sm border border-red-200/50 rounded-xl hover:bg-red-100/60 hover:border-red-300/50 cursor-pointer transition-all duration-300 hover:shadow-md hover:scale-[1.02]">
                       <input
                         type="checkbox"

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, Target, Zap, ChevronRight, Eye } from 'lucide-react';
-import ProfilePage from './components/ProfilePage';
+import { ProfilePage } from './components/Profile';
 import WorkoutFocusPage from './components/WorkoutFocusPage';
 import ReviewPage from './components/ReviewPage';
 import WorkoutResultsPage from './components/WorkoutResultsPage';
