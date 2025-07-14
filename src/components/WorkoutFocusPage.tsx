@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Target, ChevronLeft, ChevronRight, Dumbbell, Heart, Zap, Clock, Activity, AlertTriangle, Battery, Moon, Brain, Settings, Info } from 'lucide-react';
-import { usePersistedState } from '../hooks/usePersistedState';
+import { Target, ChevronLeft, ChevronRight, Dumbbell, Heart, Zap, Clock, Activity, AlertTriangle, Battery, Moon, Brain, Settings, Info, Sparkles, ArrowRight } from 'lucide-react';
 
 interface WorkoutFocusPageProps {
   onNavigate: (page: 'profile' | 'focus' | 'review' | 'results') => void;
@@ -22,7 +21,8 @@ interface WorkoutFocusData {
 }
 
 const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
-  const [focusData, setFocusData] = usePersistedState<WorkoutFocusData>('workoutFocusData', {
+  const [viewMode, setViewMode] = useState<'selection' | 'quick' | 'detailed'>('selection');
+  const [focusData, setFocusData] = useState<WorkoutFocusData>({
     workoutFocus: '',
     workoutIntensity: '',
     workoutType: '',
@@ -39,7 +39,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
 
   const [currentSection, setCurrentSection] = useState(0);
 
-  const handleInputChange = (field: keyof WorkoutFocusData, value: string | string[]) => {
+  const handleInputChange = (field: keyof WorkoutFocusData, value: any) => {
     setFocusData(prev => ({
       ...prev,
       [field]: value
@@ -56,12 +56,31 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
   };
 
   const isFormValid = () => {
+    if (viewMode === 'quick') {
+      // For quick workout, only basic fields are required
+      return focusData.workoutFocus && focusData.workoutIntensity && focusData.energyLevel;
+    }
+    
+    // For detailed workout, all fields are required
     const requiredFields = ['workoutFocus', 'workoutIntensity', 'workoutType', 'energyLevel', 'duration'];
     const hasRequiredFields = requiredFields.every(field => focusData[field as keyof WorkoutFocusData]);
     const hasEquipment = focusData.equipment.length > 0;
     const hasFocusAreas = focusData.focusAreas.length > 0;
     
     return hasRequiredFields && hasEquipment && hasFocusAreas;
+  };
+
+  const handleQuickWorkout = () => {
+    // Set some default values for quick workout
+    setFocusData(prev => ({
+      ...prev,
+      workoutType: 'Circuit Training',
+      duration: '30 minutes',
+      focusAreas: ['Full Body'],
+      equipment: ['Bodyweight Only'],
+      currentSoreness: ['No Soreness']
+    }));
+    setViewMode('quick');
   };
 
   const sections = [
@@ -91,6 +110,274 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
     }
   ];
 
+  // Top Level Selection View
+  if (viewMode === 'selection') {
+    return (
+      <div className="space-y-8">
+        {/* Page Header */}
+        <div className="text-center">
+          <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
+            <Target className="w-10 h-10 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Choose Your Workout Path</h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Select how you'd like to create your workout routine
+          </p>
+        </div>
+
+        {/* Selection Cards */}
+        <div className="max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Quick Workout Card */}
+            <div className="group relative bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-8 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 cursor-pointer"
+                 onClick={handleQuickWorkout}>
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-blue-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              
+              <div className="relative z-10">
+                <div className="w-16 h-16 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <Sparkles className="w-8 h-8 text-white" />
+                </div>
+                
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Quick Workout</h3>
+                <p className="text-gray-600 mb-6 leading-relaxed">
+                  Get an instant AI-generated workout based on your profile. Perfect for when you want to jump straight into exercising.
+                </p>
+                
+                <div className="space-y-3 mb-8">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full mr-3"></div>
+                    Uses your existing profile data
+                  </div>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full mr-3"></div>
+                    Minimal additional questions
+                  </div>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full mr-3"></div>
+                    Ready in under 2 minutes
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+                    Recommended
+                  </span>
+                  <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all duration-300" />
+                </div>
+              </div>
+            </div>
+
+            {/* Detailed Workout Focus Card */}
+            <div className="group relative bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-8 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 cursor-pointer"
+                 onClick={() => setViewMode('detailed')}>
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              
+              <div className="relative z-10">
+                <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <Settings className="w-8 h-8 text-white" />
+                </div>
+                
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Detailed Workout Focus</h3>
+                <p className="text-gray-600 mb-6 leading-relaxed">
+                  Fine-tune every aspect of your workout with comprehensive customization options for the perfect routine.
+                </p>
+                
+                <div className="space-y-3 mb-8">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full mr-3"></div>
+                    Complete workout customization
+                  </div>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full mr-3"></div>
+                    Equipment and exercise preferences
+                  </div>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full mr-3"></div>
+                    Advanced targeting options
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-purple-600 bg-purple-50 px-3 py-1 rounded-full">
+                    Advanced
+                  </span>
+                  <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-purple-500 group-hover:translate-x-1 transition-all duration-300" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Back to Profile Button */}
+          <div className="flex justify-center mt-8">
+            <button 
+              onClick={() => onNavigate('profile')}
+              className="flex items-center px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-all duration-300 border border-gray-300"
+            >
+              <ChevronLeft className="w-4 h-4 mr-2" />
+              <span>Back to Profile</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Quick Workout View
+  if (viewMode === 'quick') {
+    return (
+      <div className="space-y-8">
+        {/* Page Header */}
+        <div className="text-center">
+          <div className="w-20 h-20 bg-gradient-to-r from-emerald-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
+            <Sparkles className="w-10 h-10 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Quick Workout Setup</h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Just a few quick questions to generate your personalized workout
+          </p>
+        </div>
+
+        {/* Quick Form */}
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-8">
+            <div className="space-y-8">
+              {/* Workout Focus */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-4">What's your main goal for today's workout?</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { value: 'Weight Loss', icon: Activity, color: 'from-red-500 to-pink-500' },
+                    { value: 'Strength Building', icon: Dumbbell, color: 'from-blue-500 to-purple-500' },
+                    { value: 'Endurance', icon: Heart, color: 'from-green-500 to-teal-500' },
+                    { value: 'General Fitness', icon: Target, color: 'from-purple-500 to-indigo-500' }
+                  ].map(option => (
+                    <label key={option.value} className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 hover:shadow-lg ${
+                      focusData.workoutFocus === option.value
+                        ? 'border-emerald-500 bg-gradient-to-br from-emerald-50/80 to-blue-50/80 backdrop-blur-sm shadow-xl scale-105'
+                        : 'border-white/30 bg-white/40 backdrop-blur-sm hover:border-emerald-300/50 hover:bg-white/60 hover:scale-[1.02]'
+                    }`}>
+                      <input
+                        type="radio"
+                        name="workoutFocus"
+                        value={option.value}
+                        checked={focusData.workoutFocus === option.value}
+                        onChange={(e) => handleInputChange('workoutFocus', e.target.value)}
+                        className="sr-only"
+                      />
+                      <div className="flex items-center">
+                        <div className={`w-10 h-10 bg-gradient-to-r ${option.color} rounded-lg flex items-center justify-center mr-3`}>
+                          <option.icon className="w-5 h-5 text-white" />
+                        </div>
+                        <span className="font-medium text-gray-900">{option.value}</span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Workout Intensity */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">How intense do you want your workout?</label>
+                <div className="space-y-2">
+                  {[
+                    'Low Intensity',
+                    'Moderate Intensity',
+                    'High Intensity'
+                  ].map(intensity => (
+                    <label key={intensity} className="group relative flex items-center p-4 bg-white/40 backdrop-blur-sm border border-white/20 rounded-xl hover:bg-white/60 hover:border-white/30 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02]">
+                      <input
+                        type="radio"
+                        name="workoutIntensity"
+                        value={intensity}
+                        checked={focusData.workoutIntensity === intensity}
+                        onChange={(e) => handleInputChange('workoutIntensity', e.target.value)}
+                        className="sr-only"
+                      />
+                      <div className={`w-5 h-5 rounded-full border-2 mr-4 flex items-center justify-center transition-all duration-300 ${
+                        focusData.workoutIntensity === intensity
+                          ? 'border-emerald-500 bg-gradient-to-r from-emerald-500 to-blue-500 shadow-lg'
+                          : 'border-gray-300 bg-white/50 group-hover:border-emerald-400'
+                      }`}>
+                        {focusData.workoutIntensity === intensity && (
+                          <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
+                        )}
+                      </div>
+                      <span className={`font-medium transition-colors duration-300 ${
+                        focusData.workoutIntensity === intensity ? 'text-gray-900' : 'text-gray-700 group-hover:text-gray-900'
+                      }`}>{intensity}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Energy Level */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  <Battery className="w-4 h-4 inline mr-2" />
+                  How's your energy level right now?
+                </label>
+                <div className="space-y-2">
+                  {[
+                    'Low Energy',
+                    'Moderate Energy',
+                    'High Energy'
+                  ].map(energy => (
+                    <label key={energy} className="group relative flex items-center p-4 bg-white/40 backdrop-blur-sm border border-white/20 rounded-xl hover:bg-white/60 hover:border-white/30 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02]">
+                      <input
+                        type="radio"
+                        name="energyLevel"
+                        value={energy}
+                        checked={focusData.energyLevel === energy}
+                        onChange={(e) => handleInputChange('energyLevel', e.target.value)}
+                        className="sr-only"
+                      />
+                      <div className={`w-5 h-5 rounded-full border-2 mr-4 flex items-center justify-center transition-all duration-300 ${
+                        focusData.energyLevel === energy
+                          ? 'border-yellow-500 bg-gradient-to-r from-yellow-500 to-orange-500 shadow-lg'
+                          : 'border-gray-300 bg-white/50 group-hover:border-yellow-400'
+                      }`}>
+                        {focusData.energyLevel === energy && (
+                          <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
+                        )}
+                      </div>
+                      <span className={`font-medium transition-colors duration-300 ${
+                        focusData.energyLevel === energy ? 'text-gray-900' : 'text-gray-700 group-hover:text-gray-900'
+                      }`}>{energy}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Navigation Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 mt-8">
+              <button
+                onClick={() => setViewMode('selection')}
+                className="px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-all duration-300 border border-gray-300"
+              >
+                Back to Options
+              </button>
+              
+              <button
+                onClick={() => isFormValid() && onNavigate('review')}
+                disabled={!isFormValid()}
+                className={`flex-1 flex items-center justify-center px-6 py-3 font-medium rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl group ${
+                  isFormValid()
+                    ? 'bg-gradient-to-r from-emerald-600 to-blue-600 text-white hover:from-emerald-700 hover:to-blue-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                <span>Generate Quick Workout</span>
+                <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Detailed Workout Focus View (existing implementation)
   const renderSection = () => {
     switch (currentSection) {
       case 0: // Workout Basics
@@ -549,10 +836,10 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
     <div className="space-y-8">
       {/* Page Header */}
       <div className="text-center">
-        <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
-          <Target className="w-10 h-10 text-white" />
+        <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
+          <Settings className="w-10 h-10 text-white" />
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Workout Focus</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Detailed Workout Focus</h1>
         <p className="text-lg text-gray-600 max-w-2xl mx-auto">
           Fine-tune your workout preferences for the perfect AI-generated routine
         </p>
@@ -567,7 +854,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
               onClick={() => setCurrentSection(index)}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
                 currentSection === index
-                  ? 'bg-gradient-to-r from-green-600 to-blue-600 text-white shadow-lg'
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
@@ -613,7 +900,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
               {currentSection < sections.length - 1 && (
                 <button
                   onClick={() => setCurrentSection(currentSection + 1)}
-                  className="px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white font-medium rounded-xl hover:from-green-700 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 shadow-lg hover:shadow-xl"
                 >
                   Next
                 </button>
@@ -636,15 +923,15 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
             )}
           </div>
 
-          {/* Back to Profile Button */}
+          {/* Back to Selection Button */}
           {currentSection === 0 && (
             <div className="mt-4">
               <button 
-                onClick={() => onNavigate('profile')}
+                onClick={() => setViewMode('selection')}
                 className="flex items-center px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-all duration-300 border border-gray-300"
               >
                 <ChevronLeft className="w-4 h-4 mr-2" />
-                <span>Back to Profile</span>
+                <span>Back to Options</span>
               </button>
             </div>
           )}
@@ -660,7 +947,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
-              className="bg-gradient-to-r from-green-600 to-blue-600 h-2 rounded-full transition-all duration-500"
+              className="bg-gradient-to-r from-purple-600 to-pink-600 h-2 rounded-full transition-all duration-500"
               style={{ width: `${((currentSection + 1) / sections.length) * 100}%` }}
             ></div>
           </div>
