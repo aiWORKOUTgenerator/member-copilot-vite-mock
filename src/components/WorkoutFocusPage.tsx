@@ -1,22 +1,16 @@
 import React, { useState } from 'react';
-import { Target, ChevronLeft, ChevronRight, Dumbbell, Heart, Zap, Clock, Activity, AlertTriangle, Battery, Moon, Brain, Settings, Info, Sparkles, ArrowRight } from 'lucide-react';
+import { Target, ChevronLeft, ChevronRight, Dumbbell, Heart, Activity, Battery, Settings, Sparkles, ArrowRight } from 'lucide-react';
 import { PageHeader } from './shared';
 import { 
   WorkoutFocusData, 
   workoutFocusSchema,
   quickWorkoutSchema,
-  workoutSectionSchemas,
   defaultWorkoutFocusData,
   WORKOUT_FOCUS_OPTIONS,
   WORKOUT_INTENSITY_OPTIONS,
-  WORKOUT_TYPE_OPTIONS,
-  DURATION_OPTIONS,
-  FOCUS_AREAS_OPTIONS,
-  EQUIPMENT_OPTIONS,
   ENERGY_LEVEL_OPTIONS,
-  SORENESS_OPTIONS,
-  INCLUDE_EXERCISES_OPTIONS,
-  EXCLUDE_EXERCISES_OPTIONS
+  FOCUS_AREAS_OPTIONS,
+  EQUIPMENT_OPTIONS
 } from '../schemas/workoutFocusSchema';
 import { useFormValidation } from '../hooks/useFormValidation';
 import DetailedWorkoutContainer from './DetailedWorkoutContainer';
@@ -29,15 +23,13 @@ interface WorkoutFocusPageProps {
 const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
   const [viewMode, setViewMode] = useState<'selection' | 'quick' | 'detailed'>('selection');
   const [focusData, setFocusData] = useState<WorkoutFocusData>(defaultWorkoutFocusData);
-  const [currentSection, setCurrentSection] = useState(0);
   
   // Enhanced options state for detailed view - moved to top level to fix hook ordering
   const [enhancedOptions, setEnhancedOptions] = useState<PerWorkoutOptions>({});
-  const [enhancedErrors, setEnhancedErrors] = useState<Record<string, string>>({});
 
   // Validation hooks
-  const { validate: validateFull, validateField: validateFullField } = useFormValidation(workoutFocusSchema);
-  const { validate: validateQuick, validateField: validateQuickField } = useFormValidation(quickWorkoutSchema);
+  const { validate: validateFull } = useFormValidation(workoutFocusSchema);
+  const { validate: validateQuick } = useFormValidation(quickWorkoutSchema);
   
   // Memoize validation to prevent re-renders
   const isQuickWorkoutValid = React.useMemo(() => {
@@ -57,21 +49,14 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
     return hasRequiredFields && hasEquipment && hasFocusAreas && validateFull(focusData);
   }, [viewMode, focusData, validateFull]);
 
-  const handleInputChange = (field: keyof WorkoutFocusData, value: any) => {
+  const handleInputChange = (field: keyof WorkoutFocusData, value: string) => {
     setFocusData(prev => ({
       ...prev,
       [field]: value
     }));
   };
 
-  const handleCheckboxChange = (field: 'focusAreas' | 'currentSoreness' | 'equipment' | 'includeExercises' | 'excludeExercises', value: any) => {
-    setFocusData(prev => ({
-      ...prev,
-      [field]: (prev[field] as any[]).includes(value)
-        ? (prev[field] as any[]).filter(item => item !== value)
-        : [...(prev[field] as any[]), value]
-    }));
-  };
+
 
   const isFormValid = () => {
     return viewMode === 'quick' ? isQuickWorkoutValid : isDetailedWorkoutValid;
@@ -97,32 +82,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
     setViewMode('quick');
   };
 
-  const sections = [
-    {
-      title: "Workout Basics",
-      description: "Define your primary workout focus and intensity",
-      icon: Target,
-      color: "from-green-500 to-blue-500"
-    },
-    {
-      title: "Training Details",
-      description: "Specify workout type, duration, and focus areas",
-      icon: Settings,
-      color: "from-blue-500 to-purple-500"
-    },
-    {
-      title: "Equipment & Limitations",
-      description: "Available equipment and current physical state",
-      icon: Dumbbell,
-      color: "from-purple-500 to-pink-500"
-    },
-    {
-      title: "Exercise Preferences",
-      description: "Customize your exercise selection",
-      icon: Info,
-      color: "from-orange-500 to-red-500"
-    }
-  ];
+
 
   // Top Level Selection View
   if (viewMode === 'selection') {
@@ -382,20 +342,6 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
 
   // Enhanced Detailed Workout Focus View with new architecture
   if (viewMode === 'detailed') {
-    // Convert legacy data to enhanced format
-    const convertToEnhancedOptions = (focusData: WorkoutFocusData): PerWorkoutOptions => {
-      return {
-        customization_duration: focusData.duration ? parseInt(focusData.duration.replace(' minutes', '')) : undefined,
-        customization_focus: focusData.workoutFocus || undefined,
-        customization_areas: focusData.focusAreas || undefined,
-        customization_equipment: focusData.equipment || undefined,
-        customization_energy: focusData.energyLevel ? ['Very Low', 'Low', 'Moderate', 'High', 'Very High'].indexOf(focusData.energyLevel) + 1 : undefined,
-        customization_sleep: focusData.sleepQuality ? ['Very Poor', 'Poor', 'Fair', 'Good', 'Excellent'].indexOf(focusData.sleepQuality) + 1 : undefined,
-        customization_include: focusData.includeExercises?.join(', ') || undefined,
-        customization_exclude: focusData.excludeExercises?.join(', ') || undefined,
-      };
-    };
-
     // Convert enhanced data back to legacy format
     const convertFromEnhancedOptions = (options: PerWorkoutOptions): Partial<WorkoutFocusData> => {
       const updates: Partial<WorkoutFocusData> = {};
@@ -405,7 +351,6 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
           ? options.customization_duration 
           : options.customization_duration.totalDuration;
         // Map to valid duration options
-        const validDurations = ['30 minutes', '45 minutes', '60 minutes', '90+ minutes'] as const;
         const durationStr = duration >= 90 ? '90+ minutes' : 
                            duration >= 60 ? '60 minutes' : 
                            duration >= 45 ? '45 minutes' : '30 minutes';
@@ -417,8 +362,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
           ? options.customization_focus 
           : options.customization_focus.focus;
         // Map to valid focus options
-        const validFocus = ['Weight Loss', 'Strength Building', 'Endurance', 'Muscle Gain', 'General Fitness'] as const;
-        const focusMap: Record<string, typeof validFocus[number]> = {
+        const focusMap: Record<string, typeof WORKOUT_FOCUS_OPTIONS[number]> = {
           'weight_loss': 'Weight Loss',
           'strength': 'Strength Building',
           'endurance': 'Endurance',
@@ -431,8 +375,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
       if (options.customization_areas) {
         if (Array.isArray(options.customization_areas)) {
           // Map to valid area options
-          const validAreas = ['Cardio', 'Full Body', 'Upper Body', 'Lower Body', 'Core', 'Flexibility'] as const;
-          const areaMap: Record<string, typeof validAreas[number]> = {
+          const areaMap: Record<string, typeof FOCUS_AREAS_OPTIONS[number]> = {
             'cardio': 'Cardio',
             'full_body': 'Full Body',
             'upper_body': 'Upper Body',
@@ -441,7 +384,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
             'flexibility': 'Flexibility'
           };
           updates.focusAreas = options.customization_areas
-            .map(area => areaMap[area.toLowerCase().replace(' ', '_')] || area as typeof validAreas[number])
+            .map(area => areaMap[area.toLowerCase().replace(' ', '_')] || area as typeof FOCUS_AREAS_OPTIONS[number])
             .filter(Boolean);
         } else if (options.customization_areas) {
           const selected = Object.keys(options.customization_areas).filter(key => 
@@ -450,15 +393,14 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
             !Array.isArray(options.customization_areas) && 
             options.customization_areas[key]?.selected
           );
-          updates.focusAreas = selected as any; // Type assertion for compatibility
+          updates.focusAreas = selected as typeof FOCUS_AREAS_OPTIONS[number][];
         }
       }
       
       if (options.customization_equipment) {
         if (Array.isArray(options.customization_equipment)) {
           // Map to valid equipment options
-          const validEquipment = ['Full Gym', 'Dumbbells', 'Resistance Bands', 'Yoga Mat', 'Bodyweight Only', 'Kettlebell'] as const;
-          const equipmentMap: Record<string, typeof validEquipment[number]> = {
+          const equipmentMap: Record<string, typeof EQUIPMENT_OPTIONS[number]> = {
             'full_gym': 'Full Gym',
             'dumbbells': 'Dumbbells',
             'resistance_bands': 'Resistance Bands',
@@ -467,10 +409,10 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
             'kettlebell': 'Kettlebell'
           };
           updates.equipment = options.customization_equipment
-            .map(eq => equipmentMap[eq.toLowerCase().replace(' ', '_')] || eq as typeof validEquipment[number])
+            .map(eq => equipmentMap[eq.toLowerCase().replace(' ', '_')] || eq as typeof EQUIPMENT_OPTIONS[number])
             .filter(Boolean);
         } else if (options.customization_equipment) {
-          updates.equipment = options.customization_equipment.specificEquipment as any; // Type assertion for compatibility
+          updates.equipment = options.customization_equipment.specificEquipment as typeof EQUIPMENT_OPTIONS[number][];
         }
       }
       
@@ -489,7 +431,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
       return updates;
     };
 
-    const handleEnhancedChange = (key: keyof PerWorkoutOptions, value: any) => {
+    const handleEnhancedChange = (key: keyof PerWorkoutOptions, value: unknown) => {
       setEnhancedOptions(prev => ({ ...prev, [key]: value }));
       
       // Update legacy data
@@ -501,7 +443,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
       <DetailedWorkoutContainer
         options={enhancedOptions}
         onChange={handleEnhancedChange}
-        errors={enhancedErrors}
+        errors={{}}
         disabled={false}
         onNavigate={onNavigate}
       />

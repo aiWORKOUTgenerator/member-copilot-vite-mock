@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, memo } from 'react';
-import { Brain, Settings, ChevronRight, ChevronLeft, Eye, Zap, CheckCircle, AlertCircle } from 'lucide-react';
+import { Brain, Settings, ChevronRight, ChevronLeft, Eye, Zap, CheckCircle, AlertCircle, AlertTriangle, Lightbulb } from 'lucide-react';
 import { 
   PerWorkoutOptions, 
   UserProfile, 
@@ -85,15 +85,154 @@ const DetailedWorkoutContainer = memo(function DetailedWorkoutContainer({
   // Generate navigation steps from configuration
   const navigationSteps = useMemo(() => generateStepsFromConfig(WORKOUT_CUSTOMIZATION_CONFIG), []);
 
-  // AI-powered recommendation generation
+  // Enhanced AI-powered recommendation generation
   const updateAIRecommendations = useCallback(() => {
-    const recommendations = aiRecommendationEngine.generateRecommendations(options, mockUserProfile);
-    setAIRecommendations([
-      ...recommendations.immediate,
-      ...recommendations.contextual,
-      ...recommendations.optimization
-    ]);
-  }, [options, mockUserProfile]);
+    const recommendations = [];
+    
+    // Cross-component analysis for intelligent suggestions
+    const duration = typeof options.customization_duration === 'number' 
+      ? options.customization_duration 
+      : options.customization_duration?.totalDuration;
+      
+    // Duration-energy compatibility analysis
+    if (options.customization_energy && options.customization_energy <= 2 && duration && duration > 45) {
+      recommendations.push({
+        type: 'immediate',
+        message: "Consider reducing workout duration due to low energy levels",
+        action: 'reduce_duration',
+        targetValue: Math.max(30, duration - 15),
+        priority: 'high',
+        category: 'energy_optimization'
+      });
+    }
+    
+    // Equipment-focus synergy analysis
+    if (Array.isArray(options.customization_equipment) && 
+        options.customization_equipment.includes("Bodyweight Only") && 
+        options.customization_focus === 'strength') {
+      recommendations.push({
+        type: 'contextual',
+        message: "For strength goals, consider adding resistance equipment",
+        action: 'suggest_equipment',
+        targetValue: ['Resistance Bands', 'Dumbbells'],
+        priority: 'medium',
+        category: 'equipment_optimization'
+      });
+    }
+    
+    // Sleep-intensity adaptation with learning
+    if (options.customization_sleep && options.customization_sleep <= 2 && 
+        options.customization_focus === 'power') {
+      recommendations.push({
+        type: 'immediate',
+        message: "Poor sleep detected - consider recovery or flexibility work instead",
+        action: 'change_focus',
+        targetValue: 'recovery',
+        priority: 'high',
+        category: 'recovery_optimization',
+        learningNote: 'Poor sleep impacts power output by up to 30%'
+      });
+    }
+    
+    // Advanced cross-component conflict detection
+    const conflicts = detectCrossComponentConflicts(options, mockUserProfile);
+    conflicts.forEach(conflict => {
+      recommendations.push({
+        type: 'warning',
+        message: conflict.message,
+        action: conflict.suggestedAction,
+        priority: 'medium',
+        category: 'conflict_resolution'
+      });
+    });
+    
+    // Progressive enhancement suggestions
+    const enhancementSuggestions = analyzeEnhancementOpportunities(options, mockUserProfile, userInteractions);
+    enhancementSuggestions.forEach(suggestion => {
+      recommendations.push({
+        type: 'enhancement',
+        message: suggestion.message,
+        action: suggestion.action,
+        priority: 'low',
+        category: 'feature_enhancement'
+      });
+    });
+    
+    setAIRecommendations(recommendations);
+  }, [options, mockUserProfile, userInteractions]);
+
+  // Enhanced cross-component conflict detection
+  const detectCrossComponentConflicts = useCallback((options: PerWorkoutOptions, userProfile: UserProfile) => {
+    const conflicts = [];
+    
+    // Multiple high-impact conflicts
+    const duration = typeof options.customization_duration === 'number' 
+      ? options.customization_duration 
+      : options.customization_duration?.totalDuration;
+      
+    if (duration && options.customization_energy && options.customization_sleep) {
+      if (duration > 75 && options.customization_energy <= 2 && options.customization_sleep <= 2) {
+        conflicts.push({
+          message: "Long workout with low energy and poor sleep may lead to injury risk",
+          suggestedAction: 'reduce_duration',
+          fields: ['customization_duration', 'customization_energy', 'customization_sleep'],
+          severity: 'high'
+        });
+      }
+    }
+    
+    // Equipment-goals-space conflicts
+    if (Array.isArray(options.customization_equipment) && 
+        options.customization_equipment.length > 5 && 
+        userProfile.limitations?.equipmentConstraints?.includes('minimal_space')) {
+      conflicts.push({
+        message: "Selected equipment may not fit in available space",
+        suggestedAction: 'optimize_equipment',
+        fields: ['customization_equipment'],
+        severity: 'medium'
+      });
+    }
+    
+    return conflicts;
+  }, []);
+
+  // Enhanced progressive enhancement analysis
+  const analyzeEnhancementOpportunities = useCallback((
+    options: PerWorkoutOptions, 
+    userProfile: UserProfile, 
+    interactions: Record<string, number>
+  ) => {
+    const suggestions = [];
+    
+    // User expertise-based suggestions
+    if (userProfile.fitnessLevel === 'advanced') {
+      Object.entries(options).forEach(([key, value]) => {
+        if (typeof value === 'number' || typeof value === 'string' || Array.isArray(value)) {
+          const interactionCount = interactions[key] || 0;
+          if (interactionCount > 3) {
+            suggestions.push({
+              message: `Enable advanced ${key.replace('customization_', '')} features for more control`,
+              action: 'enable_enhancement',
+              field: key,
+              reason: 'high_interaction_frequency'
+            });
+          }
+        }
+      });
+    }
+    
+    // Goal-specific enhancement suggestions
+    if (userProfile.goals.includes('professional') || userProfile.goals.includes('competition')) {
+      suggestions.push({
+        message: "Professional goals detected - consider enabling detailed session planning",
+        action: 'enable_advanced_mode',
+        field: 'customization_duration',
+        reason: 'professional_goals'
+      });
+    }
+    
+    return suggestions;
+  }, []);
 
   // Enhanced change handler with AI integration
   const handleChange = useCallback((key: keyof PerWorkoutOptions, value: any) => {
@@ -121,13 +260,40 @@ const DetailedWorkoutContainer = memo(function DetailedWorkoutContainer({
     handleChange(configKey as keyof PerWorkoutOptions, newValue);
   }, [options, handleChange]);
 
-  // AI recommendation application
-  const handleAIRecommendationApply = useCallback((configKey: string, recommendation: string) => {
-    const aiValue = aiRecommendationEngine.parseAIRecommendation(configKey, recommendation, options, mockUserProfile);
-    if (aiValue !== null) {
-      handleChange(configKey as keyof PerWorkoutOptions, aiValue);
+  // Enhanced AI recommendation application
+  const handleAIRecommendationApply = useCallback((action: string, targetValue: any) => {
+    switch (action) {
+      case 'reduce_duration':
+        if (typeof targetValue === 'number') {
+          handleChange('customization_duration', targetValue);
+        }
+        break;
+      case 'suggest_equipment':
+        if (Array.isArray(targetValue)) {
+          const currentEquipment = Array.isArray(options.customization_equipment) 
+            ? options.customization_equipment 
+            : [];
+          const newEquipment = [...new Set([...currentEquipment, ...targetValue])];
+          handleChange('customization_equipment', newEquipment);
+        }
+        break;
+      case 'change_focus':
+        if (typeof targetValue === 'string') {
+          handleChange('customization_focus', targetValue);
+        }
+        break;
+      case 'optimize_equipment':
+        // Implement equipment optimization logic
+        const currentEquipment = Array.isArray(options.customization_equipment) 
+          ? options.customization_equipment 
+          : [];
+        const optimizedEquipment = currentEquipment.slice(0, 5); // Limit to 5 items
+        handleChange('customization_equipment', optimizedEquipment);
+        break;
+      default:
+        console.warn('Unknown AI recommendation action:', action);
     }
-  }, [handleChange, options, mockUserProfile]);
+  }, [handleChange, options]);
 
   // Calculate completion status for each step
   const getStepCompletion = useCallback((stepId: string) => {
@@ -232,27 +398,93 @@ const DetailedWorkoutContainer = memo(function DetailedWorkoutContainer({
         </p>
       </div>
 
-      {/* Global AI Recommendations Panel */}
+      {/* Enhanced AI Recommendations Panel */}
       {aiRecommendations.length > 0 && (
-        <div className="max-w-4xl mx-auto mb-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Brain className="w-5 h-5 text-blue-600" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-blue-900 mb-2">AI Recommendations</h3>
-              <div className="space-y-3">
-                {aiRecommendations.slice(0, 3).map((rec, index) => (
-                  <div key={index} className="flex items-start justify-between">
-                    <p className="text-blue-800 text-sm flex-1">{rec}</p>
-                    <button
-                      onClick={() => handleAIRecommendationApply('general', rec)}
-                      className="ml-3 px-3 py-1 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                ))}
+        <div className="max-w-4xl mx-auto mb-8">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Brain className="w-5 h-5 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-blue-900 mb-4">AI Workout Insights</h3>
+                
+                {/* Categorized Recommendations */}
+                <div className="space-y-4">
+                  {/* Immediate Priority */}
+                  {aiRecommendations.filter(rec => rec.priority === 'high').length > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertTriangle className="w-4 h-4 text-red-600" />
+                        <h4 className="font-medium text-red-800">Immediate Attention</h4>
+                      </div>
+                      <div className="space-y-2">
+                        {aiRecommendations.filter(rec => rec.priority === 'high').map((rec, index) => (
+                          <div key={index} className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <p className="text-red-700 text-sm">{rec.message}</p>
+                              {rec.learningNote && (
+                                <p className="text-red-600 text-xs mt-1 italic">💡 {rec.learningNote}</p>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => handleAIRecommendationApply(rec.action, rec.targetValue)}
+                              className="ml-3 px-3 py-1 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700 transition-colors"
+                            >
+                              Apply
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Contextual Recommendations */}
+                  {aiRecommendations.filter(rec => rec.priority === 'medium').length > 0 && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Lightbulb className="w-4 h-4 text-yellow-600" />
+                        <h4 className="font-medium text-yellow-800">Optimization Suggestions</h4>
+                      </div>
+                      <div className="space-y-2">
+                        {aiRecommendations.filter(rec => rec.priority === 'medium').map((rec, index) => (
+                          <div key={index} className="flex items-start justify-between">
+                            <p className="text-yellow-700 text-sm flex-1">{rec.message}</p>
+                            <button
+                              onClick={() => handleAIRecommendationApply(rec.action, rec.targetValue)}
+                              className="ml-3 px-3 py-1 bg-yellow-600 text-white text-xs rounded-lg hover:bg-yellow-700 transition-colors"
+                            >
+                              Apply
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Enhancement Suggestions */}
+                  {aiRecommendations.filter(rec => rec.priority === 'low').length > 0 && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Settings className="w-4 h-4 text-green-600" />
+                        <h4 className="font-medium text-green-800">Feature Enhancements</h4>
+                      </div>
+                      <div className="space-y-2">
+                        {aiRecommendations.filter(rec => rec.priority === 'low').map((rec, index) => (
+                          <div key={index} className="flex items-start justify-between">
+                            <p className="text-green-700 text-sm flex-1">{rec.message}</p>
+                            <button
+                              onClick={() => handleEnhancementToggle(rec.field, true)}
+                              className="ml-3 px-3 py-1 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 transition-colors"
+                            >
+                              Enable
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
