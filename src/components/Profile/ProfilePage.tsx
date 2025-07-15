@@ -15,7 +15,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
   const {
     currentStep,
     profileData,
-    stepCompletion,
     handleInputChange,
     handleArrayToggle,
     getFieldError,
@@ -29,7 +28,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
 
   const handleSubmit = () => {
     if (isProfileComplete()) {
-      onNavigate('focus');
+      onNavigate('waiver');
     }
   };
 
@@ -112,11 +111,11 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
           {/* Section Navigation */}
           <SectionNavigation
             sections={[
-              { step: 1, title: 'Experience & Activity', color: 'from-blue-500 to-purple-600', progress: stepCompletion[1]?.progress },
-              { step: 2, title: 'Time & Commitment', color: 'from-green-500 to-blue-600', progress: stepCompletion[2]?.progress },
-              { step: 3, title: 'Preferences & Resources', color: 'from-purple-500 to-pink-600', progress: stepCompletion[3]?.progress },
-              { step: 4, title: 'Goals & Timeline', color: 'from-orange-500 to-red-600', progress: stepCompletion[4]?.progress },
-              { step: 5, title: 'Metrics & Health', color: 'from-teal-500 to-green-600', progress: stepCompletion[5]?.progress }
+              { step: 1, title: 'Experience & Activity', color: 'from-blue-500 to-purple-600' },
+              { step: 2, title: 'Time & Commitment', color: 'from-green-500 to-blue-600' },
+              { step: 3, title: 'Preferences & Resources', color: 'from-purple-500 to-pink-600' },
+              { step: 4, title: 'Goals & Timeline', color: 'from-orange-500 to-red-600' },
+              { step: 5, title: 'Metrics & Health', color: 'from-teal-500 to-green-600' }
             ]}
             currentSection={currentStep - 1}
             onSectionChange={handleSectionChange}

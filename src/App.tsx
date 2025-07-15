@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
-import { User, Target, Zap, ChevronRight, Eye } from 'lucide-react';
+import { User, Target, Zap, ChevronRight, Eye, Shield } from 'lucide-react';
 import { ProfilePage } from './components/Profile';
+import { LiabilityWaiverPage } from './components/LiabilityWaiver';
 import WorkoutFocusPage from './components/WorkoutFocusPage';
 import ReviewPage from './components/ReviewPage';
 import WorkoutResultsPage from './components/WorkoutResultsPage';
 
-type PageType = 'profile' | 'focus' | 'review' | 'results';
+type PageType = 'profile' | 'waiver' | 'focus' | 'review' | 'results';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<PageType>('profile');
 
   const pages = [
     { id: 'profile', title: 'Profile', icon: User, component: ProfilePage },
+    { id: 'waiver', title: 'Waiver', icon: Shield, component: LiabilityWaiverPage },
     { id: 'focus', title: 'Workout Focus', icon: Target, component: WorkoutFocusPage },
     { id: 'review', title: 'Review', icon: Eye, component: ReviewPage },
     { id: 'results', title: 'Results', icon: Zap, component: WorkoutResultsPage }

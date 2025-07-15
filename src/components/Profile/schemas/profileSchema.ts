@@ -13,8 +13,8 @@ export const profileSchema = z.object({
   
   // Exercise Preferences
   preferredActivities: z.array(z.enum([
-    'Running/Jogging', 'Swimming', 'Cycling/Mountain Biking',
-    'Yoga', 'Pilates', 'Hiking', 'Dancing',
+    'Walking/Power Walking', 'Running/Jogging', 'Swimming', 'Cycling/Mountain Biking',
+    'Rock Climbing/Bouldering', 'Yoga', 'Pilates', 'Hiking', 'Dancing',
     'Team Sports', 'Golf', 'Martial Arts'
   ])).min(1, 'Please select at least one preferred activity'),
   availableEquipment: z.array(z.enum([

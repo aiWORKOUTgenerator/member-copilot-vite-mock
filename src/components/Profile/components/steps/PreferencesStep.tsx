@@ -12,6 +12,11 @@ const PreferencesStep: React.FC<StepProps> = ({
 }) => {
   const activityOptions: OptionConfig[] = [
     { 
+      value: 'Walking/Power Walking', 
+      label: 'Walking/Power Walking',
+      description: 'Low-impact cardiovascular exercise at various paces, from casual walking to brisk power walking'
+    },
+    { 
       value: 'Running/Jogging', 
       label: 'Running/Jogging',
       description: 'Cardiovascular exercise at various paces, from casual jogging to intense running, great for endurance and heart health'
@@ -25,6 +30,11 @@ const PreferencesStep: React.FC<StepProps> = ({
       value: 'Cycling/Mountain Biking', 
       label: 'Cycling/Mountain Biking',
       description: 'Road cycling or off-road biking for cardio, leg strength, and outdoor adventure'
+    },
+    { 
+      value: 'Rock Climbing/Bouldering', 
+      label: 'Rock Climbing/Bouldering',
+      description: 'Dynamic full-body workout combining strength, balance, and problem-solving skills'
     },
     { 
       value: 'Yoga', 

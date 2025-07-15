@@ -11,8 +11,8 @@ export type ProfileData = {
   
   // Exercise Preferences
   workoutType: 'strength' | 'cardio' | 'flexibility' | 'mixed';
-  preferredActivities: Array<'Running/Jogging' | 'Swimming' | 'Cycling/Mountain Biking' |
-    'Yoga' | 'Pilates' | 'Hiking' | 'Dancing' |
+  preferredActivities: Array<'Walking/Power Walking' | 'Running/Jogging' | 'Swimming' | 'Cycling/Mountain Biking' |
+    'Rock Climbing/Bouldering' | 'Yoga' | 'Pilates' | 'Hiking' | 'Dancing' |
     'Team Sports' | 'Golf' | 'Martial Arts'>;
   availableEquipment: Array<'Gym Membership' | 'Home Gym' | 'Dumbbells or Free Weights' |
     'Resistance Bands' | 'Treadmill or Cardio Machines' | 'Yoga Mat' |
@@ -54,7 +54,7 @@ export interface StepProps {
 }
 
 export interface ProfilePageProps {
-  onNavigate: (page: 'profile' | 'focus' | 'review' | 'results') => void;
+  onNavigate: (page: 'profile' | 'waiver' | 'focus' | 'review' | 'results') => void;
 }
 
 export interface StepConfig {
