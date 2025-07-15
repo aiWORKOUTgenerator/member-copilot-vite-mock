@@ -4,7 +4,7 @@ import { z } from 'zod';
 export const profileSchema = z.object({
   // Experience & Activity
   experienceLevel: z.enum(['Beginner', 'Intermediate', 'Advanced']).describe('Please select your experience level'),
-  physicalActivity: z.enum(['sedentary', 'light', 'moderate', 'very']).describe('Please select your current activity level'),
+  physicalActivity: z.enum(['sedentary', 'light', 'moderate', 'very', 'extremely', 'varies']).describe('Please select your current activity level'),
   
   // Time & Commitment
   preferredDuration: z.enum(['15-30 min', '30-45 min', '45-60 min', '60+ min']).describe('Please select your preferred workout duration'),
@@ -160,7 +160,7 @@ export const validateFullProfile = (data: ProfileData): ValidationResult => {
 };
 
 // Field-specific validation function
-export const validateField = (field: keyof ProfileData, value: any, step?: number): ValidationResult => {
+export const validateField = (field: keyof ProfileData, value: any): ValidationResult => {
   // Create a minimal schema for just this field
   const fieldSchema = profileSchema.pick({ [field]: true });
   const testData = { [field]: value } as Partial<ProfileData>;

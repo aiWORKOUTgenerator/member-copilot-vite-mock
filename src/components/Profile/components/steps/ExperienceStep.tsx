@@ -47,6 +47,16 @@ const ExperienceStep: React.FC<StepProps> = ({
       value: 'very',
       label: 'VERY ACTIVE',
       description: 'Consistent daily activity including structured exercise, sports, or physically demanding work. You prioritize fitness in your routine.'
+    },
+    {
+      value: 'extremely',
+      label: 'EXTREMELY ACTIVE',
+      description: 'Intense activity multiple times a day, including athletic training or heavy labor.'
+    },
+    {
+      value: 'varies',
+      label: 'VARIES',
+      description: 'Activity level changes weekly, from light to intense exercise.'
     }
   ];
 
@@ -78,6 +88,7 @@ const ExperienceStep: React.FC<StepProps> = ({
             columns={3}
             variant="default"
             useTooltips={true}
+            className="[&_button]:w-full"
             error={getFieldError ? getFieldError('experienceLevel') : undefined}
             aria-label="Select your fitness experience level"
           />
@@ -86,7 +97,7 @@ const ExperienceStep: React.FC<StepProps> = ({
                 <div>
           <div className="flex items-center gap-2 mb-4">
             <div className="inline-block px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-medium rounded-md shadow-sm">
-              Physical Activity Assessment
+              Current Activity Level
             </div>
             <Tooltip 
               content="How would you best describe your physical activity over the last 90 days? Please select the option that most accurately represents your typical activity level over the past 3 months."
@@ -102,9 +113,10 @@ const ExperienceStep: React.FC<StepProps> = ({
               options={physicalActivityOptions}
               selectedValues={profileData.physicalActivity}
               onSelect={(value: string) => onInputChange('physicalActivity', value)}
-              columns={2}
+              columns={3}
               variant="default"
               useTooltips={true}
+              className="[&_button]:w-full"
               error={getFieldError ? getFieldError('physicalActivity') : undefined}
               aria-label="Select your current physical activity level"
             />
