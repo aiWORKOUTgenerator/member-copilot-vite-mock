@@ -22,6 +22,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
     canProceedToNextStep,
     nextStep,
     prevStep,
+    setStep,
     isProfileComplete,
     getTotalProgress
   } = useProfileForm();
@@ -33,10 +34,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
   };
 
   const handleSectionChange = React.useCallback((index: number) => {
-    // For now, disable section navigation to prevent infinite loops
-    // This can be enhanced later with proper step validation
-    console.log('Section change requested:', index);
-  }, []);
+    setStep(index);
+  }, [setStep]);
 
 
 

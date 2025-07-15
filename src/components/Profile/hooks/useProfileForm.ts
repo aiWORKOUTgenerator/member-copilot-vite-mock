@@ -92,16 +92,39 @@ export const useProfileForm = (): ProfileFormHookReturn => {
   const stepCompletion = useMemo(() => {
     const completion: Record<number, { isComplete: boolean; progress: number }> = {};
     
+    // Define fields for each step
+    const stepFields = {
+      1: ['experienceLevel', 'physicalActivity'],
+      2: ['preferredDuration', 'timeCommitment', 'intensityLevel'],
+      3: ['workoutType', 'preferredActivities', 'availableEquipment'],
+      4: ['primaryGoal', 'goalTimeline'],
+      5: ['age', 'gender', 'hasCardiovascularConditions', 'injuries']
+    };
+
     for (let step = 1; step <= 5; step++) {
+      const fields = stepFields[step as keyof typeof stepFields];
+      let completedFields = 0;
+
+      fields.forEach(field => {
+        const value = profileData[field as keyof ProfileData];
+        if (Array.isArray(value)) {
+          if (value.length > 0) completedFields++;
+        } else if (typeof value === 'string') {
+          if (value.trim().length > 0) completedFields++;
+        }
+      });
+
+      const progress = Math.round((completedFields / fields.length) * 100);
       const isComplete = validateStep(step);
+
       completion[step] = {
         isComplete,
-        progress: isComplete ? 100 : 0
+        progress
       };
     }
     
     return completion;
-  }, [validateStep]);
+  }, [profileData, validateStep]);
 
   // Navigation functions
   const canProceedToNextStep = useCallback(() => {
@@ -119,6 +142,16 @@ export const useProfileForm = (): ProfileFormHookReturn => {
       setCurrentStep(prev => prev - 1);
     }
   }, [currentStep]);
+
+  const setStep = useCallback((step: number) => {
+    // Validate all steps up to the target step
+    const canNavigate = Array.from({ length: step }, (_, i) => i + 1)
+      .every(s => validateStep(s));
+    
+    if (canNavigate) {
+      setCurrentStep(step + 1); // +1 because step is 0-based index from SectionNavigation
+    }
+  }, [validateStep]);
 
   const getFieldError = useCallback((field: keyof ProfileData) => {
     // Simple validation - you can enhance this with more specific error messages
@@ -153,6 +186,7 @@ export const useProfileForm = (): ProfileFormHookReturn => {
     canProceedToNextStep,
     nextStep,
     prevStep,
+    setStep,
     isProfileComplete: () => isComplete,
     getTotalProgress
   };

@@ -81,6 +81,7 @@ export interface ProfileFormHookReturn {
   canProceedToNextStep: () => boolean;
   nextStep: () => void;
   prevStep: () => void;
+  setStep: (step: number) => void;
   isProfileComplete: () => boolean;
   getTotalProgress: () => number;
 }
