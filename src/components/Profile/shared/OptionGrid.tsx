@@ -1,5 +1,6 @@
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
+import { Tooltip } from '../../shared';
 
 export interface OptionConfig {
   value: string;
@@ -20,6 +21,7 @@ interface OptionGridProps {
   disabled?: boolean;
   error?: string;
   'aria-label'?: string;
+  useTooltips?: boolean;
 }
 
 const OptionGrid: React.FC<OptionGridProps> = ({
@@ -32,7 +34,8 @@ const OptionGrid: React.FC<OptionGridProps> = ({
   className = '',
   disabled = false,
   error,
-  'aria-label': ariaLabel
+  'aria-label': ariaLabel,
+  useTooltips = false
 }) => {
   const isSelected = (value: string): boolean => {
     if (Array.isArray(selectedValues)) {
@@ -89,7 +92,7 @@ const OptionGrid: React.FC<OptionGridProps> = ({
             <IconComponent className="w-6 h-6 text-white" />
           </div>
           <span className="font-medium text-gray-900">{option.label}</span>
-          {option.description && (
+          {option.description && !useTooltips && (
             <span className="text-sm text-gray-500 mt-1">{option.description}</span>
           )}
         </div>
@@ -112,7 +115,7 @@ const OptionGrid: React.FC<OptionGridProps> = ({
             <span className={`font-medium transition-colors duration-300 ${
               isOptionSelected ? 'text-gray-900' : 'text-gray-700 group-hover:text-gray-900'
             }`}>{option.label}</span>
-            {option.description && (
+            {option.description && !useTooltips && (
               <div className="text-sm text-gray-500 mt-1">{option.description}</div>
             )}
           </div>
@@ -127,11 +130,43 @@ const OptionGrid: React.FC<OptionGridProps> = ({
     return (
       <>
         <div className="font-medium">{option.label}</div>
-        {option.description && (
+        {option.description && !useTooltips && (
           <div className="text-sm text-gray-500 mt-1">{option.description}</div>
         )}
       </>
     );
+  };
+
+  const renderButtonWithTooltip = (option: OptionConfig) => {
+    const button = (
+      <button
+        key={option.value}
+        onClick={() => !disabled && !option.disabled && onSelect(option.value)}
+        className={getButtonClass(option)}
+        disabled={disabled || option.disabled}
+        aria-pressed={multiple ? isSelected(option.value) : undefined}
+        aria-checked={!multiple ? isSelected(option.value) : undefined}
+        role={multiple ? 'button' : 'radio'}
+        aria-describedby={error ? `${option.value}-error` : undefined}
+      >
+        {renderOption(option)}
+      </button>
+    );
+
+    // If tooltips are enabled and description exists, wrap with tooltip
+    if (useTooltips && option.description) {
+      return (
+                 <Tooltip
+           key={option.value}
+           content={option.description}
+           delay={200}
+         >
+          {button}
+        </Tooltip>
+      );
+    }
+
+    return button;
   };
 
   return (
@@ -142,20 +177,7 @@ const OptionGrid: React.FC<OptionGridProps> = ({
         aria-label={ariaLabel}
         aria-invalid={!!error}
       >
-        {options.map((option) => (
-          <button
-            key={option.value}
-            onClick={() => !disabled && !option.disabled && onSelect(option.value)}
-            className={getButtonClass(option)}
-            disabled={disabled || option.disabled}
-            aria-pressed={multiple ? isSelected(option.value) : undefined}
-            aria-checked={!multiple ? isSelected(option.value) : undefined}
-            role={multiple ? 'button' : 'radio'}
-            aria-describedby={error ? `${option.value}-error` : undefined}
-          >
-            {renderOption(option)}
-          </button>
-        ))}
+        {options.map((option) => renderButtonWithTooltip(option))}
       </div>
       
       {error && (

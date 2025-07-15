@@ -1,6 +1,7 @@
 import React from 'react';
 import { StepProps } from '../../types/profile.types';
 import { OptionGrid, OptionConfig } from '../../shared';
+import { Tooltip } from '../../../shared';
 import ProfileHeader from '../ProfileHeader';
 
 const ExperienceStep: React.FC<StepProps> = ({ 
@@ -12,17 +13,17 @@ const ExperienceStep: React.FC<StepProps> = ({
     {
       value: 'Beginner',
       label: 'New to Exercise',
-      description: 'New to fitness or returning after a break'
+      description: 'New to fitness or returning after a break. We\'ll focus on building basic habits and proper form with gentle progression.'
     },
     {
       value: 'Intermediate',
       label: 'Some Experience',
-      description: 'Regular exercise routine for 6+ months'
+      description: 'Regular exercise routine for 6+ months. You\'re comfortable with basic movements and ready for more structured programming.'
     },
     {
       value: 'Advanced',
       label: 'Advanced Athlete',
-      description: 'Consistent training for 2+ years'
+      description: 'Consistent training for 2+ years with solid technique. You\'re ready for complex programming and advanced training methods.'
     }
   ];
 
@@ -30,22 +31,22 @@ const ExperienceStep: React.FC<StepProps> = ({
     {
       value: 'sedentary',
       label: 'SEDENTARY',
-      description: 'Little to no activity; mostly sitting with minimal or no exercise.'
+      description: 'Little to no physical activity beyond daily living. Mostly sitting with minimal or no structured exercise.'
     },
     {
       value: 'light',
       label: 'LIGHT ACTIVITY',
-      description: 'Occasional light activity like walking, gardening, or housework.'
+      description: 'Occasional light activities like leisurely walking, light housework, or gentle stretching 1-2 times per week.'
     },
     {
       value: 'moderate',
       label: 'MODERATELY ACTIVE',
-      description: 'Regular light to moderate activity 3–4 times a week, such as walking or cycling.'
+      description: 'Regular light to moderate activity 3-4 times per week such as brisk walking, cycling, or recreational sports.'
     },
     {
       value: 'very',
       label: 'VERY ACTIVE',
-      description: 'Daily intense activity such as running, HIIT, competitive sports, or physical labor.'
+      description: 'Consistent daily activity including structured exercise, sports, or physically demanding work. You prioritize fitness in your routine.'
     }
   ];
 
@@ -53,13 +54,22 @@ const ExperienceStep: React.FC<StepProps> = ({
     <div className="space-y-8">
       <ProfileHeader 
         title="Experience & Activity"
-        description="Help us understand your current fitness level and activity patterns"
+        description="Help us understand your current fitness level and activity patterns to create the perfect workout plan"
       />
 
       <div className="space-y-8">
         <div>
-          <div className="inline-block px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-medium rounded-md shadow-sm mb-4">
-            Experience Level
+          <div className="flex items-center gap-2 mb-4">
+            <div className="inline-block px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-medium rounded-md shadow-sm">
+              Experience Level
+            </div>
+            <Tooltip 
+              content="Your fitness experience helps us determine appropriate exercise complexity, intensity progression, and safety considerations for your workouts."
+              showIcon={true}
+              iconClassName="w-4 h-4 text-gray-400 hover:text-blue-500 transition-colors"
+            >
+              <></>
+            </Tooltip>
           </div>
           <OptionGrid
             options={experienceOptions}
@@ -67,33 +77,34 @@ const ExperienceStep: React.FC<StepProps> = ({
             onSelect={(value: string) => onInputChange('experienceLevel', value)}
             columns={3}
             variant="default"
+            useTooltips={true}
             error={getFieldError ? getFieldError('experienceLevel') : undefined}
             aria-label="Select your fitness experience level"
           />
         </div>
 
-        <div>
-          <div className="space-y-4">
+                <div>
+          <div className="flex items-center gap-2 mb-4">
             <div className="inline-block px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-medium rounded-md shadow-sm">
               Physical Activity Assessment
             </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-blue-900 mb-2">
-                How would you best describe your <span className="uppercase font-bold">physical activity</span> over the last 90 days?
-              </h3>
-              <p className="text-sm text-blue-700">
-                Please select the option that most accurately represents your typical activity level over the past 3 months.
-              </p>
-            </div>
+            <Tooltip 
+              content="How would you best describe your physical activity over the last 90 days? Please select the option that most accurately represents your typical activity level over the past 3 months."
+              showIcon={true}
+              iconClassName="w-4 h-4 text-gray-400 hover:text-blue-500 transition-colors"
+            >
+              <></>
+            </Tooltip>
           </div>
           
-          <div className="mt-4">
+          <div>
             <OptionGrid
               options={physicalActivityOptions}
               selectedValues={profileData.physicalActivity}
               onSelect={(value: string) => onInputChange('physicalActivity', value)}
-              columns={3}
+              columns={2}
               variant="default"
+              useTooltips={true}
               error={getFieldError ? getFieldError('physicalActivity') : undefined}
               aria-label="Select your current physical activity level"
             />
@@ -110,7 +121,7 @@ const ExperienceStep: React.FC<StepProps> = ({
                 </svg>
               </div>
               <span className="text-green-800 font-medium">
-                Great! We'll tailor your workout recommendations based on your {profileData.experienceLevel.toLowerCase()} level and your recent activity patterns.
+                Perfect! We'll tailor your workout recommendations based on your {profileData.experienceLevel.toLowerCase()} level and your recent activity patterns.
               </span>
             </div>
           </div>
