@@ -11,11 +11,18 @@ export type ProfileData = {
   
   // Exercise Preferences
   workoutType: 'strength' | 'cardio' | 'flexibility' | 'mixed';
-  preferredActivities: Array<'Running' | 'Walking' | 'Cycling' | 'Swimming' | 'Yoga' | 'Pilates' | 'Weight Lifting' | 'Bodyweight' | 'Dancing' | 'Sports' | 'Hiking' | 'Martial Arts'>;
-  availableEquipment: Array<'None (Bodyweight)' | 'Dumbbells' | 'Resistance Bands' | 'Yoga Mat' | 'Pull-up Bar' | 'Kettlebells' | 'Barbell' | 'Gym Access'>;
+  preferredActivities: Array<'Running/Jogging' | 'Swimming' | 'Cycling/Mountain Biking' |
+    'Yoga' | 'Pilates' | 'Hiking' | 'Dancing' |
+    'Team Sports' | 'Golf' | 'Martial Arts'>;
+  availableEquipment: Array<'Gym Membership' | 'Home Gym' | 'Dumbbells or Free Weights' |
+    'Resistance Bands' | 'Treadmill or Cardio Machines' | 'Yoga Mat' |
+    'Body Weight' | 'Kettlebells' | 'Access to Parks/Outdoor Spaces' |
+    'Swimming Pool' | 'Mountain Bike' | 'Road Bike (Cycling)'>;
   
   // Goals & Timeline
-  primaryGoal: 'weight-loss' | 'muscle-gain' | 'endurance' | 'strength' | 'flexibility' | 'general';
+  primaryGoal: 'Weight Loss' | 'Strength' | 'Cardio Health' | 'Flexibility & Mobility' |
+    'General Health' | 'Muscle Gain' | 'Athletic Performance' | 'Energy Levels' |
+    'Body Toning' | 'Sleep Quality' | 'Stress Reduction' | 'Functional Fitness';
   goalTimeline: '1 month' | '3 months' | '6 months' | '1 year+';
   
   // Personal Information
@@ -25,8 +32,9 @@ export type ProfileData = {
   gender: 'male' | 'female' | 'other' | 'prefer-not-to-say';
   
   // Health & Safety
-  hasCardiovascularConditions: 'No' | 'Yes - cleared for exercise' | 'Yes - need medical clearance' | 'Prefer not to answer';
-  injuries: Array<'None' | 'Back' | 'Knee' | 'Shoulder' | 'Ankle' | 'Wrist' | 'Hip' | 'Neck' | 'Elbow' | 'Other'>;
+  hasCardiovascularConditions: 'No' | 'Yes - but cleared for exercise' | 'Yes - and need medical clearance' | 'Prefer not to answer';
+  injuries: Array<'No Injuries' | 'Lower Back' | 'Knee' | 'Shoulder' | 'Neck' |
+    'Ankle' | 'Wrist or Elbow' | 'Hip' | 'Foot or Arch'>;
 };
 
 export type StepValidationErrors = Record<string, string[]>;

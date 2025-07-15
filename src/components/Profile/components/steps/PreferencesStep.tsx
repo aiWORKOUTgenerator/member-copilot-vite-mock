@@ -1,77 +1,151 @@
 import React from 'react';
 import { Activity } from 'lucide-react';
 import { StepProps } from '../../types/profile.types';
-import { SectionHeader } from '../../../shared';
 import { OptionGrid, OptionConfig } from '../../shared';
+import { Tooltip } from '../../../shared';
+import ProfileHeader from '../ProfileHeader';
 
 const PreferencesStep: React.FC<StepProps> = ({ 
   profileData, 
-  onInputChange,
   onArrayToggle,
-  getFieldError,
-  validateField
+  getFieldError
 }) => {
-  const workoutTypeOptions: OptionConfig[] = [
-    { value: 'strength', label: 'Strength Training', description: 'Build muscle and power' },
-    { value: 'cardio', label: 'Cardiovascular', description: 'Improve heart health and endurance' },
-    { value: 'flexibility', label: 'Flexibility & Mobility', description: 'Enhance range of motion' },
-    { value: 'mixed', label: 'Mixed Training', description: 'Combination of all types' }
-  ];
-
   const activityOptions: OptionConfig[] = [
-    { value: 'Running', label: 'Running' },
-    { value: 'Walking', label: 'Walking' },
-    { value: 'Cycling', label: 'Cycling' },
-    { value: 'Swimming', label: 'Swimming' },
-    { value: 'Yoga', label: 'Yoga' },
-    { value: 'Pilates', label: 'Pilates' },
-    { value: 'Weight Lifting', label: 'Weight Lifting' },
-    { value: 'Bodyweight', label: 'Bodyweight' },
-    { value: 'Dancing', label: 'Dancing' },
-    { value: 'Sports', label: 'Sports' },
-    { value: 'Hiking', label: 'Hiking' },
-    { value: 'Martial Arts', label: 'Martial Arts' }
+    { 
+      value: 'Running/Jogging', 
+      label: 'Running/Jogging',
+      description: 'Cardiovascular exercise at various paces, from casual jogging to intense running, great for endurance and heart health'
+    },
+    { 
+      value: 'Swimming', 
+      label: 'Swimming',
+      description: 'Full-body, low-impact workout in the water, excellent for cardio and muscle conditioning'
+    },
+    { 
+      value: 'Cycling/Mountain Biking', 
+      label: 'Cycling/Mountain Biking',
+      description: 'Road cycling or off-road biking for cardio, leg strength, and outdoor adventure'
+    },
+    { 
+      value: 'Yoga', 
+      label: 'Yoga',
+      description: 'Mind-body practice combining physical postures, breathing techniques, and meditation'
+    },
+    { 
+      value: 'Pilates', 
+      label: 'Pilates',
+      description: 'Core-strengthening exercises focusing on control, precision, and flowing movement patterns'
+    },
+    { 
+      value: 'Hiking', 
+      label: 'Hiking',
+      description: 'Outdoor walking on natural terrain, combining cardio with the benefits of nature'
+    },
+    { 
+      value: 'Dancing', 
+      label: 'Dancing',
+      description: 'Rhythmic movement including styles like Zumba, Hip-Hop, and other dance fitness formats'
+    },
+    { 
+      value: 'Team Sports', 
+      label: 'Team Sports',
+      description: 'Group activities like Basketball, Soccer, or Softball that combine fitness with social interaction'
+    },
+    { 
+      value: 'Golf', 
+      label: 'Golf',
+      description: 'Precision sport combining walking, core rotation, and focused movement patterns'
+    },
+    { 
+      value: 'Martial Arts', 
+      label: 'Martial Arts',
+      description: 'Combat sports and self-defense practices that build strength, flexibility, and mental discipline'
+    }
   ];
 
   const equipmentOptions: OptionConfig[] = [
-    { value: 'None (Bodyweight)', label: 'None (Bodyweight)' },
-    { value: 'Dumbbells', label: 'Dumbbells' },
-    { value: 'Resistance Bands', label: 'Resistance Bands' },
-    { value: 'Yoga Mat', label: 'Yoga Mat' },
-    { value: 'Pull-up Bar', label: 'Pull-up Bar' },
-    { value: 'Kettlebells', label: 'Kettlebells' },
-    { value: 'Barbell', label: 'Barbell' },
-    { value: 'Gym Access', label: 'Gym Access' }
+    { 
+      value: 'Gym Membership', 
+      label: 'Gym Membership',
+      description: 'Full access to a commercial gym facility with various equipment and amenities'
+    },
+    { 
+      value: 'Home Gym', 
+      label: 'Home Gym',
+      description: 'Dedicated workout space with weights, machines, and other exercise equipment'
+    },
+    { 
+      value: 'Dumbbells or Free Weights', 
+      label: 'Dumbbells or Free Weights',
+      description: 'Various handheld weights for strength training and muscle building'
+    },
+    { 
+      value: 'Resistance Bands', 
+      label: 'Resistance Bands',
+      description: 'Elastic bands providing variable resistance for strength and mobility work'
+    },
+    { 
+      value: 'Treadmill or Cardio Machines', 
+      label: 'Treadmill or Cardio Machines',
+      description: 'Access to treadmill, stationary bike, elliptical, or other cardio equipment'
+    },
+    { 
+      value: 'Yoga Mat', 
+      label: 'Yoga Mat',
+      description: 'Exercise mat with optional accessories like straps, blocks, and blankets for floor work'
+    },
+    { 
+      value: 'Body Weight', 
+      label: 'Body Weight',
+      description: 'No equipment needed - exercises using your own body weight for resistance'
+    },
+    { 
+      value: 'Kettlebells', 
+      label: 'Kettlebells',
+      description: 'Weighted bells for dynamic strength training and conditioning exercises'
+    },
+    { 
+      value: 'Parks/Outdoor Spaces', 
+      label: 'Parks/Outdoor Spaces',
+      description: 'Outdoor areas suitable for exercise, including trails, parks, and recreation spaces'
+    },
+    { 
+      value: 'Swimming Pool', 
+      label: 'Swimming Pool',
+      description: 'Access to a pool for swimming laps and water-based exercises'
+    },
+    { 
+      value: 'Mountain Bike', 
+      label: 'Mountain Bike',
+      description: 'Bike suitable for off-road trails and varied terrain'
+    },
+    { 
+      value: 'Road Bike (Cycling)', 
+      label: 'Road Bike (Cycling)',
+      description: 'Bike designed for road cycling and endurance training'
+    }
   ];
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg">
-          <Activity className="w-6 h-6 text-white" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-800">Exercise Preferences & Resources</h2>
-      </div>
+      <ProfileHeader 
+        title="Exercise Preferences & Resources"
+        description="Tell us about the activities you enjoy and the equipment you have access to"
+      />
 
       <div className="space-y-6">
         <div>
-          <div className="inline-block px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white text-sm font-medium rounded-md shadow-sm mb-4">
-            Preferred Workout Type
-          </div>
-          <OptionGrid
-            options={workoutTypeOptions}
-            selectedValues={profileData.workoutType}
-            onSelect={(value: string) => onInputChange('workoutType', value)}
-            variant="default"
-            columns={2}
-            error={getFieldError ? getFieldError('workoutType') : undefined}
-            aria-label="Select your preferred workout type"
-          />
-        </div>
-
-        <div>
-          <div className="inline-block px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white text-sm font-medium rounded-md shadow-sm mb-3">
-            Activities You Enjoy (Select all that apply)
+          <div className="flex items-center gap-2 mb-4">
+            <div className="inline-block px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white text-sm font-medium rounded-md shadow-sm">
+              Activities You Enjoy
+            </div>
+            <Tooltip 
+              content="Select activities you enjoy or would like to try. We'll incorporate these into your workout plans to make them more engaging and sustainable."
+              showIcon={true}
+              iconClassName="w-4 h-4 text-gray-400 hover:text-purple-500 transition-colors"
+            >
+              <></>
+            </Tooltip>
           </div>
           <OptionGrid
             options={activityOptions}
@@ -80,14 +154,25 @@ const PreferencesStep: React.FC<StepProps> = ({
             multiple={true}
             columns={3}
             variant="default"
+            useTooltips={true}
+            className="[&_button]:w-full"
             error={getFieldError ? getFieldError('preferredActivities') : undefined}
             aria-label="Select activities you enjoy"
           />
         </div>
 
         <div>
-          <div className="inline-block px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white text-sm font-medium rounded-md shadow-sm mb-3">
-            Available Equipment
+          <div className="flex items-center gap-2 mb-4">
+            <div className="inline-block px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white text-sm font-medium rounded-md shadow-sm">
+              Available Equipment
+            </div>
+            <Tooltip 
+              content="Select all equipment you have regular access to. This helps us create workouts that match your available resources."
+              showIcon={true}
+              iconClassName="w-4 h-4 text-gray-400 hover:text-purple-500 transition-colors"
+            >
+              <></>
+            </Tooltip>
           </div>
           <OptionGrid
             options={equipmentOptions}
@@ -96,10 +181,24 @@ const PreferencesStep: React.FC<StepProps> = ({
             multiple={true}
             columns={3}
             variant="default"
+            useTooltips={true}
+            className="[&_button]:w-full"
             error={getFieldError ? getFieldError('availableEquipment') : undefined}
             aria-label="Select your available equipment"
           />
         </div>
+
+        {/* Progress Indication */}
+        {profileData.preferredActivities.length > 0 && profileData.availableEquipment.length > 0 && (
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center">
+              <Activity className="w-5 h-5 text-green-600 mr-3" />
+              <span className="text-green-800 font-medium">
+                Great! We'll create workouts based on your preferred activities and available equipment.
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

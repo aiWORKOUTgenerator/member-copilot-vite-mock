@@ -1,7 +1,27 @@
 import { useCallback, useMemo, useState } from 'react';
 import { usePersistedState } from '../../../hooks/usePersistedState';
 import { ProfileData, ProfileFormHookReturn } from '../types/profile.types';
-import { getCompletionPercentage, defaultProfileData } from '../schemas/profileSchema';
+import { calculateCompletionPercentage } from '../utils/profileHelpers';
+
+// Default profile data with empty values
+const defaultProfileData: ProfileData = {
+  experienceLevel: '' as ProfileData['experienceLevel'],
+  physicalActivity: '' as ProfileData['physicalActivity'],
+  preferredDuration: '' as ProfileData['preferredDuration'],
+  timeCommitment: '' as ProfileData['timeCommitment'],
+  intensityLevel: '' as ProfileData['intensityLevel'],
+  workoutType: '' as ProfileData['workoutType'],
+  preferredActivities: [],
+  availableEquipment: [],
+  primaryGoal: '' as ProfileData['primaryGoal'],
+  goalTimeline: '' as ProfileData['goalTimeline'],
+  age: '' as ProfileData['age'],
+  height: '',
+  weight: '',
+  gender: '' as ProfileData['gender'],
+  hasCardiovascularConditions: '' as ProfileData['hasCardiovascularConditions'],
+  injuries: []
+};
 
 export const useProfileForm = (): ProfileFormHookReturn => {
   const [profileData, setProfileData] = usePersistedState<ProfileData>(
@@ -40,50 +60,6 @@ export const useProfileForm = (): ProfileFormHookReturn => {
     setProfileData(defaultProfileData);
   }, [setProfileData]);
 
-  // Calculate completion status
-  const isComplete = useMemo(() => {
-    const requiredFields: (keyof ProfileData)[] = [
-      'experienceLevel',
-      'physicalActivity', 
-      'preferredDuration',
-      'timeCommitment',
-      'intensityLevel',
-      'workoutType',
-      'primaryGoal',
-      'goalTimeline',
-      'age',
-      'gender',
-      'hasCardiovascularConditions'
-    ];
-
-    const requiredArrayFields: (keyof ProfileData)[] = [
-      'preferredActivities',
-      'availableEquipment',
-      'injuries'
-    ];
-
-    // Check required string fields
-    const stringFieldsComplete = requiredFields.every(field => {
-      const value = profileData[field] as string;
-      return value && value.trim().length > 0;
-    });
-
-    // Check required array fields (must have at least one item)
-    const arrayFieldsComplete = requiredArrayFields.every(field => {
-      const value = profileData[field] as string[];
-      return Array.isArray(value) && value.length > 0;
-    });
-
-    // Check height and weight (optional but if started, should be completed)
-    const heightWeight = profileData.height && profileData.weight;
-
-    return stringFieldsComplete && arrayFieldsComplete && heightWeight;
-  }, [profileData]);
-
-  const getCompletionPercentageValue = useCallback(() => {
-    return getCompletionPercentage(profileData);
-  }, [profileData]);
-
   // Step validation logic
   const validateStep = useCallback((step: number): boolean => {
     switch (step) {
@@ -96,10 +72,20 @@ export const useProfileForm = (): ProfileFormHookReturn => {
       case 4:
         return !!(profileData.primaryGoal && profileData.goalTimeline);
       case 5:
-        return !!(profileData.age && profileData.gender && profileData.hasCardiovascularConditions);
+        return !!(profileData.age && profileData.gender && profileData.hasCardiovascularConditions && profileData.injuries.length > 0);
       default:
         return false;
     }
+  }, [profileData]);
+
+  // Calculate completion status
+  const isComplete = useMemo(() => {
+    // Use step validation to determine completion
+    return [1, 2, 3, 4, 5].every(step => validateStep(step));
+  }, [validateStep]);
+
+  const getCompletionPercentageValue = useCallback(() => {
+    return calculateCompletionPercentage(profileData);
   }, [profileData]);
 
   // Step completion status
@@ -158,7 +144,7 @@ export const useProfileForm = (): ProfileFormHookReturn => {
     handleInputChange,
     handleArrayToggle,
     resetForm,
-    isComplete: isComplete === 'complete',
+    isComplete,
     getCompletionPercentage: getCompletionPercentageValue,
     currentStep,
     touchedFields,
@@ -167,7 +153,7 @@ export const useProfileForm = (): ProfileFormHookReturn => {
     canProceedToNextStep,
     nextStep,
     prevStep,
-    isProfileComplete: () => isComplete === 'complete',
+    isProfileComplete: () => isComplete,
     getTotalProgress
   };
 }; 

@@ -9,21 +9,27 @@ export const profileSchema = z.object({
   // Time & Commitment
   preferredDuration: z.enum(['15-30 min', '30-45 min', '45-60 min', '60+ min']).describe('Please select your preferred workout duration'),
   timeCommitment: z.enum(['2-3', '3-4', '4-5', '6-7']).describe('Please select your time commitment'),
-  intensityLevel: z.enum(['low', 'moderate', 'high']).describe('Please select your target intensity level'),
+  intensityLevel: z.enum(['lightly', 'light-moderate', 'moderately', 'active', 'very', 'extremely']).describe('Please select your target intensity level'),
   
   // Exercise Preferences
-  workoutType: z.enum(['strength', 'cardio', 'flexibility', 'mixed']).describe('Please select your preferred workout type'),
   preferredActivities: z.array(z.enum([
-    'Running', 'Walking', 'Cycling', 'Swimming', 'Yoga', 'Pilates',
-    'Weight Lifting', 'Bodyweight', 'Dancing', 'Sports', 'Hiking', 'Martial Arts'
+    'Running/Jogging', 'Swimming', 'Cycling/Mountain Biking',
+    'Yoga', 'Pilates', 'Hiking', 'Dancing',
+    'Team Sports', 'Golf', 'Martial Arts'
   ])).min(1, 'Please select at least one preferred activity'),
   availableEquipment: z.array(z.enum([
-    'None (Bodyweight)', 'Dumbbells', 'Resistance Bands', 'Yoga Mat',
-    'Pull-up Bar', 'Kettlebells', 'Barbell', 'Gym Access'
+    'Gym Membership', 'Home Gym', 'Dumbbells or Free Weights',
+    'Resistance Bands', 'Treadmill or Cardio Machines', 'Yoga Mat',
+    'Body Weight', 'Kettlebells', 'Access to Parks/Outdoor Spaces',
+    'Swimming Pool', 'Mountain Bike', 'Road Bike (Cycling)'
   ])).min(1, 'Please select your available equipment'),
   
   // Goals
-  primaryGoal: z.enum(['weight-loss', 'muscle-gain', 'endurance', 'strength', 'flexibility', 'general']).describe('Please select your primary goal'),
+  primaryGoal: z.enum([
+    'Weight Loss', 'Strength', 'Cardio Health', 'Flexibility & Mobility',
+    'General Health', 'Muscle Gain', 'Athletic Performance', 'Energy Levels',
+    'Body Toning', 'Sleep Quality', 'Stress Reduction', 'Functional Fitness'
+  ]).describe('Please select your primary goal'),
   goalTimeline: z.enum(['1 month', '3 months', '6 months', '1 year+']).describe('Please select your goal timeline'),
   
   // Personal Info
@@ -40,9 +46,9 @@ export const profileSchema = z.object({
     'Prefer not to answer'
   ]).describe('Please answer the cardiovascular health question'),
   injuries: z.array(z.enum([
-    'None', 'Back', 'Knee', 'Shoulder', 'Ankle', 'Wrist',
-    'Hip', 'Neck', 'Elbow', 'Other'
-  ])).min(1, 'Please indicate any current injuries or select "None"')
+    'No Injuries', 'Lower Back', 'Knee', 'Shoulder', 'Neck',
+    'Ankle', 'Wrist or Elbow', 'Hip', 'Foot or Arch'
+  ])).min(1, 'Please indicate any current injuries or select "No Injuries"')
 });
 
 // Step-specific validation schemas for progressive validation
@@ -57,7 +63,6 @@ export const stepSchemas = {
     intensityLevel: true
   }),
   3: profileSchema.pick({
-    workoutType: true,
     preferredActivities: true,
     availableEquipment: true
   }),
@@ -185,7 +190,6 @@ export const getStepForField = (field: keyof ProfileData): number => {
     preferredDuration: 2,
     timeCommitment: 2,
     intensityLevel: 2,
-    workoutType: 3,
     preferredActivities: 3,
     availableEquipment: 3,
     primaryGoal: 4,
@@ -240,16 +244,15 @@ export const defaultProfileData: ProfileData = {
   physicalActivity: 'sedentary',
   preferredDuration: '30-45 min',
   timeCommitment: '2-3',
-  intensityLevel: 'low',
-  workoutType: 'mixed',
+  intensityLevel: 'lightly',
   preferredActivities: [],
   availableEquipment: [],
-  primaryGoal: 'general',
+  primaryGoal: 'General Health',
   goalTimeline: '3 months',
   age: '26-35',
   height: '',
   weight: '',
   gender: 'prefer-not-to-say',
   hasCardiovascularConditions: 'No',
-  injuries: ['None']
+  injuries: ['No Injuries']
 }; 

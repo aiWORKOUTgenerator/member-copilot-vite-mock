@@ -30,32 +30,32 @@ const ExperienceStep: React.FC<StepProps> = ({
   const physicalActivityOptions: OptionConfig[] = [
     {
       value: 'sedentary',
-      label: 'SEDENTARY',
+      label: 'Sedentary',
       description: 'Little to no physical activity beyond daily living. Mostly sitting with minimal or no structured exercise.'
     },
     {
       value: 'light',
-      label: 'LIGHT ACTIVITY',
+      label: 'Light Activity',
       description: 'Occasional light activities like leisurely walking, light housework, or gentle stretching 1-2 times per week.'
     },
     {
       value: 'moderate',
-      label: 'MODERATELY ACTIVE',
+      label: 'Moderately Active',
       description: 'Regular light to moderate activity 3-4 times per week such as brisk walking, cycling, or recreational sports.'
     },
     {
       value: 'very',
-      label: 'VERY ACTIVE',
+      label: 'Very Active',
       description: 'Consistent daily activity including structured exercise, sports, or physically demanding work. You prioritize fitness in your routine.'
     },
     {
       value: 'extremely',
-      label: 'EXTREMELY ACTIVE',
+      label: 'Extremely Active',
       description: 'Intense activity multiple times a day, including athletic training or heavy labor.'
     },
     {
       value: 'varies',
-      label: 'VARIES',
+      label: 'Varies',
       description: 'Activity level changes weekly, from light to intense exercise.'
     }
   ];
