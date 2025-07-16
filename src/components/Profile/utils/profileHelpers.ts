@@ -6,7 +6,7 @@ export const calculateCompletionPercentage = (profileData: ProfileData): number 
   const totalFields = Object.keys(profileData).length;
   let completedFields = 0;
 
-  Object.entries(profileData).forEach(([key, value]) => {
+  Object.values(profileData).forEach((value) => {
     if (Array.isArray(value)) {
       if (value.length > 0) completedFields++;
     } else if (typeof value === 'string') {

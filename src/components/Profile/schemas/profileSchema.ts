@@ -104,15 +104,15 @@ export type ProfileStep5Data = z.infer<typeof stepSchemas[5]>;
 export interface ValidationResult {
   success: boolean;
   errors: StepValidationErrors;
-  data?: any;
+  data?: unknown;
 }
 
 // Helper function to convert Zod error to our error format
-const formatZodError = (error: any): StepValidationErrors => {
+const formatZodError = (error: z.ZodError): StepValidationErrors => {
   const errors: StepValidationErrors = {};
   
   if (error.issues) {
-    error.issues.forEach((issue: any) => {
+    error.issues.forEach((issue: z.ZodIssue) => {
       const field = issue.path[0] as string;
       if (!errors[field]) {
         errors[field] = [];
@@ -165,7 +165,7 @@ export const validateFullProfile = (data: ProfileData): ValidationResult => {
 };
 
 // Field-specific validation function
-export const validateField = (field: keyof ProfileData, value: any): ValidationResult => {
+export const validateField = (field: keyof ProfileData, value: unknown): ValidationResult => {
   // Create a minimal schema for just this field
   const fieldSchema = profileSchema.pick({ [field]: true });
   const testData = { [field]: value } as Partial<ProfileData>;

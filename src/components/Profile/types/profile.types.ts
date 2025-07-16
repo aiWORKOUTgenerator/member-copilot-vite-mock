@@ -10,7 +10,6 @@ export type ProfileData = {
   intensityLevel: 'low' | 'moderate' | 'high';
   
   // Exercise Preferences
-  workoutType: 'strength' | 'cardio' | 'flexibility' | 'mixed';
   preferredActivities: Array<'Walking/Power Walking' | 'Running/Jogging' | 'Swimming' | 'Cycling/Mountain Biking' |
     'Rock Climbing/Bouldering' | 'Yoga' | 'Pilates' | 'Hiking' | 'Dancing' |
     'Team Sports' | 'Golf' | 'Martial Arts'>;
@@ -39,10 +38,11 @@ export type ProfileData = {
 
 export type StepValidationErrors = Record<string, string[]>;
 
+// Validation result interface
 export interface ValidationResult {
   success: boolean;
   errors: StepValidationErrors;
-  data?: any;
+  data?: unknown;
 }
 
 export interface StepProps {
@@ -50,7 +50,7 @@ export interface StepProps {
   onInputChange: (field: keyof ProfileData, value: string | string[]) => void;
   onArrayToggle: (field: keyof ProfileData, value: string) => void;
   getFieldError?: (field: keyof ProfileData) => string | undefined;
-  validateField?: (field: keyof ProfileData, value: any) => boolean;
+  validateField?: (field: keyof ProfileData, value: unknown) => boolean;
 }
 
 export interface ProfilePageProps {
@@ -93,7 +93,7 @@ export interface ValidationHookReturn {
   
   // Core validation methods
   validateCurrentStep: (step: number, data: Partial<ProfileData>) => boolean;
-  validateField: (field: keyof ProfileData, value: any, step?: number) => boolean;
+  validateField: (field: keyof ProfileData, value: unknown) => boolean;
   validateComplete: (data: ProfileData) => boolean;
   
   // Error management

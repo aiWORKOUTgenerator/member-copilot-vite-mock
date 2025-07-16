@@ -10,7 +10,6 @@ const defaultProfileData: ProfileData = {
   preferredDuration: '' as ProfileData['preferredDuration'],
   timeCommitment: '' as ProfileData['timeCommitment'],
   intensityLevel: '' as ProfileData['intensityLevel'],
-  workoutType: '' as ProfileData['workoutType'],
   preferredActivities: [],
   availableEquipment: [],
   primaryGoal: '' as ProfileData['primaryGoal'],
@@ -68,7 +67,7 @@ export const useProfileForm = (): ProfileFormHookReturn => {
       case 2:
         return !!(profileData.preferredDuration && profileData.timeCommitment && profileData.intensityLevel);
       case 3:
-        return !!(profileData.workoutType && profileData.preferredActivities.length > 0 && profileData.availableEquipment.length > 0);
+        return !!(profileData.preferredActivities.length > 0 && profileData.availableEquipment.length > 0);
       case 4:
         return !!(profileData.primaryGoal && profileData.goalTimeline);
       case 5:
@@ -96,7 +95,7 @@ export const useProfileForm = (): ProfileFormHookReturn => {
     const stepFields = {
       1: ['experienceLevel', 'physicalActivity'],
       2: ['preferredDuration', 'timeCommitment', 'intensityLevel'],
-      3: ['workoutType', 'preferredActivities', 'availableEquipment'],
+      3: ['preferredActivities', 'availableEquipment'],
       4: ['primaryGoal', 'goalTimeline'],
       5: ['age', 'gender', 'hasCardiovascularConditions', 'injuries']
     };

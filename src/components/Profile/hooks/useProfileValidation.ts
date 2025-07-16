@@ -35,8 +35,8 @@ export const useProfileValidation = (): ValidationHookReturn => {
     return result.success;
   }, []);
 
-  const validateField = useCallback((field: keyof ProfileData, value: any, step?: number): boolean => {
-    const result = validateSingleField(field, value, step);
+  const validateField = useCallback((field: keyof ProfileData, value: unknown): boolean => {
+    const result = validateSingleField(field, value);
     
     // Mark field as touched
     setTouchedFields(prev => new Set(prev).add(field));
