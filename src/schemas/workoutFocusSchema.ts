@@ -2,11 +2,11 @@ import { z } from 'zod';
 
 // Define enum arrays as constants first
 export const WORKOUT_FOCUS_OPTIONS = [
-  'Weight Loss', 'Strength Building', 'Endurance', 'Muscle Gain', 'General Fitness'
-] as const;
-
-export const WORKOUT_INTENSITY_OPTIONS = [
-  'Low Intensity', 'Moderate Intensity', 'High Intensity', 'Maximum Intensity'
+  'Energizing Boost',
+  'Improve Posture',
+  'Stress Reduction',
+  'Quick Sweat',
+  'Gentle Recovery & Mobility'
 ] as const;
 
 export const WORKOUT_TYPE_OPTIONS = [
@@ -25,9 +25,7 @@ export const EQUIPMENT_OPTIONS = [
   'Full Gym', 'Dumbbells', 'Resistance Bands', 'Yoga Mat', 'Bodyweight Only', 'Kettlebell'
 ] as const;
 
-export const ENERGY_LEVEL_OPTIONS = [
-  'Low Energy', 'Moderate Energy', 'High Energy'
-] as const;
+export const ENERGY_LEVEL_OPTIONS = [1, 2, 3, 4, 5] as const;
 
 export const SORENESS_OPTIONS = [
   'No Soreness', 'Back', 'Legs', 'Shoulders', 'Upper Body', 'Lower Body'
@@ -50,7 +48,7 @@ export const EXCLUDE_EXERCISES_OPTIONS = [
 export const workoutFocusSchema = z.object({
   // Basic workout info - allow empty string for unset values
   workoutFocus: z.union([z.enum(WORKOUT_FOCUS_OPTIONS), z.literal('')]),
-  workoutIntensity: z.union([z.enum(WORKOUT_INTENSITY_OPTIONS), z.literal('')]),
+  workoutDuration: z.union([z.number().min(5).max(45), z.literal('')]),
   workoutType: z.union([z.enum(WORKOUT_TYPE_OPTIONS), z.literal('')]),
   duration: z.union([z.enum(DURATION_OPTIONS), z.literal('')]),
   
@@ -61,7 +59,7 @@ export const workoutFocusSchema = z.object({
   equipment: z.array(z.enum(EQUIPMENT_OPTIONS)),
   
   // Current state
-  energyLevel: z.union([z.enum(ENERGY_LEVEL_OPTIONS), z.literal('')]),
+  energyLevel: z.union([z.number().min(1).max(5), z.literal('')]),
   sleepQuality: z.string().default('Good (6-8 hours)'),
   stressLevel: z.string().default('Moderate Stress'),
   
@@ -76,7 +74,7 @@ export const workoutFocusSchema = z.object({
 // Quick workout schema (subset for quick flow)
 export const quickWorkoutSchema = workoutFocusSchema.pick({
   workoutFocus: true,
-  workoutIntensity: true,
+  workoutDuration: true,
   energyLevel: true
 });
 
@@ -84,7 +82,7 @@ export const quickWorkoutSchema = workoutFocusSchema.pick({
 export const workoutSectionSchemas = {
   basics: workoutFocusSchema.pick({
     workoutFocus: true,
-    workoutIntensity: true,
+    workoutDuration: true,
     energyLevel: true
   }),
   details: workoutFocusSchema.pick({
@@ -113,7 +111,7 @@ export type WorkoutPreferencesData = z.infer<typeof workoutSectionSchemas.prefer
 // Default values - using empty strings for unset values to match original behavior
 export const defaultWorkoutFocusData: WorkoutFocusData = {
   workoutFocus: '',
-  workoutIntensity: '',
+  workoutDuration: '',
   workoutType: '',
   duration: '',
   focusAreas: [],
