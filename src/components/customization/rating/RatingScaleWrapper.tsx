@@ -2,6 +2,7 @@ import React from 'react';
 import { RatingScale } from '../../shared/DRYComponents';
 import { CustomizationComponentProps } from '../../../types/core';
 import AIEnhancedRatingScale from './AIEnhancedRatingScale';
+import { AIInsight } from '../../../types/insights';
 
 export interface RatingScaleConfig {
   min: number;
@@ -14,12 +15,6 @@ export interface RatingScaleConfig {
   size: 'sm' | 'md' | 'lg';
   showLabels: boolean;
   showValue: boolean;
-}
-
-export interface AIInsight {
-  type: 'warning' | 'opportunity';
-  message: string;
-  recommendation: string;
 }
 
 export interface RatingScaleWrapperProps extends CustomizationComponentProps<number> {

@@ -3,7 +3,7 @@ import { PenLine, ChevronLeft, ClipboardList, Sparkles, ArrowRight } from 'lucid
 import { PageHeader } from './shared';
 import { QuickWorkoutForm } from './quickWorkout/components';
 import DetailedWorkoutContainer from './DetailedWorkoutContainer';
-import { PerWorkoutOptions } from '../types/enhanced-workout-types';
+import { PerWorkoutOptions, UserProfile, AIRecommendationContext } from '../types/enhanced-workout-types';
 
 interface WorkoutFocusPageProps {
   onNavigate: (page: 'profile' | 'focus' | 'review' | 'results') => void;
@@ -17,6 +17,51 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
 
   const handleOptionsChange = (key: keyof PerWorkoutOptions, value: PerWorkoutOptions[keyof PerWorkoutOptions]) => {
     setOptions(prev => ({ ...prev, [key]: value }));
+  };
+
+  // Mock user profile for demo purposes
+  const mockUserProfile: UserProfile = {
+    fitnessLevel: 'intermediate',
+    goals: ['strength', 'muscle_building'],
+    preferences: {
+      workoutStyle: ['strength_training', 'functional'],
+      timePreference: 'morning',
+      intensityPreference: 'moderate',
+      advancedFeatures: false,
+      aiAssistanceLevel: 'moderate'
+    },
+    limitations: {
+      timeConstraints: 60,
+      equipmentConstraints: ['home_gym']
+    },
+    history: {
+      completedWorkouts: 15,
+      averageDuration: 45,
+      preferredFocusAreas: ['upper_body', 'core'],
+      progressiveEnhancementUsage: {},
+      aiRecommendationAcceptance: 0.7
+    },
+    learningProfile: {
+      prefersSimplicity: false,
+      explorationTendency: 'moderate',
+      feedbackPreference: 'detailed'
+    }
+  };
+
+  // Mock AI context
+  const mockAIContext: AIRecommendationContext = {
+    currentSelections: options,
+    userProfile: mockUserProfile,
+    environmentalFactors: {
+      timeOfDay: 'morning',
+      location: 'home',
+      availableTime: 60
+    },
+    recentActivity: {
+      lastWorkoutDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      lastWorkoutType: 'strength',
+      recoveryStatus: 'full'
+    }
   };
 
   // Selection View
@@ -35,49 +80,49 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
         <div className="max-w-4xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Quick Workout Card */}
-            <div className="group relative bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-8 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 cursor-pointer"
-                 onClick={() => setViewMode('quick')}>
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-blue-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              
+            <div
+              onClick={() => setViewMode('quick')}
+              className="relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 p-8 cursor-pointer group"
+            >
               <div className="relative z-10">
                 <div className="w-16 h-16 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                   <Sparkles className="w-8 h-8 text-white" />
                 </div>
                 
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Quick Workout</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Quick Workout Setup</h3>
                 <p className="text-gray-600 mb-6 leading-relaxed">
-                  Get an instant AI-generated workout based on your profile. Perfect for when you want to jump straight into exercising.
+                  Get a personalized workout in minutes with our streamlined setup process.
                 </p>
                 
                 <div className="space-y-3 mb-8">
                   <div className="flex items-center text-sm text-gray-600">
                     <div className="w-2 h-2 bg-emerald-500 rounded-full mr-3"></div>
-                    Uses your existing profile data
+                    Fast and efficient setup
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <div className="w-2 h-2 bg-emerald-500 rounded-full mr-3"></div>
-                    Minimal additional questions
+                    AI-powered recommendations
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <div className="w-2 h-2 bg-emerald-500 rounded-full mr-3"></div>
-                    Ready in under 2 minutes
+                    Basic customization options
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
-                    Recommended
+                    Beginner Friendly
                   </span>
                   <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all duration-300" />
                 </div>
               </div>
             </div>
 
-            {/* Detailed Workout Focus Card */}
-            <div className="group relative bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-8 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 cursor-pointer"
-                 onClick={() => setViewMode('detailed')}>
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              
+            {/* Detailed Workout Card */}
+            <div
+              onClick={() => setViewMode('detailed')}
+              className="relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 p-8 cursor-pointer group"
+            >
               <div className="relative z-10">
                 <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                   <ClipboardList className="w-8 h-8 text-white" />
@@ -134,6 +179,8 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
       <QuickWorkoutForm
         onNavigate={onNavigate}
         onBack={() => setViewMode('selection')}
+        userProfile={mockUserProfile}
+        aiContext={mockAIContext}
       />
     );
   }
@@ -146,6 +193,8 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
       errors={{}}
       disabled={false}
       onNavigate={onNavigate}
+      userProfile={mockUserProfile}
+      aiContext={mockAIContext}
     />
   );
 };

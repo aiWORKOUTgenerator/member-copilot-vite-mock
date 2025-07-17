@@ -7,9 +7,9 @@ import {
   CustomizationConfig,
   UserProfile,
   PerWorkoutOptions,
-  AIRecommendationContext,
   ValidationResult
 } from '../../types/enhanced-workout-types';
+import { AIRecommendationContext } from '../../types/ai';
 
 // ============================================================================
 // ENHANCED OPTION GRID - Eliminates 60% of repetitive code
@@ -268,11 +268,19 @@ export function RatingScale({
   
   // Generate contextual insights based on rating
   const generateRatingInsights = useCallback((rating: number) => {
+    // Use custom generateInsights function from aiContext if available
+    if (aiContext?.generateInsights) {
+      const customInsights = aiContext.generateInsights(rating);
+      return customInsights.map((insight: { message: string }) => insight.message);
+    }
+    
+    // Fallback to generic insights using the actual rating context
     const insights: string[] = [];
+    const ratingContext = labels.low.toLowerCase();
     
     // Low rating insights
     if (rating <= 2) {
-      insights.push(`Low ${labels.low.toLowerCase()} may impact workout performance`);
+      insights.push(`Low ${ratingContext} may impact workout performance`);
       
       // Cross-component analysis
       if (aiContext?.currentSelections.customization_duration) {
@@ -293,16 +301,17 @@ export function RatingScale({
     
     // High rating insights
     if (rating >= 4) {
-      insights.push(`High ${labels.high.toLowerCase()} - great opportunity for challenging workouts`);
+      insights.push(`High ${ratingContext} - great opportunity for challenging workouts`);
       
-      if (aiContext?.currentSelections.customization_focus === 'recovery') {
+      // Only add energy-specific advice if the rating is actually about energy
+      if (ratingContext.includes('energy') && aiContext?.currentSelections.customization_focus === 'recovery') {
         insights.push('Consider switching to a more intense focus given your high energy');
       }
     }
     
     // Medium rating insights
     if (rating === 3) {
-      insights.push(`Moderate ${labels.low.toLowerCase()} - perfect for balanced training`);
+      insights.push(`Moderate ${ratingContext} - perfect for balanced training`);
     }
     
     return insights;

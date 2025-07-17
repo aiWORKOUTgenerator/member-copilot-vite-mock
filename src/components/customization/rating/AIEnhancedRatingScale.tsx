@@ -2,27 +2,16 @@ import React from 'react';
 import { RatingScale } from '../../shared/DRYComponents';
 import { UserProfile } from '../../../types/user';
 import { AIRecommendationContext } from '../../../types/ai';
-
-interface RatingScaleConfig {
-  min: number;
-  max: number;
-  labels: {
-    low: string;
-    high: string;
-    scale: string[];
-  };
-  size: 'sm' | 'md' | 'lg';
-  showLabels: boolean;
-  showValue: boolean;
-}
+import { RatingConfig } from '../../../types/rating';
+import { AIInsight } from '../../../types/insights';
 
 interface AIEnhancedRatingScaleProps {
   value: number;
   onChange: (value: number) => void;
-  config: RatingScaleConfig;
+  config: RatingConfig;
   userProfile?: UserProfile;
   aiContext?: AIRecommendationContext;
-  onAIInsight?: (insight: any) => void;
+  onAIInsight?: (insight: AIInsight) => void;
 }
 
 const AIEnhancedRatingScale: React.FC<AIEnhancedRatingScaleProps> = ({
@@ -34,25 +23,10 @@ const AIEnhancedRatingScale: React.FC<AIEnhancedRatingScaleProps> = ({
   onAIInsight
 }) => {
   const generateAIInsights = (currentValue: number) => {
-    const insights = [];
-    
-    if (currentValue <= 2) {
-      insights.push({
-        type: 'warning',
-        message: 'Low energy/sleep may affect workout performance',
-        recommendation: 'Consider a shorter or less intense workout'
-      });
+    if (!aiContext?.generateInsights) {
+      return [];
     }
-    
-    if (currentValue >= 4 && userProfile?.goals?.includes('performance')) {
-      insights.push({
-        type: 'opportunity',
-        message: 'High energy/sleep - great for challenging workouts',
-        recommendation: 'Consider adding advanced exercises or longer duration'
-      });
-    }
-    
-    return insights;
+    return aiContext.generateInsights(currentValue);
   };
 
   const handleChange = (newValue: number) => {
@@ -66,6 +40,18 @@ const AIEnhancedRatingScale: React.FC<AIEnhancedRatingScaleProps> = ({
 
   const insights = generateAIInsights(value);
 
+  const getInsightStyles = (type: AIInsight['type']) => {
+    switch (type) {
+      case 'critical_warning':
+        return 'bg-red-50 border-red-200 text-red-800';
+      case 'warning':
+        return 'bg-yellow-50 border-yellow-200 text-yellow-800';
+      case 'opportunity':
+      default:
+        return 'bg-green-50 border-green-200 text-green-800';
+    }
+  };
+
   return (
     <div className="space-y-4">
       <RatingScale
@@ -76,17 +62,12 @@ const AIEnhancedRatingScale: React.FC<AIEnhancedRatingScaleProps> = ({
         aiContext={aiContext}
       />
       
-      {/* AI Insights Display */}
       {insights.length > 0 && (
         <div className="space-y-2">
           {insights.map((insight, index) => (
             <div 
               key={index}
-              className={`p-3 rounded-lg border ${
-                insight.type === 'warning' 
-                  ? 'bg-yellow-50 border-yellow-200 text-yellow-800' 
-                  : 'bg-blue-50 border-blue-200 text-blue-800'
-              }`}
+              className={`p-3 rounded-lg border ${getInsightStyles(insight.type)}`}
             >
               <div className="font-medium">{insight.message}</div>
               <div className="text-sm mt-1">{insight.recommendation}</div>

@@ -60,6 +60,7 @@ export const workoutFocusSchema = z.object({
   
   // Current state
   energyLevel: z.union([z.number().min(1).max(5), z.literal('')]),
+  sorenessLevel: z.union([z.number().min(1).max(10), z.literal('')]),
   sleepQuality: z.string().default('Good (6-8 hours)'),
   stressLevel: z.string().default('Moderate Stress'),
   
@@ -75,7 +76,8 @@ export const workoutFocusSchema = z.object({
 export const quickWorkoutSchema = workoutFocusSchema.pick({
   workoutFocus: true,
   workoutDuration: true,
-  energyLevel: true
+  energyLevel: true,
+  sorenessLevel: true
 });
 
 // Section-based schemas for detailed workflow
@@ -117,6 +119,7 @@ export const defaultWorkoutFocusData: WorkoutFocusData = {
   focusAreas: [],
   equipment: [],
   energyLevel: '',
+  sorenessLevel: '',
   sleepQuality: 'Good (6-8 hours)',
   stressLevel: 'Moderate Stress',
   currentSoreness: [],

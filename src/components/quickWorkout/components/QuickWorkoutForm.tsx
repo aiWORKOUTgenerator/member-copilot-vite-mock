@@ -4,12 +4,21 @@ import { PageHeader } from '../../shared';
 import { WorkoutFocusSection } from './WorkoutFocusSection';
 import { WorkoutDurationSection } from './WorkoutDurationSection';
 import { EnergyLevelSection } from './EnergyLevelSection';
+import { MuscleSorenessSection } from './MuscleSorenessSection';
 import { useQuickWorkoutForm } from '../hooks/useQuickWorkoutForm';
 import { QuickWorkoutFormProps } from '../types/quick-workout.types';
+import { UserProfile, AIRecommendationContext } from '../../../types';
 
-export const QuickWorkoutForm: React.FC<QuickWorkoutFormProps> = ({
+interface EnhancedQuickWorkoutFormProps extends QuickWorkoutFormProps {
+  userProfile?: UserProfile;
+  aiContext?: AIRecommendationContext;
+}
+
+export const QuickWorkoutForm: React.FC<EnhancedQuickWorkoutFormProps> = ({
   onNavigate,
-  onBack
+  onBack,
+  userProfile,
+  aiContext
 }) => {
   const {
     focusData,
@@ -61,18 +70,32 @@ export const QuickWorkoutForm: React.FC<QuickWorkoutFormProps> = ({
           focusData={focusData}
           onInputChange={handleInputChange}
           viewMode={viewMode}
+          userProfile={userProfile}
+          aiContext={aiContext}
         />
         
         <WorkoutDurationSection
           focusData={focusData}
           onInputChange={handleInputChange}
           viewMode={viewMode}
+          userProfile={userProfile}
+          aiContext={aiContext}
         />
         
         <EnergyLevelSection
           focusData={focusData}
           onInputChange={handleInputChange}
           viewMode={viewMode}
+          userProfile={userProfile}
+          aiContext={aiContext}
+        />
+
+        <MuscleSorenessSection
+          focusData={focusData}
+          onInputChange={handleInputChange}
+          viewMode={viewMode}
+          userProfile={userProfile}
+          aiContext={aiContext}
         />
 
         {/* Navigation Buttons */}

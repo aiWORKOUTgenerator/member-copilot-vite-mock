@@ -1,8 +1,36 @@
 import { PerWorkoutOptions } from './core';
 import { UserProfile } from './user';
+import { AIInsight } from './insights';
 
 // AI recommendation context
 export interface AIRecommendationContext {
+  generateInsights?: (value: number) => AIInsight[];
+  generateRatingInsights?: (value: number) => string[];
+  generateFocusInsights?: () => {
+    recommendations: string[];
+    warnings: string[];
+    optimizations: string[];
+  };
+  generateAreaInsights?: () => {
+    recommendations: string[];
+    warnings: string[];
+    optimizations: string[];
+  };
+  generateEquipmentInsights?: () => {
+    recommendations: string[];
+    warnings: string[];
+    optimizations: string[];
+  };
+  generateDurationInsights?: () => {
+    recommendations: string[];
+    warnings: string[];
+    optimizations: string[];
+  };
+  generateTextInsights?: () => {
+    recommendations: string[];
+    warnings: string[];
+    optimizations: string[];
+  };
   currentSelections: Partial<PerWorkoutOptions>;
   userProfile: UserProfile;
   environmentalFactors?: {
@@ -45,16 +73,6 @@ export interface AIAnalysis {
   missingComplements: string[];
   insights: string[];
   recommendations: AIRecommendation[];
-}
-
-// AI insight types
-export interface AIInsight {
-  id: string;
-  category: 'performance' | 'safety' | 'optimization' | 'education';
-  message: string;
-  confidence: number;
-  actionable: boolean;
-  relatedFields?: string[];
 }
 
 // AI validation types

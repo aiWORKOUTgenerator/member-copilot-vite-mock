@@ -8,7 +8,6 @@ import {
   ExcludeExercisesData,
   UserProfile,
   AIRecommendationContext,
-  ValidationResult,
   MigrationUtils
 } from '../types/enhanced-workout-types';
 
@@ -532,24 +531,270 @@ export const aiRecommendationEngine = {
     configKey: string,
     recommendation: string,
     options: PerWorkoutOptions,
-    userProfile: UserProfile
+    userProfile: UserProfile,
+    aiContext?: AIRecommendationContext
   ): any => {
-    // Simple implementation - in real app this would use NLP
-    if (recommendation.includes('reduce') && configKey === 'customization_duration') {
+    // Normalize recommendation text for better matching
+    const normalizedRec = recommendation.toLowerCase();
+    
+    // Use AI context for enhanced recommendations when available
+    const environmentalFactors = aiContext?.environmentalFactors;
+    const recentActivity = aiContext?.recentActivity;
+    const currentSelections = aiContext?.currentSelections || options;
+    
+    // Common variables used across multiple cases
+    const currentTimeOfDay = environmentalFactors?.timeOfDay || 'morning';
+    const userInjuries = userProfile.limitations?.injuries || [];
+    const workoutLocation = environmentalFactors?.location || 'home';
+    
+    switch (configKey) {
+      case 'customization_duration':
+        if (normalizedRec.includes('reduce')) {
       const current = typeof options.customization_duration === 'number' 
         ? options.customization_duration 
         : options.customization_duration?.totalDuration || 45;
-      return Math.max(15, current - 15);
+          // Consider user's fitness level and available time for minimum duration
+          const minDuration = userProfile.fitnessLevel === 'beginner' ? 20 : 15;
+          const availableTime = environmentalFactors?.availableTime;
+          const suggestedDuration = Math.max(minDuration, current - 15);
+          return availableTime ? Math.min(suggestedDuration, availableTime) : suggestedDuration;
+        }
+        if (normalizedRec.includes('increase')) {
+          const current = typeof options.customization_duration === 'number' 
+            ? options.customization_duration 
+            : options.customization_duration?.totalDuration || 30;
+          // Consider user's time constraints and fitness level for maximum duration
+          const maxDuration = userProfile.limitations?.timeConstraints || 
+                            (userProfile.fitnessLevel === 'advanced' ? 90 : 60);
+          const availableTime = environmentalFactors?.availableTime;
+          const suggestedDuration = Math.min(maxDuration, current + 15);
+          return availableTime ? Math.min(suggestedDuration, availableTime) : suggestedDuration;
+        }
+        // Adjust default durations based on fitness level and time of day
+        const isEarlyMorning = currentTimeOfDay === 'morning';
+        if (normalizedRec.includes('30')) {
+          return userProfile.fitnessLevel === 'beginner' ? 20 : (isEarlyMorning ? 25 : 30);
+        }
+        if (normalizedRec.includes('45')) {
+          return userProfile.fitnessLevel === 'beginner' ? 30 : (isEarlyMorning ? 40 : 45);
+        }
+        if (normalizedRec.includes('60')) {
+          return userProfile.fitnessLevel === 'beginner' ? 45 : (isEarlyMorning ? 50 : 60);
+        }
+        break;
+
+      case 'customization_focus':
+        // Consider user's goals, limitations, and recent activity
+        const lastWorkoutType = recentActivity?.lastWorkoutType;
+        const recoveryStatus = recentActivity?.recoveryStatus;
+        
+        // Avoid same focus type if recent workout and poor recovery
+        if (lastWorkoutType && recoveryStatus === 'minimal') {
+          if (normalizedRec.includes(lastWorkoutType)) {
+            return 'recovery';
+          }
+        }
+        
+        // Consider current energy level for focus recommendations
+        if (currentSelections.customization_energy && currentSelections.customization_energy <= 2) {
+          if (normalizedRec.includes('strength') || normalizedRec.includes('power')) {
+            return 'recovery';
+          }
+        }
+        
+        if (userInjuries.length > 0) {
+          if (normalizedRec.includes('strength') || normalizedRec.includes('power')) {
+            return 'recovery';
+          }
+        }
+        if (normalizedRec.includes('flexibility')) return 'flexibility';
+        if (normalizedRec.includes('recovery')) return 'recovery';
+        if (normalizedRec.includes('strength') && userProfile.goals.includes('strength')) return 'strength';
+        if ((normalizedRec.includes('cardio') || normalizedRec.includes('endurance')) && 
+            !userInjuries.includes('cardio')) return 'cardio';
+        if (normalizedRec.includes('power') && userProfile.fitnessLevel === 'advanced') return 'power';
+        if (normalizedRec.includes('weight loss') && userProfile.goals.includes('weight_loss')) return 'weight_loss';
+        break;
+
+      case 'customization_equipment':
+        const equipmentSuggestions = [];
+        // Consider user's equipment constraints, preferences, and location
+        const equipmentConstraints = userProfile.limitations?.equipmentConstraints || [];
+        const hasEquipmentConstraints = equipmentConstraints.length > 0;
+        
+        if (normalizedRec.includes('resistance') && 
+            (!hasEquipmentConstraints || !equipmentConstraints.includes('bands'))) {
+          equipmentSuggestions.push('Resistance Bands');
+        }
+        if ((normalizedRec.includes('dumbbell') || normalizedRec.includes('weights')) &&
+            (!hasEquipmentConstraints || !equipmentConstraints.includes('weights'))) {
+          equipmentSuggestions.push('Dumbbells');
+        }
+        if (normalizedRec.includes('kettlebell') &&
+            (!hasEquipmentConstraints || !equipmentConstraints.includes('kettlebell'))) {
+          equipmentSuggestions.push('Kettlebell');
+        }
+        if (normalizedRec.includes('bodyweight') || hasEquipmentConstraints || workoutLocation === 'outdoor') {
+          equipmentSuggestions.push('Bodyweight Only');
+        }
+        if (normalizedRec.includes('gym') && workoutLocation === 'gym' &&
+            (!hasEquipmentConstraints || !equipmentConstraints.includes('gym'))) {
+          equipmentSuggestions.push('Full Gym');
+        }
+        
+        // Merge with existing equipment
+        const currentEquipment = Array.isArray(options.customization_equipment) 
+          ? options.customization_equipment 
+          : [];
+        return [...new Set([...currentEquipment, ...equipmentSuggestions])];
+
+      case 'customization_energy':
+        // Consider user's typical energy patterns and time of day
+        const timePreference = userProfile.preferences?.timePreference || 'morning';
+        const energyBoost = (timePreference === currentTimeOfDay) ? 1 : 0;
+        
+        if (normalizedRec.includes('low energy')) {
+          return Math.min(5, 2 + energyBoost);
+        }
+        if (normalizedRec.includes('moderate energy')) {
+          return Math.min(5, 3 + energyBoost);
+        }
+        if (normalizedRec.includes('high energy')) {
+          return Math.min(5, 4 + energyBoost);
+        }
+        if (normalizedRec.includes('maximum energy')) return 5;
+        break;
+
+      case 'customization_areas':
+        const areaSuggestions = [];
+        // Consider user's injury history, preferences, and recent activity
+        const lastWorkoutAreas = recentActivity?.lastWorkoutType;
+        
+        // Avoid same areas if recent workout and poor recovery
+        if (lastWorkoutAreas && recoveryStatus === 'minimal') {
+          // Skip areas that were recently worked
+        }
+        
+        if (normalizedRec.includes('upper body') && !userInjuries.includes('upper_body')) {
+          areaSuggestions.push('Upper Body');
+        }
+        if ((normalizedRec.includes('lower body') || normalizedRec.includes('legs')) && 
+            !userInjuries.includes('lower_body')) {
+          areaSuggestions.push('Lower Body');
+        }
+        if (normalizedRec.includes('core') || normalizedRec.includes('abs')) {
+          areaSuggestions.push('Core');
+        }
+        if (normalizedRec.includes('full body') && userInjuries.length === 0) {
+          areaSuggestions.push('Full Body');
+        }
+        if (normalizedRec.includes('cardio') && !userInjuries.includes('cardio')) {
+          areaSuggestions.push('Cardio');
+        }
+        if (normalizedRec.includes('flexibility') || normalizedRec.includes('stretch') || userInjuries.length > 0) {
+          areaSuggestions.push('Flexibility');
+        }
+        
+        // For array-based areas, merge with existing
+        const currentAreas = Array.isArray(options.customization_areas) 
+          ? options.customization_areas 
+          : [];
+        return [...new Set([...currentAreas, ...areaSuggestions])];
+
+      case 'customization_sleep':
+        // Consider user's typical sleep patterns and time of day
+        const isEarlyWorkout = currentTimeOfDay === 'morning';
+        const sleepQuality = recentActivity?.performanceMetrics?.sleepQuality;
+        
+        if (normalizedRec.includes('poor sleep')) {
+          return Math.max(1, (sleepQuality || 1) + (isEarlyWorkout ? -1 : 0));
+        }
+        if (normalizedRec.includes('average sleep')) {
+          return Math.max(1, (sleepQuality || 3) + (isEarlyWorkout ? -1 : 0));
+        }
+        if (normalizedRec.includes('good sleep')) {
+          return Math.min(5, (sleepQuality || 4) + (isEarlyWorkout ? 0 : 1));
+        }
+        if (normalizedRec.includes('excellent sleep')) return 5;
+        break;
+
+      case 'customization_include':
+        // Parse exercise suggestions considering user profile and context
+        const exerciseSuggestions = [];
+        const userLevel = userProfile.fitnessLevel;
+        
+        if (normalizedRec.includes('stretches') || normalizedRec.includes('flexibility')) {
+          exerciseSuggestions.push('Dynamic Stretches', 'Mobility Work');
+        }
+        if (normalizedRec.includes('core')) {
+          if (userLevel === 'beginner') {
+            exerciseSuggestions.push('Basic Planks', 'Modified Crunches');
+          } else {
+            exerciseSuggestions.push('Advanced Core Complex', 'Stability Work');
+          }
+        }
+        if (normalizedRec.includes('cardio') && !userInjuries.includes('cardio')) {
+          if (userLevel === 'beginner') {
+            exerciseSuggestions.push('Walking', 'Modified Jumping Jacks');
+          } else if (workoutLocation === 'outdoor') {
+            exerciseSuggestions.push('Running', 'Sprint Intervals');
+          } else {
+            exerciseSuggestions.push('High Knees', 'Burpees');
+          }
+        }
+        if (normalizedRec.includes('strength') && userInjuries.length === 0) {
+          if (userLevel === 'beginner') {
+            exerciseSuggestions.push('Bodyweight Squats', 'Modified Push-ups');
+          } else {
+            exerciseSuggestions.push('Advanced Compound Movements', 'Plyometrics');
+          }
+        }
+        return exerciseSuggestions;
+
+      case 'customization_exclude':
+        // Parse exercises to exclude based on user limitations and context
+        const excludeSuggestions = [];
+        const contextualInjuries = userInjuries || [];
+        
+        // Always exclude based on injuries
+        contextualInjuries.forEach(injury => {
+          if (injury.includes('knee')) {
+            excludeSuggestions.push('Jumping exercises', 'Deep Squats');
+          }
+          if (injury.includes('back')) {
+            excludeSuggestions.push('Heavy lifting', 'Deadlifts');
+          }
+          if (injury.includes('joint')) {
+            excludeSuggestions.push('High-impact exercises', 'Plyometrics');
+          }
+        });
+        
+        // Add recommendation-based exclusions
+        if (normalizedRec.includes('avoid jumping')) {
+          excludeSuggestions.push('Jumping exercises', 'Plyometrics');
+    }
+        if (normalizedRec.includes('avoid heavy')) {
+          excludeSuggestions.push('Heavy lifting', 'Deadlifts');
+        }
+        if (normalizedRec.includes('avoid high impact')) {
+          excludeSuggestions.push('Running', 'Plyometrics');
+        }
+        
+        // Consider location constraints
+        if (workoutLocation === 'office') {
+          excludeSuggestions.push('Loud exercises', 'Floor exercises');
+        }
+        
+        return [...new Set(excludeSuggestions)]; // Remove duplicates
+
+      default:
+        // For unknown config keys, try to extract useful values
+        console.warn(`parseAIRecommendation: Unknown configKey "${configKey}" for recommendation "${recommendation}"`);
+        break;
     }
     
-    if (recommendation.includes('resistance') && configKey === 'customization_equipment') {
-      return ['resistance_bands', 'bodyweight'];
-    }
-    
-    if (recommendation.includes('flexibility') && configKey === 'customization_focus') {
-      return 'flexibility';
-    }
-    
+    // Return null if no specific parsing could be done
+    // This prevents undefined errors while allowing calling code to handle gracefully
     return null;
   },
 
@@ -568,7 +813,12 @@ export const aiRecommendationEngine = {
     
     if (duration && options.customization_energy && duration > 45 && options.customization_energy <= 2) {
       conflicts.push("Long workout duration conflicts with low energy level");
+      // Consider user's fitness level for optimization suggestions
+      if (userProfile.fitnessLevel === 'beginner') {
+        optimizations.push("Try a 20-minute beginner-friendly workout instead");
+      } else {
       optimizations.push("Reduce duration to 30 minutes or focus on recovery");
+      }
     }
 
     // Equipment vs Focus mismatch
@@ -576,16 +826,64 @@ export const aiRecommendationEngine = {
         options.customization_equipment.includes("Bodyweight Only") && 
         options.customization_focus === 'strength') {
       conflicts.push("Bodyweight-only equipment may limit strength training effectiveness");
+      // Consider user's equipment constraints
+      if (userProfile.limitations?.equipmentConstraints?.includes('weights')) {
+        optimizations.push("Try resistance bands or suspension trainers for strength training");
+      } else {
       optimizations.push("Add resistance bands or weights for better strength gains");
     }
+    }
 
-    // Missing complementary selections
+    // User fitness level vs workout complexity
+    if (userProfile.fitnessLevel === 'beginner' && duration && duration > 60) {
+      conflicts.push("Long workout duration may be too challenging for beginners");
+      optimizations.push("Start with 30-45 minute sessions and gradually increase");
+    }
+
+    // User goals vs workout focus alignment
+    if (userProfile.goals.includes('weight_loss') && options.customization_focus === 'strength') {
+      missingComplements.push("Consider adding cardio elements for weight loss goals");
+    }
+
+    // User injury limitations vs workout areas
+    if (userProfile.limitations?.injuries?.length && options.customization_areas) {
+      const injuries = userProfile.limitations.injuries;
+      const areas = Array.isArray(options.customization_areas) 
+        ? options.customization_areas 
+        : Object.keys(options.customization_areas || {});
+      
+      injuries.forEach(injury => {
+        if (injury.includes('back') && areas.includes('Core')) {
+          conflicts.push("Back injury may conflict with core-focused exercises");
+          optimizations.push("Focus on gentle mobility and avoid heavy core work");
+        }
+        if (injury.includes('knee') && areas.includes('Lower Body')) {
+          conflicts.push("Knee injury may conflict with lower body exercises");
+          optimizations.push("Consider upper body focus or low-impact alternatives");
+        }
+      });
+    }
+
+    // Time constraints vs workout duration
+    if (userProfile.limitations?.timeConstraints && duration && 
+        duration > userProfile.limitations.timeConstraints) {
+      conflicts.push(`Workout duration exceeds your ${userProfile.limitations.timeConstraints} minute limit`);
+      optimizations.push("Consider high-intensity interval training for time efficiency");
+    }
+
+    // Missing complementary selections based on user profile
     if (options.customization_focus === 'strength' && !options.customization_areas) {
       missingComplements.push("Strength training would benefit from specific muscle group targeting");
     }
 
     if (options.customization_energy && options.customization_energy <= 2 && !options.customization_sleep) {
       missingComplements.push("Low energy may be related to sleep quality - consider tracking sleep");
+    }
+
+    // Advanced user without advanced features
+    if (userProfile.fitnessLevel === 'advanced' && 
+        !userProfile.preferences?.advancedFeatures) {
+      missingComplements.push("Advanced users may benefit from enabling detailed customization features");
     }
 
     return { conflicts, optimizations, missingComplements };
