@@ -1,9 +1,14 @@
 import { useState, useMemo } from 'react';
 import { WorkoutFocusData, defaultWorkoutFocusData, quickWorkoutSchema } from '../../../schemas/workoutFocusSchema';
 import { useFormValidation } from '../../../hooks/useFormValidation';
+import { useViewModePreference } from '../../../hooks/useViewModePreference';
 
 export const useQuickWorkoutForm = () => {
   const [focusData, setFocusData] = useState<WorkoutFocusData>(defaultWorkoutFocusData);
+  const [viewMode, toggleViewMode, setViewMode] = useViewModePreference({
+    key: 'quickWorkout',
+    defaultMode: 'complex'
+  });
   const { validate } = useFormValidation(quickWorkoutSchema);
 
   const handleInputChange = (field: keyof WorkoutFocusData, value: string | number) => {
@@ -19,7 +24,10 @@ export const useQuickWorkoutForm = () => {
 
   return {
     focusData,
+    viewMode,
     handleInputChange,
+    toggleViewMode,
+    setViewMode,
     isFormValid
   };
 }; 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, ChevronRight } from 'lucide-react';
+import { Sparkles, ChevronRight, LayoutGrid, LayoutList } from 'lucide-react';
 import { PageHeader } from '../../shared';
 import { WorkoutFocusSection } from './WorkoutFocusSection';
 import { WorkoutDurationSection } from './WorkoutDurationSection';
@@ -13,7 +13,9 @@ export const QuickWorkoutForm: React.FC<QuickWorkoutFormProps> = ({
 }) => {
   const {
     focusData,
+    viewMode,
     handleInputChange,
+    toggleViewMode,
     isFormValid
   } = useQuickWorkoutForm();
 
@@ -26,35 +28,58 @@ export const QuickWorkoutForm: React.FC<QuickWorkoutFormProps> = ({
   return (
     <div className="space-y-8">
       {/* Page Header */}
-      <PageHeader
-        title="Quick Workout Setup"
-        subtitle="Just a few quick questions to generate your personalized workout"
-        icon={Sparkles}
-        gradient="from-emerald-500 to-blue-600"
-      />
+      <div className="flex items-center justify-between">
+        <PageHeader
+          title="Quick Workout Setup"
+          subtitle="Just a few quick questions to generate your personalized workout"
+          icon={Sparkles}
+          gradient="from-emerald-500 to-blue-600"
+        />
+        
+        {/* View Mode Toggle */}
+        <button
+          onClick={toggleViewMode}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+        >
+          {viewMode === 'complex' ? (
+            <>
+              <LayoutList className="w-4 h-4" />
+              <span>Simple View</span>
+            </>
+          ) : (
+            <>
+              <LayoutGrid className="w-4 h-4" />
+              <span>Detailed View</span>
+            </>
+          )}
+        </button>
+      </div>
 
       {/* Quick Form */}
       <div className="space-y-8">
         <WorkoutFocusSection
           focusData={focusData}
           onInputChange={handleInputChange}
+          viewMode={viewMode}
         />
         
         <WorkoutDurationSection
           focusData={focusData}
           onInputChange={handleInputChange}
+          viewMode={viewMode}
         />
         
         <EnergyLevelSection
           focusData={focusData}
           onInputChange={handleInputChange}
+          viewMode={viewMode}
         />
 
         {/* Navigation Buttons */}
         <div className="flex flex-col sm:flex-row gap-4">
           <button
             onClick={onBack}
-            className="px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-all duration-300 border border-gray-300"
+            className="px-6 py-3 font-medium text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors duration-300"
           >
             Back to Options
           </button>

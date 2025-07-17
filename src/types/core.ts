@@ -110,3 +110,8 @@ export interface CustomizationComponentProps<T = unknown> {
   onAIRecommendationApply?: (recommendation: string) => void;
   onAIFeedback?: (feedback: any) => void;
 } 
+
+/**
+ * Represents the view mode for components that support simple/complex views
+ */
+export type ViewMode = 'simple' | 'complex'; 

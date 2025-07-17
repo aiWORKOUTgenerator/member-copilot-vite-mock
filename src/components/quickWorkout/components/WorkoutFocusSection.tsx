@@ -75,39 +75,59 @@ const focusOptions: OptionDefinition<string>[] = [
 
 export const WorkoutFocusSection: React.FC<SectionProps> = ({
   focusData,
-  onInputChange
+  onInputChange,
+  viewMode
 }) => {
   const handleSelect = (value: string) => {
     onInputChange('workoutFocus', value);
   };
 
-  return (
-    <div className="space-y-4">
-      {/* Section Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl">
-            <Target className="w-6 h-6 text-gray-700" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-xl font-semibold text-gray-900">Workout Goal</h3>
-              {focusData.workoutFocus && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  {focusData.workoutFocus}
-                </span>
-              )}
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                Required
+  const renderHeader = () => (
+    <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center gap-3">
+        <div className="p-3 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl">
+          <Target className="w-6 h-6 text-gray-700" />
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="text-xl font-semibold text-gray-900">Workout Goal</h3>
+            {focusData.workoutFocus && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                {focusData.workoutFocus}
               </span>
-            </div>
+            )}
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+              Required
+            </span>
+          </div>
+          {viewMode === 'complex' && (
             <p className="text-sm text-gray-600 mt-1">
               What's your main goal for today's workout?
             </p>
-          </div>
+          )}
         </div>
       </div>
-      
+    </div>
+  );
+
+  const renderSimpleView = () => (
+    <OptionGrid
+      options={focusOptions.map(option => ({
+        value: option.value,
+        label: option.label,
+        metadata: option.metadata ? {
+          icon: option.metadata.icon
+        } : undefined
+      }))}
+      selected={focusData.workoutFocus}
+      onSelect={handleSelect}
+      columns={{ base: 2, sm: 3, md: 3 }}
+      size="sm"
+    />
+  );
+
+  const renderComplexView = () => (
+    <>
       <OptionGrid
         options={focusOptions}
         selected={focusData.workoutFocus}
@@ -133,6 +153,13 @@ export const WorkoutFocusSection: React.FC<SectionProps> = ({
           </div>
         </div>
       </div>
+    </>
+  );
+
+  return (
+    <div className="space-y-4">
+      {renderHeader()}
+      {viewMode === 'simple' ? renderSimpleView() : renderComplexView()}
     </div>
   );
 }; 
