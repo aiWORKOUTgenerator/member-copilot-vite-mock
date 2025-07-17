@@ -1,8 +1,7 @@
 import React from 'react';
-import { Clock } from 'lucide-react';
+import { Clock, AlertCircle } from 'lucide-react';
 import { StepProps } from '../../types/profile.types';
 import { OptionGrid, OptionConfig } from '../../shared';
-import { Tooltip } from '../../../shared';
 import ProfileHeader from '../ProfileHeader';
 
 const TimeCommitmentStep: React.FC<StepProps> = ({ 
@@ -10,6 +9,10 @@ const TimeCommitmentStep: React.FC<StepProps> = ({
   onInputChange,
   getFieldError
 }) => {
+  const [showDurationInfo, setShowDurationInfo] = React.useState(false);
+  const [showCommitmentInfo, setShowCommitmentInfo] = React.useState(false);
+  const [showIntensityInfo, setShowIntensityInfo] = React.useState(false);
+
   const durationOptions: OptionConfig[] = [
     { value: '15-30 min', label: '15-30 min' },
     { value: '30-45 min', label: '30-45 min' },
@@ -60,38 +63,115 @@ const TimeCommitmentStep: React.FC<StepProps> = ({
   return (
     <div className="space-y-8">
       <ProfileHeader 
-        title="Time & Commitment"
-        description="Help us understand how much time you can dedicate to your fitness journey"
+        title="Time & Intensity"
+        description="Help us understand your schedule and preferred workout intensity"
       />
 
       <div className="space-y-8">
         <div>
-          <div className="inline-block px-4 py-2 bg-gradient-to-r from-green-500 to-blue-600 text-white text-sm font-medium rounded-md shadow-sm mb-4">
-            Preferred Workout Duration
+          <div className="flex items-center gap-2 mb-4">
+            <div className="inline-block px-4 py-2 bg-gradient-to-r from-green-500 to-blue-600 text-white text-sm font-medium rounded-md shadow-sm">
+              Preferred Workout Duration
+            </div>
+            <button 
+              onClick={() => setShowDurationInfo(prev => !prev)}
+              className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="Toggle duration information"
+            >
+              <AlertCircle className="w-4 h-4 text-gray-400 hover:text-blue-500 transition-colors" />
+            </button>
           </div>
+
+          {/* Duration Information Panel */}
+          <div className={`mb-6 bg-green-50 border border-green-100 rounded-lg p-6 ${showDurationInfo ? 'block' : 'hidden'}`}>
+            <div className="prose prose-sm max-w-none">
+              <h4 className="text-green-800 font-semibold mb-3">Workout Duration</h4>
+              <p className="text-gray-700 mb-4">
+                Choose how long you'd like your typical workout sessions to last. This helps us design workouts that fit your schedule while meeting your fitness goals.
+              </p>
+              <div className="space-y-2">
+                <p className="text-gray-700">Duration considerations:</p>
+                <ul className="list-none pl-4 space-y-1">
+                  <li className="flex items-start">
+                    <span className="text-green-600 mr-2">•</span>
+                    Includes warm-up and cool-down time
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-green-600 mr-2">•</span>
+                    Can be adjusted based on workout type
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-green-600 mr-2">•</span>
+                    Affects exercise selection and intensity
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
           <OptionGrid
             options={durationOptions}
             selectedValues={profileData.preferredDuration}
             onSelect={(value: string) => onInputChange('preferredDuration', value)}
             variant="default"
             columns={4}
+            className="[&_button]:w-full"
             error={getFieldError ? getFieldError('preferredDuration') : undefined}
             aria-label="Select your preferred workout duration"
           />
         </div>
 
         <div>
-          <div className="inline-block px-4 py-2 bg-gradient-to-r from-green-500 to-blue-600 text-white text-sm font-medium rounded-md shadow-sm mb-4">
-            Time Commitment
+          <div className="flex items-center gap-2 mb-4">
+            <div className="inline-block px-4 py-2 bg-gradient-to-r from-green-500 to-blue-600 text-white text-sm font-medium rounded-md shadow-sm">
+              Weekly Time Commitment
+            </div>
+            <button 
+              onClick={() => setShowCommitmentInfo(prev => !prev)}
+              className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="Toggle commitment information"
+            >
+              <AlertCircle className="w-4 h-4 text-gray-400 hover:text-blue-500 transition-colors" />
+            </button>
           </div>
+
+          {/* Commitment Information Panel */}
+          <div className={`mb-6 bg-green-50 border border-green-100 rounded-lg p-6 ${showCommitmentInfo ? 'block' : 'hidden'}`}>
+            <div className="prose prose-sm max-w-none">
+              <h4 className="text-green-800 font-semibold mb-3">Weekly Commitment</h4>
+              <p className="text-gray-700 mb-4">
+                Select how many days per week you can commit to working out. This helps us create a sustainable schedule that balances progress with recovery.
+              </p>
+              <div className="space-y-2">
+                <p className="text-gray-700">We'll use this to:</p>
+                <ul className="list-none pl-4 space-y-1">
+                  <li className="flex items-start">
+                    <span className="text-green-600 mr-2">•</span>
+                    Plan optimal workout frequency
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-green-600 mr-2">•</span>
+                    Balance exercise and recovery days
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-green-600 mr-2">•</span>
+                    Create a sustainable long-term schedule
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
           <OptionGrid
             options={commitmentOptions}
             selectedValues={profileData.timeCommitment}
             onSelect={(value: string) => onInputChange('timeCommitment', value)}
             variant="default"
-            columns={2}
+            columns={4}
+            useTooltips={true}
+            className="[&_button]:w-full"
             error={getFieldError ? getFieldError('timeCommitment') : undefined}
-            aria-label="Select your time commitment level"
+            aria-label="Select your weekly time commitment"
           />
         </div>
 
@@ -100,14 +180,42 @@ const TimeCommitmentStep: React.FC<StepProps> = ({
             <div className="inline-block px-4 py-2 bg-gradient-to-r from-green-500 to-blue-600 text-white text-sm font-medium rounded-md shadow-sm">
               Target Activity Level
             </div>
-            <Tooltip 
-              content="Choose your target activity level based on the types and intensity of exercises you'd like to do."
-              showIcon={true}
-              iconClassName="w-4 h-4 text-gray-400 hover:text-blue-500 transition-colors"
+            <button 
+              onClick={() => setShowIntensityInfo(prev => !prev)}
+              className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="Toggle intensity information"
             >
-              <></>
-            </Tooltip>
+              <AlertCircle className="w-4 h-4 text-gray-400 hover:text-blue-500 transition-colors" />
+            </button>
           </div>
+
+          {/* Intensity Information Panel */}
+          <div className={`mb-6 bg-green-50 border border-green-100 rounded-lg p-6 ${showIntensityInfo ? 'block' : 'hidden'}`}>
+            <div className="prose prose-sm max-w-none">
+              <h4 className="text-green-800 font-semibold mb-3">Target Activity Level</h4>
+              <p className="text-gray-700 mb-4">
+                Choose your target activity level based on the types and intensity of exercises you'd like to do.
+              </p>
+              <div className="space-y-2">
+                <p className="text-gray-700">This determines:</p>
+                <ul className="list-none pl-4 space-y-1">
+                  <li className="flex items-start">
+                    <span className="text-green-600 mr-2">•</span>
+                    Exercise intensity and complexity
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-green-600 mr-2">•</span>
+                    Progression rate of your workouts
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-green-600 mr-2">•</span>
+                    Recovery needs between sessions
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
           <OptionGrid
             options={intensityOptions}
             selectedValues={profileData.intensityLevel}

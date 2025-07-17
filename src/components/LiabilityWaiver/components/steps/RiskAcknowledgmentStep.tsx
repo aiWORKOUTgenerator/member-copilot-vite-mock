@@ -1,5 +1,5 @@
-import React from 'react';
-import { AlertTriangle, CheckCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react';
 import { StepProps, LiabilityWaiverData } from '../../types/liability-waiver.types';
 
 const RiskAcknowledgmentStep: React.FC<StepProps> = ({ 
@@ -7,6 +7,8 @@ const RiskAcknowledgmentStep: React.FC<StepProps> = ({
   onInputChange,
   getFieldError
 }) => {
+  const [showInfo, setShowInfo] = useState(false);
+
   const renderFieldError = (field: keyof LiabilityWaiverData) => {
     const error = getFieldError ? getFieldError(field) : undefined;
     if (error) {
@@ -45,11 +47,37 @@ const RiskAcknowledgmentStep: React.FC<StepProps> = ({
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-gradient-to-r from-orange-500 to-red-600 rounded-lg">
-          <AlertTriangle className="w-6 h-6 text-white" />
+      <div className="relative">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-gradient-to-r from-orange-500 to-red-600 rounded-lg">
+            <AlertTriangle className="w-6 h-6 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800">Risk Acknowledgment</h2>
+          <button
+            onClick={() => setShowInfo(!showInfo)}
+            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            aria-label="Toggle information"
+          >
+            <AlertCircle className="w-5 h-5 text-orange-600" />
+          </button>
         </div>
-        <h2 className="text-2xl font-bold text-gray-800">Risk Acknowledgment</h2>
+        
+        {showInfo && (
+          <div className="mt-2 p-4 bg-orange-50 border border-orange-100 rounded-lg shadow-sm">
+            <h3 className="text-lg font-semibold text-orange-800 mb-2">Understanding Exercise Risks</h3>
+            <div className="space-y-2 text-sm text-orange-700">
+              <p>This section is crucial because:</p>
+              <ul className="list-disc list-inside space-y-1 ml-4">
+                <li>Exercise carries inherent risks that you need to understand</li>
+                <li>Your acknowledgment protects both you and us legally</li>
+                <li>It ensures you're making an informed decision about participation</li>
+                <li>Helps establish clear expectations and responsibilities</li>
+                <li>Documents your commitment to safe exercise practices</li>
+              </ul>
+              <p className="mt-2">Please read each acknowledgment carefully before proceeding.</p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-6">

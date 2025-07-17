@@ -1,5 +1,5 @@
-import React from 'react';
-import { FileText, CheckCircle, AlertTriangle } from 'lucide-react';
+import React, { useState } from 'react';
+import { FileText, CheckCircle, AlertTriangle, AlertCircle } from 'lucide-react';
 import { StepProps, LiabilityWaiverData } from '../../types/liability-waiver.types';
 
 const ReleaseSignatureStep: React.FC<StepProps> = ({ 
@@ -7,6 +7,8 @@ const ReleaseSignatureStep: React.FC<StepProps> = ({
   onInputChange,
   getFieldError
 }) => {
+  const [showInfo, setShowInfo] = useState(false);
+
   const renderFieldError = (field: keyof LiabilityWaiverData) => {
     const error = getFieldError ? getFieldError(field) : undefined;
     if (error) {
@@ -22,11 +24,37 @@ const ReleaseSignatureStep: React.FC<StepProps> = ({
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-gradient-to-r from-purple-500 to-red-600 rounded-lg">
-          <FileText className="w-6 h-6 text-white" />
+      <div className="relative">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-gradient-to-r from-purple-500 to-red-600 rounded-lg">
+            <FileText className="w-6 h-6 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800">Release & Signature</h2>
+          <button
+            onClick={() => setShowInfo(!showInfo)}
+            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            aria-label="Toggle information"
+          >
+            <AlertCircle className="w-5 h-5 text-purple-600" />
+          </button>
         </div>
-        <h2 className="text-2xl font-bold text-gray-800">Release & Signature</h2>
+        
+        {showInfo && (
+          <div className="mt-2 p-4 bg-purple-50 border border-purple-100 rounded-lg shadow-sm">
+            <h3 className="text-lg font-semibold text-purple-800 mb-2">About Electronic Signatures</h3>
+            <div className="space-y-2 text-sm text-purple-700">
+              <p>Your electronic signature on this document:</p>
+              <ul className="list-disc list-inside space-y-1 ml-4">
+                <li>Is legally binding and equivalent to a handwritten signature</li>
+                <li>Confirms you have read and understood all terms</li>
+                <li>Represents your voluntary agreement to all conditions</li>
+                <li>Cannot be disputed or retracted without proper cause</li>
+                <li>Is securely stored with timestamp verification</li>
+              </ul>
+              <p className="mt-2">Please ensure all information is accurate before signing.</p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-6">

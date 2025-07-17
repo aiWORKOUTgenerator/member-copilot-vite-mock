@@ -1,8 +1,7 @@
 import React from 'react';
-import { Activity } from 'lucide-react';
+import { Activity, AlertCircle } from 'lucide-react';
 import { StepProps } from '../../types/profile.types';
 import { OptionGrid, OptionConfig } from '../../shared';
-import { Tooltip } from '../../../shared';
 import ProfileHeader from '../ProfileHeader';
 
 const PreferencesStep: React.FC<StepProps> = ({ 
@@ -10,6 +9,9 @@ const PreferencesStep: React.FC<StepProps> = ({
   onArrayToggle,
   getFieldError
 }) => {
+  const [showActivitiesInfo, setShowActivitiesInfo] = React.useState(false);
+  const [showEquipmentInfo, setShowEquipmentInfo] = React.useState(false);
+
   const activityOptions: OptionConfig[] = [
     { 
       value: 'Walking/Power Walking', 
@@ -149,14 +151,42 @@ const PreferencesStep: React.FC<StepProps> = ({
             <div className="inline-block px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white text-sm font-medium rounded-md shadow-sm">
               Activities You Enjoy
             </div>
-            <Tooltip 
-              content="Select activities you enjoy or would like to try. We'll incorporate these into your workout plans to make them more engaging and sustainable."
-              showIcon={true}
-              iconClassName="w-4 h-4 text-gray-400 hover:text-purple-500 transition-colors"
+            <button 
+              onClick={() => setShowActivitiesInfo(prev => !prev)}
+              className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="Toggle activities information"
             >
-              <></>
-            </Tooltip>
+              <AlertCircle className="w-4 h-4 text-gray-400 hover:text-purple-500 transition-colors" />
+            </button>
           </div>
+
+          {/* Activities Information Panel */}
+          <div className={`mb-6 bg-purple-50 border border-purple-100 rounded-lg p-6 ${showActivitiesInfo ? 'block' : 'hidden'}`}>
+            <div className="prose prose-sm max-w-none">
+              <h4 className="text-purple-800 font-semibold mb-3">Activities You Enjoy</h4>
+              <p className="text-gray-700 mb-4">
+                Select activities you enjoy or would like to try. We'll incorporate these into your workout plans to make them more engaging and sustainable.
+              </p>
+              <div className="space-y-2">
+                <p className="text-gray-700">Your selections help us:</p>
+                <ul className="list-none pl-4 space-y-1">
+                  <li className="flex items-start">
+                    <span className="text-purple-600 mr-2">•</span>
+                    Create personalized workout plans that match your interests
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-purple-600 mr-2">•</span>
+                    Suggest new activities that align with your preferences
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-purple-600 mr-2">•</span>
+                    Balance variety and familiarity in your routines
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
           <OptionGrid
             options={activityOptions}
             selectedValues={profileData.preferredActivities}
@@ -176,14 +206,42 @@ const PreferencesStep: React.FC<StepProps> = ({
             <div className="inline-block px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white text-sm font-medium rounded-md shadow-sm">
               Available Equipment
             </div>
-            <Tooltip 
-              content="Select all equipment you have regular access to. This helps us create workouts that match your available resources."
-              showIcon={true}
-              iconClassName="w-4 h-4 text-gray-400 hover:text-purple-500 transition-colors"
+            <button 
+              onClick={() => setShowEquipmentInfo(prev => !prev)}
+              className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="Toggle equipment information"
             >
-              <></>
-            </Tooltip>
+              <AlertCircle className="w-4 h-4 text-gray-400 hover:text-purple-500 transition-colors" />
+            </button>
           </div>
+
+          {/* Equipment Information Panel */}
+          <div className={`mb-6 bg-purple-50 border border-purple-100 rounded-lg p-6 ${showEquipmentInfo ? 'block' : 'hidden'}`}>
+            <div className="prose prose-sm max-w-none">
+              <h4 className="text-purple-800 font-semibold mb-3">Available Equipment</h4>
+              <p className="text-gray-700 mb-4">
+                Select all equipment you have regular access to. This helps us create workouts that match your available resources.
+              </p>
+              <div className="space-y-2">
+                <p className="text-gray-700">Why this matters:</p>
+                <ul className="list-none pl-4 space-y-1">
+                  <li className="flex items-start">
+                    <span className="text-purple-600 mr-2">•</span>
+                    Ensures workouts only use equipment you have access to
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-purple-600 mr-2">•</span>
+                    Helps optimize exercise selection for your setup
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-purple-600 mr-2">•</span>
+                    Allows for alternative suggestions when equipment is limited
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
           <OptionGrid
             options={equipmentOptions}
             selectedValues={profileData.availableEquipment}

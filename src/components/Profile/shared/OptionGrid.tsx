@@ -159,7 +159,7 @@ const OptionGrid: React.FC<OptionGridProps> = ({
                  <Tooltip
            key={option.value}
            content={option.description}
-           delay={200}
+           delay={2000}
          >
           {button}
         </Tooltip>

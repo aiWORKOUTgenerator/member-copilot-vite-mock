@@ -10,23 +10,29 @@ interface TooltipProps {
   maxWidth?: string;
   showIcon?: boolean;
   iconClassName?: string;
+  'aria-label'?: string;
 }
+
+// Standard delay for all tooltips
+const TOOLTIP_DELAY = 1000;
 
 const Tooltip: React.FC<TooltipProps> = ({
   content,
   children,
   position = 'bottom',
-  delay = 300,
+  delay = TOOLTIP_DELAY,
   className = '',
   maxWidth = 'max-w-md',
   showIcon = false,
-  iconClassName = 'w-4 h-4 text-gray-400 hover:text-gray-600'
+  iconClassName = 'w-4 h-4 text-gray-400 hover:text-gray-600',
+  'aria-label': ariaLabel
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [actualPosition, setActualPosition] = useState(position);
   const timeoutRef = useRef<NodeJS.Timeout>();
   const tooltipRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
+  const tooltipId = useRef(`tooltip-${Math.random().toString(36).substr(2, 9)}`);
 
   const showTooltip = () => {
     if (timeoutRef.current) {
@@ -93,6 +99,31 @@ const Tooltip: React.FC<TooltipProps> = ({
   };
 
   useEffect(() => {
+    // Handle touch devices
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (isTouchDevice) {
+      const handleTouchStart = (e: TouchEvent) => {
+        const target = e.target as Node;
+        if (triggerRef.current?.contains(target)) {
+          e.preventDefault();
+          if (isVisible) {
+            hideTooltip();
+          } else {
+            showTooltip();
+          }
+        } else if (isVisible && !tooltipRef.current?.contains(target)) {
+          hideTooltip();
+        }
+      };
+
+      document.addEventListener('touchstart', handleTouchStart);
+      return () => {
+        document.removeEventListener('touchstart', handleTouchStart);
+      };
+    }
+  }, [isVisible]);
+
+  useEffect(() => {
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
@@ -147,7 +178,8 @@ const Tooltip: React.FC<TooltipProps> = ({
           className="cursor-help inline-block"
           tabIndex={0}
           role="button"
-          aria-label="More information"
+          aria-label={ariaLabel || "More information"}
+          aria-describedby={isVisible ? tooltipId.current : undefined}
         >
           <Info className={iconClassName} />
         </div>
@@ -155,13 +187,14 @@ const Tooltip: React.FC<TooltipProps> = ({
         {isVisible && (
           <div
             ref={tooltipRef}
+            id={tooltipId.current}
             className={`${getPositionClasses()} ${maxWidth} ${className}`}
             style={{
               opacity: isVisible ? 1 : 0,
               visibility: isVisible ? 'visible' : 'hidden'
             }}
             role="tooltip"
-            aria-live="polite"
+            aria-hidden={!isVisible}
           >
             <div className={getArrowClasses()}></div>
             {content}
@@ -183,7 +216,8 @@ const Tooltip: React.FC<TooltipProps> = ({
         className="cursor-help"
         tabIndex={0}
         role="button"
-        aria-describedby={isVisible ? 'tooltip' : undefined}
+        aria-label={ariaLabel}
+        aria-describedby={isVisible ? tooltipId.current : undefined}
       >
         {children}
       </div>
@@ -191,14 +225,14 @@ const Tooltip: React.FC<TooltipProps> = ({
       {isVisible && (
         <div
           ref={tooltipRef}
-          id="tooltip"
+          id={tooltipId.current}
           className={`${getPositionClasses()} ${maxWidth} ${className}`}
           style={{
             opacity: isVisible ? 1 : 0,
             visibility: isVisible ? 'visible' : 'hidden'
           }}
           role="tooltip"
-          aria-live="polite"
+          aria-hidden={!isVisible}
         >
           <div className={getArrowClasses()}></div>
           {content}

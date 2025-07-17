@@ -1,8 +1,7 @@
 import React from 'react';
-import { Target } from 'lucide-react';
+import { Target, AlertCircle } from 'lucide-react';
 import { StepProps } from '../../types/profile.types';
 import { OptionGrid, OptionConfig } from '../../shared';
-import { Tooltip } from '../../../shared';
 import ProfileHeader from '../ProfileHeader';
 
 const GoalsStep: React.FC<StepProps> = ({ 
@@ -10,6 +9,9 @@ const GoalsStep: React.FC<StepProps> = ({
   onInputChange,
   getFieldError
 }) => {
+  const [showGoalInfo, setShowGoalInfo] = React.useState(false);
+  const [showTimelineInfo, setShowTimelineInfo] = React.useState(false);
+
   const goalOptions: OptionConfig[] = [
     { 
       value: 'Weight Loss', 
@@ -93,14 +95,42 @@ const GoalsStep: React.FC<StepProps> = ({
             <div className="inline-block px-4 py-2 bg-gradient-to-r from-orange-500 to-red-600 text-white text-sm font-medium rounded-md shadow-sm">
               Primary Goal
             </div>
-            <Tooltip 
-              content="Choose your main fitness goal. We'll customize your workout plan to help you achieve this specific objective."
-              showIcon={true}
-              iconClassName="w-4 h-4 text-gray-400 hover:text-orange-500 transition-colors"
+            <button 
+              onClick={() => setShowGoalInfo(prev => !prev)}
+              className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="Toggle goal information"
             >
-              <></>
-            </Tooltip>
+              <AlertCircle className="w-4 h-4 text-gray-400 hover:text-orange-500 transition-colors" />
+            </button>
           </div>
+
+          {/* Goal Information Panel */}
+          <div className={`mb-6 bg-orange-50 border border-orange-100 rounded-lg p-6 ${showGoalInfo ? 'block' : 'hidden'}`}>
+            <div className="prose prose-sm max-w-none">
+              <h4 className="text-orange-800 font-semibold mb-3">Primary Goal</h4>
+              <p className="text-gray-700 mb-4">
+                Choose your main fitness goal. We'll customize your workout plan to help you achieve this specific objective.
+              </p>
+              <div className="space-y-2">
+                <p className="text-gray-700">Your goal will guide:</p>
+                <ul className="list-none pl-4 space-y-1">
+                  <li className="flex items-start">
+                    <span className="text-orange-600 mr-2">•</span>
+                    Exercise selection and programming
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-orange-600 mr-2">•</span>
+                    Workout intensity and progression
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-orange-600 mr-2">•</span>
+                    Recovery and nutrition recommendations
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
           <OptionGrid
             options={goalOptions}
             selectedValues={profileData.primaryGoal}
@@ -119,14 +149,42 @@ const GoalsStep: React.FC<StepProps> = ({
             <div className="inline-block px-4 py-2 bg-gradient-to-r from-orange-500 to-red-600 text-white text-sm font-medium rounded-md shadow-sm">
               Goal Timeline
             </div>
-            <Tooltip 
-              content="Select a realistic timeframe for achieving your primary goal. This helps us pace your progression appropriately."
-              showIcon={true}
-              iconClassName="w-4 h-4 text-gray-400 hover:text-orange-500 transition-colors"
+            <button 
+              onClick={() => setShowTimelineInfo(prev => !prev)}
+              className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="Toggle timeline information"
             >
-              <></>
-            </Tooltip>
+              <AlertCircle className="w-4 h-4 text-gray-400 hover:text-orange-500 transition-colors" />
+            </button>
           </div>
+
+          {/* Timeline Information Panel */}
+          <div className={`mb-6 bg-orange-50 border border-orange-100 rounded-lg p-6 ${showTimelineInfo ? 'block' : 'hidden'}`}>
+            <div className="prose prose-sm max-w-none">
+              <h4 className="text-orange-800 font-semibold mb-3">Goal Timeline</h4>
+              <p className="text-gray-700 mb-4">
+                Select a realistic timeframe for achieving your primary goal. This helps us pace your progression appropriately.
+              </p>
+              <div className="space-y-2">
+                <p className="text-gray-700">Timeline importance:</p>
+                <ul className="list-none pl-4 space-y-1">
+                  <li className="flex items-start">
+                    <span className="text-orange-600 mr-2">•</span>
+                    Sets realistic progression milestones
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-orange-600 mr-2">•</span>
+                    Helps track your progress effectively
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-orange-600 mr-2">•</span>
+                    Ensures sustainable long-term results
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
           <OptionGrid
             options={timelineOptions}
             selectedValues={profileData.goalTimeline}
