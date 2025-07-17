@@ -3,6 +3,8 @@ import { Battery } from 'lucide-react';
 import { SectionProps } from '../types/quick-workout.types';
 import { RatingScaleWrapper } from '../../customization/rating';
 
+const DEFAULT_ENERGY_LEVEL = 3; // Moderate energy level
+
 export const EnergyLevelSection: React.FC<SectionProps> = ({
   focusData,
   onInputChange
@@ -39,7 +41,7 @@ export const EnergyLevelSection: React.FC<SectionProps> = ({
       </div>
       
       <RatingScaleWrapper
-        value={typeof focusData.energyLevel === 'number' ? focusData.energyLevel : 3}
+        value={typeof focusData.energyLevel === 'number' ? focusData.energyLevel : DEFAULT_ENERGY_LEVEL}
         onChange={handleEnergyChange}
         config={{
           min: 1,
