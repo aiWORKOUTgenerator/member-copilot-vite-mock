@@ -39,7 +39,7 @@ export const EnergyLevelSection: React.FC<SectionProps> = ({
       </div>
       
       <RatingScaleWrapper
-        value={typeof focusData.energyLevel === 'number' ? focusData.energyLevel : undefined}
+        value={typeof focusData.energyLevel === 'number' ? focusData.energyLevel : 3}
         onChange={handleEnergyChange}
         config={{
           min: 1,

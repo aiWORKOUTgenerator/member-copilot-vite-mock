@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
-import { usePersistedState } from '../../../hooks/usePersistedState';
+import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useEnhancedPersistedState } from '../../../hooks/usePersistedState';
 import { ProfileData, ProfileFormHookReturn } from '../types/profile.types';
 import { calculateCompletionPercentage } from '../utils/profileHelpers';
 
@@ -23,41 +23,76 @@ const defaultProfileData: ProfileData = {
 };
 
 export const useProfileForm = (): ProfileFormHookReturn => {
-  const [profileData, setProfileData] = usePersistedState<ProfileData>(
+  const {
+    state: profileData,
+    setState: setProfileData,
+    metadata,
+    hasUnsavedChanges,
+    createBackup,
+    restoreFromBackup,
+    forceSave
+  } = useEnhancedPersistedState<ProfileData>(
     'profileData', 
-    defaultProfileData
+    defaultProfileData,
+    { debounceDelay: 500 } // Faster debounce for better responsiveness
   );
   
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [touchedFields, setTouchedFields] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
-  const handleInputChange = useCallback((field: keyof ProfileData, value: string | string[]) => {
-    setProfileData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    
-    // Mark field as touched
-    setTouchedFields(prev => {
-      if (!prev.includes(field as string)) {
-        return [...prev, field as string];
-      }
-      return prev;
-    });
+  // Create backup when changing steps
+  useEffect(() => {
+    createBackup();
+  }, [currentStep, createBackup]);
+
+  const handleInputChange = useCallback(async (field: keyof ProfileData, value: string | string[]) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      setProfileData(prev => ({
+        ...prev,
+        [field]: value
+      }));
+      
+      // Mark field as touched
+      setTouchedFields(prev => {
+        if (!prev.includes(field as string)) {
+          return [...prev, field as string];
+        }
+        return prev;
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('An error occurred while updating the form'));
+    } finally {
+      setIsLoading(false);
+    }
   }, [setProfileData]);
 
-  const handleArrayToggle = useCallback((field: keyof ProfileData, value: string) => {
-    const currentArray = profileData[field] as string[];
-    const newArray = currentArray.includes(value)
-      ? currentArray.filter(item => item !== value)
-      : [...currentArray, value];
-    
-    handleInputChange(field, newArray);
+  const handleArrayToggle = useCallback(async (field: keyof ProfileData, value: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const currentArray = profileData[field] as string[];
+      const newArray = currentArray.includes(value)
+        ? currentArray.filter(item => item !== value)
+        : [...currentArray, value];
+      
+      await handleInputChange(field, newArray);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('An error occurred while updating the form'));
+    } finally {
+      setIsLoading(false);
+    }
   }, [profileData, handleInputChange]);
 
   const resetForm = useCallback(() => {
+    createBackup(); // Create backup before reset
     setProfileData(defaultProfileData);
-  }, [setProfileData]);
+  }, [setProfileData, createBackup]);
 
   // Step validation logic
   const validateStep = useCallback((step: number): boolean => {
@@ -152,6 +187,11 @@ export const useProfileForm = (): ProfileFormHookReturn => {
     }
   }, [validateStep]);
 
+  const handleStepChange = useCallback((step: number) => {
+    forceSave(); // Force save before changing steps
+    setStep(step);
+  }, [forceSave, setStep]);
+
   const getFieldError = useCallback((field: keyof ProfileData) => {
     // Simple validation - you can enhance this with more specific error messages
     if (!touchedFields.includes(field as string)) return undefined;
@@ -185,8 +225,13 @@ export const useProfileForm = (): ProfileFormHookReturn => {
     canProceedToNextStep,
     nextStep,
     prevStep,
-    setStep,
+    setStep: handleStepChange,
     isProfileComplete: () => isComplete,
-    getTotalProgress
+    getTotalProgress,
+    isLoading,
+    error,
+    hasUnsavedChanges,
+    lastSaved: metadata.lastSaved,
+    restoreFromBackup
   };
 }; 

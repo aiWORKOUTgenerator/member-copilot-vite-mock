@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { z } from 'zod';
 
 interface ValidationError {
@@ -16,19 +17,33 @@ interface UseFormValidationReturn<T> {
 
 export function useFormValidation<T>(schema: z.ZodSchema<T>): UseFormValidationReturn<T> {
   const [errors, setErrors] = useState<ValidationError[]>([]);
+  const errorsRef = useRef<ValidationError[]>([]);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    errorsRef.current = errors;
+  }, [errors]);
 
   const validate = useCallback((data: T): boolean => {
     try {
       schema.parse(data);
-      setErrors([]);
+      const newErrors: ValidationError[] = [];
+      flushSync(() => {
+        setErrors(newErrors);
+      });
+      errorsRef.current = newErrors;
       return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const validationErrors: ValidationError[] = error.errors.map(err => ({
-          field: err.path.join('.'),
-          message: err.message
+        const validationErrors: ValidationError[] = error.issues.map(issue => ({
+          field: issue.path.join('.'),
+          message: issue.message
         }));
-        setErrors(validationErrors);
+        flushSync(() => {
+          setErrors(validationErrors);
+        });
+        errorsRef.current = validationErrors;
+        return false;
       }
       return false;
     }
@@ -36,37 +51,118 @@ export function useFormValidation<T>(schema: z.ZodSchema<T>): UseFormValidationR
 
   const validateField = useCallback((field: keyof T, value: any): boolean => {
     try {
-      // Create a partial schema for the specific field
-      const fieldSchema = schema.shape[field as string];
-      if (fieldSchema) {
-        fieldSchema.parse(value);
-        // Remove any existing errors for this field
-        setErrors(prev => prev.filter(err => err.field !== String(field)));
-        return true;
+      // For object schemas, extract the field schema and validate directly
+      if (schema instanceof z.ZodObject) {
+        const fieldSchema = (schema as any).shape[field];
+        if (fieldSchema) {
+          fieldSchema.parse(value);
+          // If validation passes, remove any existing errors for this field
+          const newErrors = errorsRef.current.filter(err => err.field !== String(field));
+          flushSync(() => {
+            setErrors(newErrors);
+          });
+          errorsRef.current = newErrors;
+          return true;
+        }
       }
+      
+      // Fallback approach: use safeParse to validate the field
+      const result = schema.safeParse({ [field]: value } as any);
+      
+      if (result.success) {
+        const newErrors = errorsRef.current.filter(err => err.field !== String(field));
+        flushSync(() => {
+          setErrors(newErrors);
+        });
+        errorsRef.current = newErrors;
+        return true;
+      } else {
+        // Find the error for this specific field
+        const fieldError = result.error.issues.find(issue => 
+          issue.path.includes(field as string)
+        );
+        
+        if (fieldError) {
+          const validationError: ValidationError = {
+            field: String(field),
+            message: fieldError.message
+          };
+          
+          const newErrors = [
+            ...errorsRef.current.filter(err => err.field !== String(field)),
+            validationError
+          ];
+          flushSync(() => {
+            setErrors(newErrors);
+          });
+          errorsRef.current = newErrors;
+          return false;
+        }
+      }
+      
+      // If we can't find a specific field error, create a generic one
+      const genericError: ValidationError = {
+        field: String(field),
+        message: 'Invalid value'
+      };
+      
+      const newErrors = [
+        ...errorsRef.current.filter(err => err.field !== String(field)),
+        genericError
+      ];
+      flushSync(() => {
+        setErrors(newErrors);
+      });
+      errorsRef.current = newErrors;
       return false;
     } catch (error) {
+      // Handle direct field validation errors
       if (error instanceof z.ZodError) {
-        const fieldError: ValidationError = {
+        const validationError: ValidationError = {
           field: String(field),
-          message: error.errors[0]?.message || 'Invalid value'
+          message: error.issues[0]?.message || 'Invalid value'
         };
-        setErrors(prev => [
-          ...prev.filter(err => err.field !== String(field)),
-          fieldError
-        ]);
+        
+        const newErrors = [
+          ...errorsRef.current.filter(err => err.field !== String(field)),
+          validationError
+        ];
+        flushSync(() => {
+          setErrors(newErrors);
+        });
+        errorsRef.current = newErrors;
+        return false;
       }
+      
+      // If direct field validation fails, create a generic error
+      const genericError: ValidationError = {
+        field: String(field),
+        message: 'Invalid value'
+      };
+      
+      const newErrors = [
+        ...errorsRef.current.filter(err => err.field !== String(field)),
+        genericError
+      ];
+      flushSync(() => {
+        setErrors(newErrors);
+      });
+      errorsRef.current = newErrors;
       return false;
     }
   }, [schema]);
 
   const clearErrors = useCallback(() => {
-    setErrors([]);
+    flushSync(() => {
+      setErrors([]);
+    });
+    errorsRef.current = [];
   }, []);
 
   const getFieldError = useCallback((field: keyof T): string | undefined => {
-    return errors.find(err => err.field === String(field))?.message;
-  }, [errors]);
+    const error = errorsRef.current.find(err => err.field === String(field));
+    return error?.message;
+  }, []);
 
   return {
     errors,

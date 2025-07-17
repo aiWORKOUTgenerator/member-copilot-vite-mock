@@ -1,9 +1,9 @@
 import React from 'react';
 import { RatingScale } from '../../shared/DRYComponents';
-import { CustomizationComponentProps } from '../../../types/config';
+import { CustomizationComponentProps } from '../../../types/core';
 import AIEnhancedRatingScale from './AIEnhancedRatingScale';
 
-interface RatingScaleConfig {
+export interface RatingScaleConfig {
   min: number;
   max: number;
   labels: {
@@ -16,10 +16,16 @@ interface RatingScaleConfig {
   showValue: boolean;
 }
 
-interface RatingScaleWrapperProps extends CustomizationComponentProps<number> {
+export interface AIInsight {
+  type: 'warning' | 'opportunity';
+  message: string;
+  recommendation: string;
+}
+
+export interface RatingScaleWrapperProps extends CustomizationComponentProps<number> {
   config: RatingScaleConfig;
   enableAI?: boolean;
-  onAIInsight?: (insight: any) => void;
+  onAIInsight?: (insight: AIInsight) => void;
 }
 
 const RatingScaleWrapper: React.FC<RatingScaleWrapperProps> = ({

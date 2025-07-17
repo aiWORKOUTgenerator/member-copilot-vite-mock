@@ -84,6 +84,11 @@ export interface ProfileFormHookReturn {
   setStep: (step: number) => void;
   isProfileComplete: () => boolean;
   getTotalProgress: () => number;
+  isLoading: boolean;
+  error: Error | null;
+  hasUnsavedChanges: boolean;
+  lastSaved: number;
+  restoreFromBackup: () => boolean;
 }
 
 export interface ValidationHookReturn {
