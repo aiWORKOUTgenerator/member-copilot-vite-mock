@@ -45,7 +45,6 @@ export class EquipmentAIService {
     if (!equipment || equipment.length === 0) {
       insights.push(this.createInsight(
         'warning',
-        'warning',
         'No equipment selected. Consider adding equipment for more varied workouts.',
         0.8,
         true,
@@ -83,7 +82,6 @@ export class EquipmentAIService {
     if (categories.length === 1 && categories[0] === 'BODYWEIGHT') {
       return this.createInsight(
         'education',
-        'info',
         'Body weight workouts are excellent for building strength and endurance. Consider adding resistance equipment for progressive overload.',
         0.7,
         true,
@@ -98,7 +96,6 @@ export class EquipmentAIService {
 
     if (categories.length < 2) {
       return this.createInsight(
-        'warning',
         'warning',
         'Limited equipment variety may restrict workout options. Consider adding equipment from different categories.',
         0.6,
@@ -233,7 +230,6 @@ export class EquipmentAIService {
    */
   private createInsight(
     type: AIInsightType,
-    severity: 'info' | 'warning' | 'success' | 'error',
     message: string,
     confidence: number,
     actionable: boolean,
