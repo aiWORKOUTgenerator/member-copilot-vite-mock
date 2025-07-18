@@ -67,9 +67,7 @@ export class EquipmentAIService {
     const complexityInsight = this.analyzeComplexityLevel(equipment, context);
     if (complexityInsight) insights.push(complexityInsight);
 
-    // Analyze space requirements
-    const spaceInsight = this.analyzeSpaceRequirements(equipment, context);
-    if (spaceInsight) insights.push(spaceInsight);
+    // Space requirements analysis removed
 
     // Analyze cost considerations
     const costInsight = this.analyzeCostConsiderations(equipment, context);
@@ -216,35 +214,7 @@ export class EquipmentAIService {
     return null;
   }
 
-  /**
-   * Analyze space requirements
-   */
-  private analyzeSpaceRequirements(equipment: string[], context: GlobalAIContext): AIInsight | null {
-    const location = context.currentSelections?.customization_equipment;
-    if (!location) return null;
 
-    const spaceIntensiveEquipment = ['Treadmill', 'Stationary Bike', 'Rowing Machine', 'Elliptical', 'Squat Rack', 'Cable Machine'];
-    const spaceIntensiveCount = equipment.filter(eq => spaceIntensiveEquipment.includes(eq)).length;
-
-    if (location === 'home' && spaceIntensiveCount > 1) {
-      return this.createInsight(
-        'space_concern',
-        'warning',
-        'Multiple space-intensive equipment items selected for home use. Consider space constraints and equipment placement.',
-        0.8,
-        true,
-        ['customization_equipment', 'customization_equipment_location'],
-        {
-          context: 'space_concern',
-          location: location,
-          spaceIntensiveCount: spaceIntensiveCount,
-          recommendation: 'Consider space-efficient alternatives'
-        }
-      );
-    }
-
-    return null;
-  }
 
   /**
    * Analyze cost considerations
