@@ -1,4 +1,4 @@
-import { AIInsight } from '../../../types/insights';
+import { AIInsight, AIInsightType } from '../../../types/insights';
 import { GlobalAIContext } from '../core/AIService';
 import { UserProfile } from '../../../types/user';
 import { WorkoutFocus } from '../../../types/focus';
@@ -44,7 +44,7 @@ export class EquipmentAIService {
     // Validate input
     if (!equipment || equipment.length === 0) {
       insights.push(this.createInsight(
-        'no_equipment',
+        'warning',
         'warning',
         'No equipment selected. Consider adding equipment for more varied workouts.',
         0.8,
@@ -82,7 +82,7 @@ export class EquipmentAIService {
     
     if (categories.length === 1 && categories[0] === 'BODYWEIGHT') {
       return this.createInsight(
-        'limited_variety',
+        'education',
         'info',
         'Body weight workouts are excellent for building strength and endurance. Consider adding resistance equipment for progressive overload.',
         0.7,
@@ -98,7 +98,7 @@ export class EquipmentAIService {
 
     if (categories.length < 2) {
       return this.createInsight(
-        'low_variety',
+        'warning',
         'warning',
         'Limited equipment variety may restrict workout options. Consider adding equipment from different categories.',
         0.6,
@@ -129,7 +129,7 @@ export class EquipmentAIService {
 
     if (alignmentPercentage < 50) {
       return this.createInsight(
-        'focus_misalignment',
+        'warning',
         'warning',
         `Your equipment selection has limited alignment with ${focus} training. Consider adding focus-specific equipment.`,
         0.8,
@@ -147,7 +147,7 @@ export class EquipmentAIService {
 
     if (alignmentPercentage > 80) {
       return this.createInsight(
-        'focus_alignment',
+        'encouragement',
         'success',
         `Excellent equipment selection for ${focus} training! Your equipment is well-aligned with your focus area.`,
         0.9,
@@ -178,7 +178,7 @@ export class EquipmentAIService {
 
     if (experienceLevel === 'new to exercise' && advancedEquipment.length > 0) {
       return this.createInsight(
-        'complexity_mismatch',
+        'warning',
         'warning',
         'Advanced equipment detected for beginner level. Consider starting with simpler equipment and progressing gradually.',
         0.8,
@@ -195,7 +195,7 @@ export class EquipmentAIService {
 
     if (experienceLevel === 'advanced athlete' && beginnerEquipment.length === equipment.length) {
       return this.createInsight(
-        'under_challenging',
+        'opportunity',
         'info',
         'Consider adding more advanced equipment to challenge your current fitness level.',
         0.7,
@@ -232,7 +232,7 @@ export class EquipmentAIService {
    * Create a standardized AI insight
    */
   private createInsight(
-    type: string,
+    type: AIInsightType,
     severity: 'info' | 'warning' | 'success' | 'error',
     message: string,
     confidence: number,
@@ -242,7 +242,6 @@ export class EquipmentAIService {
   ): AIInsight {
     return {
       type,
-      severity,
       message,
       confidence,
       actionable,
