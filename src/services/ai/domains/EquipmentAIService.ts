@@ -1,9 +1,7 @@
-import { AIInsight, GlobalAIContext } from '../../../types/ai';
-import { EquipmentOption } from '../../../types/equipment';
+import { AIInsight } from '../../../types/insights';
+import { GlobalAIContext } from '../core/AIService';
 import { UserProfile } from '../../../types/user';
-import { FocusArea } from '../../../types/areas';
 import { WorkoutFocus } from '../../../types/focus';
-import { equipmentOptions } from '../../../config/equipmentOptions';
 
 /**
  * AI service for equipment analysis and recommendations
@@ -20,13 +18,14 @@ export class EquipmentAIService {
     HOME_GYM: ['Pull-up Bar', 'Bench', 'Squat Rack', 'Cable Machine']
   };
 
-  // Focus area to equipment alignment
+  // Focus area to equipment alignment - Updated to match actual available equipment
   private readonly FOCUS_EQUIPMENT_ALIGNMENT = new Map<WorkoutFocus, string[]>([
-    ['strength', ['Dumbbells', 'Barbell', 'Kettlebell', 'Resistance Bands', 'Weight Machine']],
-    ['cardio', ['Treadmill', 'Stationary Bike', 'Rowing Machine', 'Elliptical', 'Jump Rope', 'Mountain Bike or Road Bike']],
-    ['flexibility', ['Yoga Mat', 'Foam Roller', 'Stretching Straps']],
-    ['balance', ['Yoga Mat', 'Balance Board', 'Resistance Bands']],
-    ['endurance', ['Treadmill', 'Stationary Bike', 'Rowing Machine', 'Elliptical', 'Jump Rope']]
+    ['strength', ['Dumbbells', 'Barbells & Weight Plates', 'Kettlebells', 'Resistance Bands', 'Strength Machines']],
+    ['endurance', ['Cardio Machines (Treadmill, Elliptical, Bike)', 'Cardio Machine (Treadmill, Bike)', 'Resistance Bands', 'Body Weight']],
+    ['flexibility', ['Yoga Mat', 'Yoga Mat & Stretching Space', 'Stretching & Mobility Zone (Yoga Mats, Foam Rollers)']],
+    ['power', ['Dumbbells', 'Barbells & Weight Plates', 'Kettlebells', 'Resistance Bands', 'Strength Machines']],
+    ['weight_loss', ['Cardio Machines (Treadmill, Elliptical, Bike)', 'Cardio Machine (Treadmill, Bike)', 'Body Weight', 'Resistance Bands']],
+    ['recovery', ['Yoga Mat', 'Yoga Mat & Stretching Space', 'Stretching & Mobility Zone (Yoga Mats, Foam Rollers)', 'Pool (If available)']]
   ]);
 
   // Equipment complexity levels
@@ -125,9 +124,10 @@ export class EquipmentAIService {
    */
   private analyzeFocusAlignment(equipment: string[], context: GlobalAIContext): AIInsight | null {
     const focus = context.currentSelections?.customization_focus;
-    if (!focus) return null;
+    if (!focus || typeof focus !== 'string') return null;
 
-    const recommendedEquipment = this.FOCUS_EQUIPMENT_ALIGNMENT.get(focus) || [];
+    const focusValue = focus as WorkoutFocus;
+    const recommendedEquipment = this.FOCUS_EQUIPMENT_ALIGNMENT.get(focusValue) || [];
     const alignedEquipment = equipment.filter(eq => recommendedEquipment.includes(eq));
     const alignmentPercentage = (alignedEquipment.length / equipment.length) * 100;
 
@@ -176,11 +176,11 @@ export class EquipmentAIService {
     const userProfile = context.userProfile;
     if (!userProfile) return null;
 
-    const experienceLevel = userProfile.experience?.level || 'beginner';
+    const experienceLevel = userProfile.fitnessLevel || 'new to exercise';
     const advancedEquipment = equipment.filter(eq => this.EQUIPMENT_COMPLEXITY.ADVANCED.includes(eq));
     const beginnerEquipment = equipment.filter(eq => this.EQUIPMENT_COMPLEXITY.BEGINNER.includes(eq));
 
-    if (experienceLevel === 'beginner' && advancedEquipment.length > 0) {
+    if (experienceLevel === 'new to exercise' && advancedEquipment.length > 0) {
       return this.createInsight(
         'complexity_mismatch',
         'warning',
@@ -197,7 +197,7 @@ export class EquipmentAIService {
       );
     }
 
-    if (experienceLevel === 'advanced' && beginnerEquipment.length === equipment.length) {
+    if (experienceLevel === 'advanced athlete' && beginnerEquipment.length === equipment.length) {
       return this.createInsight(
         'under_challenging',
         'info',
@@ -220,7 +220,7 @@ export class EquipmentAIService {
    * Analyze space requirements
    */
   private analyzeSpaceRequirements(equipment: string[], context: GlobalAIContext): AIInsight | null {
-    const location = context.currentSelections?.customization_equipment_location;
+    const location = context.currentSelections?.customization_equipment;
     if (!location) return null;
 
     const spaceIntensiveEquipment = ['Treadmill', 'Stationary Bike', 'Rowing Machine', 'Elliptical', 'Squat Rack', 'Cable Machine'];
@@ -318,43 +318,84 @@ export class EquipmentAIService {
   }
 
   /**
-   * Get equipment recommendations based on context
+   * Get equipment recommendations based on context with focus-specific prioritization
    */
   getRecommendations(context: GlobalAIContext): string[] {
     const focus = context.currentSelections?.customization_focus;
-    const location = context.currentSelections?.customization_equipment_location;
     const userProfile = context.userProfile;
 
-    if (!focus || !location) {
+    if (!focus || typeof focus !== 'string') {
       return ['Body Weight', 'Resistance Bands'];
     }
 
-    const focusEquipment = this.FOCUS_EQUIPMENT_ALIGNMENT.get(focus) || [];
-    const locationEquipment = this.getLocationSpecificEquipment(location);
+    const focusValue = focus as WorkoutFocus;
+    const focusEquipment = this.FOCUS_EQUIPMENT_ALIGNMENT.get(focusValue) || [];
     
-    // Combine and prioritize equipment
-    const recommendations = [...new Set([...focusEquipment, ...locationEquipment])];
+    // Get location-specific equipment if available
+    const locationEquipment = this.getLocationSpecificEquipment(context);
+    
+    // Combine and prioritize equipment based on focus
+    let recommendations = [...new Set([...focusEquipment, ...locationEquipment])];
+    
+    // Prioritize focus-specific equipment
+    recommendations = this.prioritizeByFocus(recommendations, focusValue);
     
     // Filter by user preferences if available
-    if (userProfile?.preferences?.budget === 'low') {
-      return recommendations.filter(eq => !['Treadmill', 'Stationary Bike', 'Weight Machine'].includes(eq));
+    if (userProfile?.preferences?.aiAssistanceLevel === 'low') {
+      recommendations = recommendations.filter(eq => 
+        !['Strength Machines', 'Cardio Machines (Treadmill, Elliptical, Bike)'].includes(eq)
+      );
     }
 
-    return recommendations.slice(0, 5); // Limit to top 5 recommendations
+    return recommendations.slice(0, 6); // Limit to top 6 recommendations
+  }
+
+  /**
+   * Prioritize equipment based on focus area
+   */
+  private prioritizeByFocus(equipment: string[], focus: WorkoutFocus): string[] {
+    const focusEquipment = this.FOCUS_EQUIPMENT_ALIGNMENT.get(focus) || [];
+    
+    // Sort equipment so focus-specific items come first
+    return equipment.sort((a, b) => {
+      const aIsFocusSpecific = focusEquipment.includes(a);
+      const bIsFocusSpecific = focusEquipment.includes(b);
+      
+      if (aIsFocusSpecific && !bIsFocusSpecific) return -1;
+      if (!aIsFocusSpecific && bIsFocusSpecific) return 1;
+      
+      return 0;
+    });
   }
 
   /**
    * Get location-specific equipment recommendations
    */
-  private getLocationSpecificEquipment(location: string): string[] {
-    const locationEquipment: Record<string, string[]> = {
-      'home': ['Body Weight', 'Resistance Bands', 'Dumbbells', 'Yoga Mat'],
-      'gym': ['Weight Machine', 'Cable Machine', 'Treadmill', 'Stationary Bike'],
-      'outdoor': ['Body Weight', 'Resistance Bands', 'Mountain Bike or Road Bike'],
-      'office': ['Body Weight', 'Resistance Bands', 'Yoga Mat'],
-      'hotel': ['Body Weight', 'Resistance Bands']
-    };
-
-    return locationEquipment[location] || ['Body Weight', 'Resistance Bands'];
+  private getLocationSpecificEquipment(context: GlobalAIContext): string[] {
+    // Default equipment for any location
+    const defaultEquipment = ['Body Weight', 'Resistance Bands'];
+    
+    // Try to get location from user profile if available
+    const userProfile = context.userProfile;
+    if (userProfile?.basicLimitations?.availableLocations) {
+      const locations = userProfile.basicLimitations.availableLocations;
+      
+      // If gym is available, include gym equipment
+      if (locations.includes('Gym')) {
+        return ['Barbells & Weight Plates', 'Strength Machines', 'Cardio Machines (Treadmill, Elliptical, Bike)', ...defaultEquipment];
+      }
+      
+      // If home gym is available
+      if (locations.includes('Home Gym')) {
+        return ['Dumbbells', 'Kettlebells', 'Cardio Machine (Treadmill, Bike)', ...defaultEquipment];
+      }
+      
+      // If outdoor spaces are available
+      if (locations.includes('Parks/Outdoor Spaces')) {
+        return ['Body Weight', 'Resistance Bands', 'Yoga Mat'];
+      }
+    }
+    
+    return defaultEquipment;
   }
 } 
