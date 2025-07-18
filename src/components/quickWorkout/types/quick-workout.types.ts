@@ -3,8 +3,10 @@ import { ViewMode } from '../../../types/core';
 import { AIRecommendationContext, UserProfile } from '../../../types';
 
 export interface QuickWorkoutFormProps {
-  onNavigate: (page: 'profile' | 'focus' | 'review' | 'results') => void;
+  onNavigate: (page: 'profile' | 'waiver' | 'focus' | 'review' | 'results') => void;
   onBack: () => void;
+  userProfile?: UserProfile;
+  aiContext?: AIRecommendationContext;
 }
 
 export interface SectionProps {

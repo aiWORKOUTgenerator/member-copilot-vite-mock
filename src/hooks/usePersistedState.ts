@@ -10,8 +10,30 @@ interface PersistedData<T> {
   metadata: PersistedStateMetadata;
 }
 
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 2; // Incremented for availableLocations addition
 const DEBOUNCE_DELAY = 1000; // 1 second
+
+/**
+ * Migrates data from one version to another
+ * @param data The data to migrate
+ * @param fromVersion The version to migrate from
+ * @returns The migrated data
+ */
+function migrateData<T>(data: T, fromVersion: number): T {
+  let migratedData = { ...data };
+
+  // Migration from version 1 to 2
+  if (fromVersion === 1) {
+    if (typeof migratedData === 'object' && migratedData !== null) {
+      migratedData = {
+        ...migratedData,
+        availableLocations: [] // Initialize with empty array
+      };
+    }
+  }
+
+  return migratedData;
+}
 
 /**
  * Enhanced hook for persisting state to localStorage with additional features:
@@ -31,10 +53,15 @@ export function useEnhancedPersistedState<T>(
       const item = window.localStorage.getItem(key);
       if (item) {
         const parsed = JSON.parse(item) as PersistedData<T>;
-        // Only use persisted data if it's the current version
-        if (parsed.metadata?.version === CURRENT_VERSION) {
-          return parsed.data;
+        // Handle data migration if needed
+        if (parsed.metadata?.version < CURRENT_VERSION) {
+          const migratedData = migrateData(parsed.data, parsed.metadata.version);
+          // Save migrated data immediately
+          const newMetadata = { lastSaved: Date.now(), version: CURRENT_VERSION };
+          window.localStorage.setItem(key, JSON.stringify({ data: migratedData, metadata: newMetadata }));
+          return migratedData;
         }
+        return parsed.data;
       }
       return defaultValue;
     } catch (error) {
@@ -112,41 +139,7 @@ export function useEnhancedPersistedState<T>(
     };
   }, [state, saveState, options.debounceDelay]);
 
-  // Create backup
-  const createBackup = useCallback(() => {
-    try {
-      const backup = {
-        data: state,
-        metadata: {
-          ...metadata,
-          backupDate: Date.now()
-        }
-      };
-      const backupKey = `${key}_backup`;
-      window.localStorage.setItem(backupKey, JSON.stringify(backup));
-      return true;
-    } catch (error) {
-      console.warn(`Failed to create backup for key "${key}":`, error);
-      return false;
-    }
-  }, [key, state, metadata]);
-
-  // Restore from backup
-  const restoreFromBackup = useCallback(() => {
-    try {
-      const backupKey = `${key}_backup`;
-      const backup = window.localStorage.getItem(backupKey);
-      if (backup) {
-        const parsed = JSON.parse(backup) as PersistedData<T>;
-        setState(parsed.data);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.warn(`Failed to restore backup for key "${key}":`, error);
-      return false;
-    }
-  }, [key]);
+  // Removed backup functionality
 
   // Regular setState that only updates state (doesn't immediately save)
   const updateState = useCallback((newState: T | ((prevState: T) => T)) => {
@@ -170,17 +163,10 @@ export function useEnhancedPersistedState<T>(
     setState: updateState,
     metadata,
     hasUnsavedChanges,
-    createBackup,
-    restoreFromBackup,
     forceSave
   };
 }
 
-/**
- * Legacy hook for backward compatibility
- * @deprecated Use useEnhancedPersistedState instead
- */
-export function usePersistedState<T>(key: string, defaultValue: T) {
-  const { state, setState } = useEnhancedPersistedState<T>(key, defaultValue);
-  return [state, setState] as const;
-} 
+// Legacy usePersistedState hook has been removed
+// All components should now use useEnhancedPersistedState
+// See the enhanced hook above for the new implementation 

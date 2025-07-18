@@ -22,7 +22,7 @@ export const FOCUS_AREAS_OPTIONS = [
 ] as const;
 
 export const EQUIPMENT_OPTIONS = [
-  'Full Gym', 'Dumbbells', 'Resistance Bands', 'Yoga Mat', 'Bodyweight Only', 'Kettlebell'
+  'Full Gym', 'Dumbbells', 'Resistance Bands', 'Yoga Mat', 'Body Weight', 'Kettlebells'
 ] as const;
 
 export const ENERGY_LEVEL_OPTIONS = [1, 2, 3, 4, 5] as const;
@@ -45,39 +45,28 @@ export const EXCLUDE_EXERCISES_OPTIONS = [
   'Hip flexor stretches'
 ] as const;
 
+// Main schema for full workout data
 export const workoutFocusSchema = z.object({
-  // Basic workout info - allow empty string for unset values
+  // Basic workout info
   workoutFocus: z.union([z.enum(WORKOUT_FOCUS_OPTIONS), z.literal('')]),
-  workoutDuration: z.union([z.number().min(5).max(45), z.literal('')]),
+  workoutDuration: z.union([z.number().min(5).max(45), z.literal(0)]),
   workoutType: z.union([z.enum(WORKOUT_TYPE_OPTIONS), z.literal('')]),
   duration: z.union([z.enum(DURATION_OPTIONS), z.literal('')]),
   
-  // Focus areas
+  // Focus areas and equipment
   focusAreas: z.array(z.enum(FOCUS_AREAS_OPTIONS)),
-  
-  // Equipment
   equipment: z.array(z.enum(EQUIPMENT_OPTIONS)),
   
   // Current state
-  energyLevel: z.union([z.number().min(1).max(5), z.literal('')]),
-  sorenessLevel: z.union([z.number().min(1).max(10), z.literal('')]),
+  energyLevel: z.union([z.number().min(1).max(5), z.literal(0)]),
+  sorenessLevel: z.union([z.number().min(1).max(10), z.literal(0)]),
   sleepQuality: z.string().default('Good (6-8 hours)'),
   stressLevel: z.string().default('Moderate Stress'),
   
-  // Physical limitations
+  // Physical limitations and preferences
   currentSoreness: z.array(z.enum(SORENESS_OPTIONS)),
-  
-  // Exercise preferences
   includeExercises: z.array(z.enum(INCLUDE_EXERCISES_OPTIONS)),
   excludeExercises: z.array(z.enum(EXCLUDE_EXERCISES_OPTIONS))
-});
-
-// Quick workout schema (subset for quick flow)
-export const quickWorkoutSchema = workoutFocusSchema.pick({
-  workoutFocus: true,
-  workoutDuration: true,
-  energyLevel: true,
-  sorenessLevel: true
 });
 
 // Section-based schemas for detailed workflow
@@ -104,22 +93,21 @@ export const workoutSectionSchemas = {
 
 // Inferred TypeScript types
 export type WorkoutFocusData = z.infer<typeof workoutFocusSchema>;
-export type QuickWorkoutData = z.infer<typeof quickWorkoutSchema>;
 export type WorkoutBasicsData = z.infer<typeof workoutSectionSchemas.basics>;
 export type WorkoutDetailsData = z.infer<typeof workoutSectionSchemas.details>;
 export type WorkoutEquipmentData = z.infer<typeof workoutSectionSchemas.equipment>;
 export type WorkoutPreferencesData = z.infer<typeof workoutSectionSchemas.preferences>;
 
-// Default values - using empty strings for unset values to match original behavior
+// Default values with proper types
 export const defaultWorkoutFocusData: WorkoutFocusData = {
   workoutFocus: '',
-  workoutDuration: '',
+  workoutDuration: 0,
   workoutType: '',
   duration: '',
   focusAreas: [],
   equipment: [],
-  energyLevel: '',
-  sorenessLevel: '',
+  energyLevel: 0,
+  sorenessLevel: 0,
   sleepQuality: 'Good (6-8 hours)',
   stressLevel: 'Moderate Stress',
   currentSoreness: [],

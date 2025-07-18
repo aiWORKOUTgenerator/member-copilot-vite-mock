@@ -30,33 +30,33 @@ const TimeCommitmentStep: React.FC<StepProps> = ({
   const intensityOptions: OptionConfig[] = [
     { 
       value: 'lightly', 
-      label: 'Lightly Active',
-      description: 'Start with easy, low-effort moves—think brisk walks around the block or gentle yoga stretches a few times a week.'
+      label: 'Become Lightly Active',
+      description: 'Build a foundation of regular movement with gentle activities like walking, light stretching, and basic body weight exercises.'
     },
     { 
       value: 'light-moderate', 
-      label: 'Light to Moderately Active',
-      description: 'A step up—regular brisk walks or casual bike rides most days.'
+      label: 'Become Light to Moderately Active',
+      description: 'Develop consistent exercise habits with regular walks, beginner-friendly workouts, and recreational activities.'
     },
     { 
       value: 'moderately', 
-      label: 'Moderately Active',
-      description: 'Add a bit more challenge: try steady bike rides, longer walks, or beginner-friendly aerobics classes 3–4 times weekly.'
+      label: 'Become Moderately Active',
+      description: 'Establish a solid fitness routine with regular cardio, strength training, and structured workout programs.'
     },
     { 
       value: 'active', 
-      label: 'Active',
-      description: 'Move up to workouts that get your heart pumping—jogging, swimming, or joining a recreational sports team most days.'
+      label: 'Become Very Active',
+      description: 'Build an active lifestyle with challenging workouts, sports participation, and high-energy fitness activities.'
     },
     { 
       value: 'very', 
-      label: 'Very Active',
-      description: 'Make exercise part of your daily routine: go for runs, follow a solid strength workout plan, or take high-energy fitness classes.'
+      label: 'Become Extremely Active',
+      description: 'Achieve peak fitness with intense training, competitive sports, and advanced workout programs.'
     },
     { 
       value: 'extremely', 
-      label: 'Extremely Active',
-      description: 'Push your limits with intense sessions every day—think competitive sports training, advanced weightlifting, or hardcore HIIT workouts.'
+      label: 'Become Elite Athlete',
+      description: 'Reach elite performance levels with specialized training, competitive athletics, and maximum intensity workouts.'
     }
   ];
 
@@ -194,22 +194,22 @@ const TimeCommitmentStep: React.FC<StepProps> = ({
             <div className="prose prose-sm max-w-none">
               <h4 className="text-green-800 font-semibold mb-3">Target Activity Level</h4>
               <p className="text-gray-700 mb-4">
-                Choose your target activity level based on the types and intensity of exercises you'd like to do.
+                Choose your long-term fitness goal. This helps us plan your progression from your current activity level to where you want to be.
               </p>
               <div className="space-y-2">
                 <p className="text-gray-700">This determines:</p>
                 <ul className="list-none pl-4 space-y-1">
                   <li className="flex items-start">
                     <span className="text-green-600 mr-2">•</span>
-                    Exercise intensity and complexity
+                    Your progression timeline and milestones
                   </li>
                   <li className="flex items-start">
                     <span className="text-green-600 mr-2">•</span>
-                    Progression rate of your workouts
+                    How quickly we increase workout intensity
                   </li>
                   <li className="flex items-start">
                     <span className="text-green-600 mr-2">•</span>
-                    Recovery needs between sessions
+                    The types of activities we'll introduce over time
                   </li>
                 </ul>
               </div>
@@ -235,7 +235,7 @@ const TimeCommitmentStep: React.FC<StepProps> = ({
             <div className="flex items-center">
               <Clock className="w-5 h-5 text-green-600 mr-3" />
               <span className="text-green-800 font-medium">
-                Great! We'll plan {profileData.preferredDuration} workouts, {profileData.timeCommitment} days per week at a {profileData.intensityLevel} activity level.
+                Great! We'll plan {profileData.preferredDuration} workouts, {profileData.timeCommitment} days per week, progressing toward your goal of becoming {profileData.intensityLevel}.
               </span>
             </div>
           </div>

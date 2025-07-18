@@ -1,77 +1,87 @@
-// User profile interface for personalization
-export interface UserProfile {
-  fitnessLevel: 'beginner' | 'intermediate' | 'advanced';
-  goals: string[];
-  preferences: {
-    workoutStyle?: string[];
-    timePreference?: 'morning' | 'afternoon' | 'evening';
-    intensityPreference?: 'low' | 'moderate' | 'high' | 'variable';
-    advancedFeatures?: boolean;
-    aiAssistanceLevel?: 'minimal' | 'moderate' | 'comprehensive';
-  };
-  limitations?: {
-    injuries?: string[];
-    timeConstraints?: number; // max minutes
-    equipmentConstraints?: string[];
-    physicalLimitations?: string[];
-  };
-  history?: {
-    completedWorkouts?: number;
-    averageDuration?: number;
-    preferredFocusAreas?: string[];
-    progressiveEnhancementUsage?: Record<string, number>;
-    aiRecommendationAcceptance?: number;
-  };
-  learningProfile?: {
-    prefersSimplicity?: boolean;
-    explorationTendency?: 'conservative' | 'moderate' | 'adventurous';
-    feedbackPreference?: 'minimal' | 'detailed' | 'comprehensive';
-  };
-}
+// User Profile Type System
 
-// User fitness levels
-export type FitnessLevel = 'beginner' | 'intermediate' | 'advanced';
+export type FitnessLevel = 'new to exercise' | 'some experience' | 'advanced athlete';
+export type TimePreference = 'morning' | 'afternoon' | 'evening';
+export type IntensityLevel = 'low' | 'moderate' | 'high';
+export type AIAssistanceLevel = 'low' | 'moderate' | 'high';
+export type RecoveryStatus = 'minimal' | 'partial' | 'full';
+export type ExplorationTendency = 'low' | 'moderate' | 'high';
+export type FeedbackPreference = 'simple' | 'detailed';
 
-// User goals
-export type UserGoal = 
-  | 'weight_loss'
-  | 'muscle_gain'
-  | 'strength'
-  | 'endurance'
-  | 'flexibility'
-  | 'general_fitness'
-  | 'recovery'
-  | 'athletic_performance';
-
-// User preferences
+// User-provided preferences
 export interface UserPreferences {
   workoutStyle: string[];
-  timePreference: 'morning' | 'afternoon' | 'evening';
-  intensityPreference: 'low' | 'moderate' | 'high' | 'variable';
+  timePreference: TimePreference;
+  intensityPreference: IntensityLevel;
   advancedFeatures: boolean;
-  aiAssistanceLevel: 'minimal' | 'moderate' | 'comprehensive';
+  aiAssistanceLevel: AIAssistanceLevel;
 }
 
-// User limitations
-export interface UserLimitations {
+// User-provided basic limitations
+export interface UserBasicLimitations {
   injuries: string[];
-  timeConstraints: number;
-  equipmentConstraints: string[];
-  physicalLimitations: string[];
+  availableEquipment: string[];
+  availableLocations: string[];
 }
 
-// User history
-export interface UserHistory {
-  completedWorkouts: number;
+// AI-generated enhanced limitations
+export interface AIEnhancedLimitations {
+  timeConstraints: number; // calculated from duration + commitment
+  equipmentConstraints: string[]; // filtered and prioritized
+  locationConstraints: string[]; // filtered and prioritized locations
+  recoveryNeeds: {
+    restDays: number;
+    sleepHours: number;
+    hydrationLevel: 'low' | 'moderate' | 'high';
+  };
+  mobilityLimitations: string[]; // inferred from age, injuries, activity
+  progressionRate: 'conservative' | 'moderate' | 'aggressive';
+}
+
+// AI-generated workout history
+export interface AIWorkoutHistory {
+  estimatedCompletedWorkouts: number;
   averageDuration: number;
-  preferredFocusAreas: string[];
+  preferredFocusAreas: string[]; // inferred from goals and preferences
   progressiveEnhancementUsage: Record<string, number>;
-  aiRecommendationAcceptance: number;
+  aiRecommendationAcceptance: number; // 0-1 scale
+  consistencyScore: number; // 0-1 scale based on activity level
+  plateauRisk: 'low' | 'moderate' | 'high';
 }
 
-// User learning profile
-export interface UserLearningProfile {
-  prefersSimplicity: boolean;
-  explorationTendency: 'conservative' | 'moderate' | 'adventurous';
-  feedbackPreference: 'minimal' | 'detailed' | 'comprehensive';
+// AI-generated learning profile
+export interface AILearningProfile {
+  prefersSimplicity: boolean; // based on experience level
+  explorationTendency: ExplorationTendency; // based on activity level and goals
+  feedbackPreference: FeedbackPreference; // based on experience level
+  learningStyle: 'visual' | 'kinesthetic' | 'auditory' | 'mixed';
+  motivationType: 'intrinsic' | 'extrinsic' | 'social' | 'achievement';
+  adaptationSpeed: 'slow' | 'moderate' | 'fast';
+}
+
+// Complete user profile with clear separation
+export interface UserProfile {
+  // User-provided core data
+  fitnessLevel: FitnessLevel;
+  goals: string[];
+  preferences: UserPreferences;
+  basicLimitations: UserBasicLimitations;
+  
+  // AI-generated enhanced data
+  enhancedLimitations: AIEnhancedLimitations;
+  workoutHistory: AIWorkoutHistory;
+  learningProfile: AILearningProfile;
+}
+
+// Workout Environment Types
+export interface EnvironmentalFactors {
+  timeOfDay: TimePreference;
+  location: 'home' | 'gym' | 'outdoor';
+  availableTime: number;
+}
+
+export interface RecentActivity {
+  lastWorkoutDate: Date;
+  lastWorkoutType: string;
+  recoveryStatus: RecoveryStatus;
 } 

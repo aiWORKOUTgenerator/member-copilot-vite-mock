@@ -124,7 +124,7 @@ export const WORKOUT_CUSTOMIZATION_CONFIG: CustomizationConfig[] = [
 
   // Exercise Selection Configurations
   createExerciseSelectionConfig('customization_include', 'Include Exercises', IncludeComponent as ComponentType<CustomizationComponentProps<unknown>>, Plus, 7, {
-    metadata: METADATA_PATTERNS.intermediateCustomization(
+    metadata: METADATA_PATTERNS.someExperienceCustomization(
       ['exercises', 'preferences', 'customization'],
       ['Specify preferred exercises', 'Customize workout content'],
       ['Personalized exercise selection', 'Enjoyable workouts', 'Skill development']
@@ -132,7 +132,7 @@ export const WORKOUT_CUSTOMIZATION_CONFIG: CustomizationConfig[] = [
   }),
 
   createExerciseSelectionConfig('customization_exclude', 'Exclude Exercises', ExcludeComponent as ComponentType<CustomizationComponentProps<unknown>>, Minus, 8, {
-    metadata: METADATA_PATTERNS.intermediateCustomization(
+    metadata: METADATA_PATTERNS.someExperienceCustomization(
       ['exercises', 'limitations', 'safety'],
       ['Identify limitations', 'Ensure safe exercise selection'],
       ['Safe workout planning', 'Injury prevention', 'Comfortable training']

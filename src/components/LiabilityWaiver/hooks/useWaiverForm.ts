@@ -1,17 +1,26 @@
-import { useCallback, useMemo, useState } from 'react';
-import { usePersistedState } from '../../../hooks/usePersistedState';
+import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useEnhancedPersistedState } from '../../../hooks/usePersistedState';
 import { LiabilityWaiverData, WaiverFormHookReturn } from '../types/liability-waiver.types';
 import { calculateCompletionPercentage } from '../utils/waiverHelpers';
 import { defaultWaiverData } from '../schemas/waiverSchema';
 
 export const useWaiverForm = (): WaiverFormHookReturn => {
-  const [waiverData, setWaiverData] = usePersistedState<LiabilityWaiverData>(
+  const {
+    state: waiverData,
+    setState: setWaiverData,
+    metadata,
+    hasUnsavedChanges,
+    forceSave
+  } = useEnhancedPersistedState<LiabilityWaiverData>(
     'waiverData', 
-    defaultWaiverData
+    defaultWaiverData,
+    { debounceDelay: 500 } // Faster debounce for better responsiveness
   );
   
   const [currentSection, setCurrentSection] = useState<number>(1);
   const [touchedFields, setTouchedFields] = useState<string[]>([]);
+
+  // Removed backup functionality
 
   const handleInputChange = useCallback((field: keyof LiabilityWaiverData, value: string | boolean) => {
     setWaiverData(prev => ({
@@ -31,7 +40,8 @@ export const useWaiverForm = (): WaiverFormHookReturn => {
   const resetForm = useCallback(() => {
     setWaiverData(defaultWaiverData);
     setTouchedFields([]);
-  }, [setWaiverData]);
+    forceSave(); // Immediately persist the reset
+  }, [setWaiverData, forceSave]);
 
   // Step validation logic
   const validateStep = useCallback((step: number): boolean => {
@@ -178,6 +188,10 @@ export const useWaiverForm = (): WaiverFormHookReturn => {
     prevSection,
     setSection,
     isWaiverComplete: () => isComplete,
-    getTotalProgress
+    getTotalProgress,
+    // New enhanced features
+    hasUnsavedChanges,
+    lastSaved: metadata.lastSaved,
+    forceSave
   };
 }; 

@@ -39,7 +39,7 @@ export interface DurationConfigurationData {
   // Metadata for AI recommendations
   metadata?: {
     intensityLevel?: 'low' | 'moderate' | 'high' | 'variable';
-    fitnessLevel?: 'beginner' | 'intermediate' | 'advanced';
+    fitnessLevel?: 'new to exercise' | 'some experience' | 'advanced athlete';
     timeOfDay?: 'morning' | 'afternoon' | 'evening';
     workoutDensity?: number; // exercises per minute
     userPreferences?: Record<string, any>;

@@ -13,8 +13,8 @@ export const validateFocus = (value: string | WorkoutFocusConfigurationData, all
   // Cross-component validation
   if (focus === 'strength' && Array.isArray(allOptions?.customization_equipment)) {
     const equipment = allOptions.customization_equipment;
-    if (equipment.includes('Bodyweight Only') && equipment.length === 1) {
-      result.warnings = ['Bodyweight exercises may limit strength training effectiveness'];
+    if (equipment.includes('Body Weight') && equipment.length === 1) {
+      result.warnings = ['Body weight exercises may limit strength training effectiveness'];
       result.recommendations = ['Consider adding resistance equipment for better strength gains'];
     }
   }

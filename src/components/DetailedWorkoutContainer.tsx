@@ -5,20 +5,23 @@ import {
   UserProfile, 
   AIRecommendationContext,
   CustomizationConfig,
-  ValidationResult
+  ValidationResult,
+  WorkoutType
 } from '../types/enhanced-workout-types';
 import { CustomizationWrapper } from './shared/DRYComponents';
 import { WORKOUT_CUSTOMIZATION_CONFIG, generateStepsFromConfig } from '../config/workoutCustomizationConfig';
-import { migrationUtils, aiRecommendationEngine } from '../utils/migrationUtils';
+import { migrationUtils } from '../utils/migrationUtils';
+import { useAI } from '../contexts/AIContext';
 
 interface DetailedWorkoutContainerProps {
   options: PerWorkoutOptions;
-  onChange: (key: keyof PerWorkoutOptions, value: any) => void;
+  onChange: (key: keyof PerWorkoutOptions, value: PerWorkoutOptions[keyof PerWorkoutOptions]) => void;
   errors: Record<string, string>;
-  disabled?: boolean;
-  onNavigate: (page: 'profile' | 'focus' | 'review' | 'results') => void;
+  disabled: boolean;
+  onNavigate: (page: 'profile' | 'waiver' | 'focus' | 'review' | 'results') => void;
   userProfile?: UserProfile;
   aiContext?: AIRecommendationContext;
+  workoutType: WorkoutType;
 }
 
 const DetailedWorkoutContainer = memo(function DetailedWorkoutContainer({
@@ -28,7 +31,8 @@ const DetailedWorkoutContainer = memo(function DetailedWorkoutContainer({
   disabled = false,
   onNavigate,
   userProfile,
-  aiContext
+  aiContext,
+  workoutType
 }: DetailedWorkoutContainerProps) {
   // Enhanced state management with AI integration
   const [activeStep, setActiveStep] = useState('training_structure');
@@ -39,7 +43,7 @@ const DetailedWorkoutContainer = memo(function DetailedWorkoutContainer({
 
   // Mock user profile for demo purposes
   const mockUserProfile: UserProfile = userProfile || {
-    fitnessLevel: 'intermediate',
+    fitnessLevel: 'some experience',
     goals: ['strength', 'muscle_building'],
     preferences: {
       workoutStyle: ['strength_training', 'functional'],
@@ -108,7 +112,7 @@ const DetailedWorkoutContainer = memo(function DetailedWorkoutContainer({
     
     // Equipment-focus synergy analysis
     if (Array.isArray(options.customization_equipment) && 
-        options.customization_equipment.includes("Bodyweight Only") && 
+        options.customization_equipment.includes("Body Weight") && 
         options.customization_focus === 'strength') {
       recommendations.push({
         type: 'contextual',
@@ -205,7 +209,7 @@ const DetailedWorkoutContainer = memo(function DetailedWorkoutContainer({
     const suggestions = [];
     
     // User expertise-based suggestions
-    if (userProfile.fitnessLevel === 'advanced') {
+    if (userProfile.fitnessLevel === 'advanced athlete') {
       Object.entries(options).forEach(([key, value]) => {
         if (typeof value === 'number' || typeof value === 'string' || Array.isArray(value)) {
           const interactionCount = interactions[key] || 0;

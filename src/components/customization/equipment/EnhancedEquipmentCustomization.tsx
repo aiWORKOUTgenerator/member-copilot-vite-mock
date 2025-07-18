@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lightbulb } from 'lucide-react';
 import { EquipmentSelectionData } from '../../../types/equipment';
-import { CustomizationComponentProps } from '../../../types/config';
+import { CustomizationComponentProps } from '../../../types/core';
 import { UserProfile } from '../../../types/user';
 import LocationSelection from './LocationSelection';
 import ContextSelection from './ContextSelection';
 import EquipmentSelection from './EquipmentSelection';
 import AdvancedSettings from './AdvancedSettings';
+import { filterAvailableEquipment, validateEquipmentForFocus } from '../../../utils/equipmentRecommendations';
 
 const EnhancedEquipmentCustomization: React.FC<CustomizationComponentProps<string[] | EquipmentSelectionData>> = ({
   value,
@@ -19,7 +20,7 @@ const EnhancedEquipmentCustomization: React.FC<CustomizationComponentProps<strin
   // Intelligent initial disclosure level based on data complexity and user profile
   const [disclosureLevel, setDisclosureLevel] = useState<1 | 2 | 3 | 4>(() => {
     if (typeof value === 'object' && !Array.isArray(value)) return 4;
-    if (userProfile?.fitnessLevel === 'advanced') return 2;
+    if (userProfile?.fitnessLevel === 'advanced athlete') return 2;
     return 1;
   });
   
@@ -36,21 +37,44 @@ const EnhancedEquipmentCustomization: React.FC<CustomizationComponentProps<strin
   });
   
   const [aiSuggestions, setAISuggestions] = useState<string[]>([]);
-  
+
+  // Effect to update equipment based on workout focus
+  useEffect(() => {
+    if (aiContext?.currentSelections?.customization_focus && internalState.location) {
+      const workoutFocus = String(aiContext.currentSelections.customization_focus);
+      const availableEquipment = userProfile?.basicLimitations?.availableEquipment || [];
+      
+      const recommendedEquipment = filterAvailableEquipment(workoutFocus, availableEquipment);
+
+      setInternalState(prev => ({
+        ...prev,
+        contexts: [],
+        specificEquipment: recommendedEquipment,
+        metadata: {
+          ...prev.metadata,
+          aiRecommendations: recommendedEquipment
+        }
+      }));
+
+      // Update AI suggestions
+      setAISuggestions(recommendedEquipment);
+    }
+  }, [aiContext?.currentSelections?.customization_focus, internalState.location, userProfile?.basicLimitations?.availableEquipment]);
+
   // Helper function to generate AI suggestions based on location
   const getLocationBasedSuggestions = (location: string, userProfile?: UserProfile) => {
     const suggestions = [];
     if (location === 'home' && userProfile?.goals?.includes('strength')) {
       suggestions.push('For home strength training, consider resistance bands and dumbbells');
     }
-    if (location === 'gym' && userProfile?.fitnessLevel === 'beginner') {
+    if (location === 'gym' && userProfile?.fitnessLevel === 'new to exercise') {
       suggestions.push('Gym access allows for progressive overload with barbells and machines');
     }
     return suggestions;
   };
   
   const needsAdvancedSettings = (equipment: string[]) => {
-    return equipment.some(eq => ['Dumbbells', 'Barbell', 'Kettlebells'].includes(eq));
+    return equipment.some(eq => ['Dumbbells', 'Barbells & Weight Plates', 'Kettlebells'].includes(eq));
   };
   
   const handleLocationSelect = (location: string) => {
@@ -61,6 +85,25 @@ const EnhancedEquipmentCustomization: React.FC<CustomizationComponentProps<strin
     // Generate AI suggestions based on location
     const suggestions = getLocationBasedSuggestions(location, userProfile);
     setAISuggestions(suggestions);
+
+    // Trigger equipment recommendations if we have a workout focus
+    if (aiContext?.currentSelections?.customization_focus) {
+      const workoutFocus = String(aiContext.currentSelections.customization_focus);
+      const availableEquipment = userProfile?.basicLimitations?.availableEquipment || [];
+      
+      const recommendedEquipment = filterAvailableEquipment(workoutFocus, availableEquipment);
+
+      setInternalState(prev => ({
+        ...prev,
+        location,
+        contexts: [],
+        specificEquipment: recommendedEquipment,
+        metadata: {
+          ...prev.metadata,
+          aiRecommendations: recommendedEquipment
+        }
+      }));
+    }
   };
   
   const handleContextSelect = (context: string) => {
@@ -78,6 +121,20 @@ const EnhancedEquipmentCustomization: React.FC<CustomizationComponentProps<strin
     const newEquipment = internalState.specificEquipment.includes(equipment)
       ? internalState.specificEquipment.filter(e => e !== equipment)
       : [...internalState.specificEquipment, equipment];
+    
+    // Validate equipment selection against workout focus
+    if (aiContext?.currentSelections?.customization_focus) {
+      const workoutFocus = String(aiContext.currentSelections.customization_focus);
+      const isValid = validateEquipmentForFocus(workoutFocus, newEquipment);
+      
+      if (!isValid) {
+        setAISuggestions([
+          `Warning: The selected equipment may not be optimal for ${workoutFocus}`,
+          'Consider including recommended equipment for better results'
+        ]);
+      }
+    }
+
     const newState = { ...internalState, specificEquipment: newEquipment };
     setInternalState(newState);
     
@@ -169,7 +226,7 @@ const EnhancedEquipmentCustomization: React.FC<CustomizationComponentProps<strin
       {renderCurrentLevel()}
       
       {/* AI Enhancement Suggestion */}
-      {disclosureLevel < 4 && userProfile?.fitnessLevel === 'advanced' && (
+                  {disclosureLevel < 4 && userProfile?.fitnessLevel === 'advanced athlete' && (
         <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
           <div className="flex items-start gap-2">
             <Lightbulb className="w-5 h-5 text-yellow-600 mt-0.5" />

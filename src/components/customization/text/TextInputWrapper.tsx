@@ -25,10 +25,10 @@ const TextInputWrapper: React.FC<TextInputWrapperProps> = ({
     const baseSuggestions = [...suggestions];
     
     if (type === 'include') {
-      if (userProfile.fitnessLevel === 'beginner') {
+      if (userProfile.fitnessLevel === 'new to exercise') {
         baseSuggestions.push('push-ups', 'squats', 'planks');
-      } else if (userProfile.fitnessLevel === 'advanced') {
-        baseSuggestions.push('deadlifts', 'pull-ups', 'muscle-ups');
+      } else if (userProfile.fitnessLevel === 'advanced athlete') {
+        baseSuggestions.push('deadlifts', 'clean and press', 'muscle-ups');
       }
       
       if (userProfile.goals?.includes('strength')) {

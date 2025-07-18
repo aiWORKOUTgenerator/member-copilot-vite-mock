@@ -14,17 +14,17 @@ const ExperienceStep: React.FC<StepProps> = ({
 
   const experienceOptions: OptionConfig[] = [
     {
-      value: 'Beginner',
+      value: 'New to Exercise',
       label: 'New to Exercise',
       description: 'New to fitness or returning after a break. We\'ll focus on building basic habits and proper form with gentle progression.'
     },
     {
-      value: 'Intermediate',
+      value: 'Some Experience',
       label: 'Some Experience',
       description: 'Regular exercise routine for 6+ months. You\'re comfortable with basic movements and ready for more structured programming.'
     },
     {
-      value: 'Advanced',
+      value: 'Advanced Athlete',
       label: 'Advanced Athlete',
       description: 'Consistent training for 2+ years with solid technique. You\'re ready for complex programming and advanced training methods.'
     }

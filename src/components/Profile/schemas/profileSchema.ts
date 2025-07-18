@@ -3,7 +3,7 @@ import { z } from 'zod';
 // Base schema for the profile data with comprehensive validation
 export const profileSchema = z.object({
   // Experience & Activity
-  experienceLevel: z.enum(['Beginner', 'Intermediate', 'Advanced']).describe('Please select your experience level'),
+  experienceLevel: z.enum(['New to Exercise', 'Some Experience', 'Advanced Athlete']).describe('Please select your experience level'),
   physicalActivity: z.enum(['sedentary', 'light', 'moderate', 'very', 'extremely', 'varies']).describe('Please select your current activity level'),
   
   // Time & Commitment
@@ -17,11 +17,16 @@ export const profileSchema = z.object({
     'Rock Climbing/Bouldering', 'Yoga', 'Pilates', 'Hiking', 'Dancing',
     'Team Sports', 'Golf', 'Martial Arts'
   ])).min(1, 'Please select at least one preferred activity'),
+  availableLocations: z.array(z.enum([
+    'Gym', 'Home Gym', 'Home', 'Parks/Outdoor Spaces', 'Swimming Pool', 'Running Track'
+  ])).min(1, 'Please select at least one available training location'),
   availableEquipment: z.array(z.enum([
-    'Gym Membership', 'Home Gym', 'Dumbbells or Free Weights',
-    'Resistance Bands', 'Treadmill or Cardio Machines', 'Yoga Mat',
-    'Body Weight', 'Kettlebells', 'Access to Parks/Outdoor Spaces',
-    'Swimming Pool', 'Mountain Bike', 'Road Bike (Cycling)'
+    'Barbells & Weight Plates', 'Strength Machines',
+    'Cardio Machines (Treadmill, Elliptical, Bike)', 'Functional Training Area (Kettlebells, Resistance Bands, TRX)',
+    'Stretching & Mobility Zone (Yoga Mats, Foam Rollers)', 'Pool (If available)',
+    'Dumbbells', 'Resistance Bands', 'Kettlebells',
+    'Cardio Machine (Treadmill, Bike)', 'Yoga Mat & Stretching Space',
+    'Body Weight', 'Yoga Mat', 'Suspension Trainer/TRX', 'No equipment required'
   ])).min(1, 'Please select your available equipment'),
   
   // Goals
@@ -41,8 +46,8 @@ export const profileSchema = z.object({
   // Health & Safety
   hasCardiovascularConditions: z.enum([
     'No', 
-    'Yes - cleared for exercise', 
-    'Yes - need medical clearance', 
+    'Yes - but cleared for exercise', 
+    'Yes - and need medical clearance', 
     'Prefer not to answer'
   ]).describe('Please answer the cardiovascular health question'),
   injuries: z.array(z.enum([
@@ -64,6 +69,7 @@ export const stepSchemas = {
   }),
   3: profileSchema.pick({
     preferredActivities: true,
+    availableLocations: true,
     availableEquipment: true
   }),
   4: profileSchema.pick({
@@ -191,6 +197,7 @@ export const getStepForField = (field: keyof ProfileData): number => {
     timeCommitment: 2,
     intensityLevel: 2,
     preferredActivities: 3,
+    availableLocations: 3,
     availableEquipment: 3,
     primaryGoal: 4,
     goalTimeline: 4,
@@ -240,12 +247,13 @@ export const getFirstIncompleteStep = (data: Partial<ProfileData>): number => {
 
 // Default values with proper typing
 export const defaultProfileData: ProfileData = {
-  experienceLevel: 'Beginner',
+  experienceLevel: 'New to Exercise',
   physicalActivity: 'sedentary',
   preferredDuration: '30-45 min',
   timeCommitment: '2-3',
   intensityLevel: 'lightly',
   preferredActivities: [],
+  availableLocations: [],
   availableEquipment: [],
   primaryGoal: 'General Health',
   goalTimeline: '3 months',

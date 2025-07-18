@@ -1,22 +1,25 @@
 // Temporary types definition - TODO: Re-export from schema once import issues are resolved
 export type ProfileData = {
   // Experience & Activity
-  experienceLevel: 'Beginner' | 'Intermediate' | 'Advanced';
-  physicalActivity: 'sedentary' | 'light' | 'moderate' | 'very';
+  experienceLevel: 'New to Exercise' | 'Some Experience' | 'Advanced Athlete';
+  physicalActivity: 'sedentary' | 'light' | 'moderate' | 'very' | 'extremely' | 'varies';
   
   // Time & Commitment
   preferredDuration: '15-30 min' | '30-45 min' | '45-60 min' | '60+ min';
   timeCommitment: '2-3' | '3-4' | '4-5' | '6-7';
-  intensityLevel: 'low' | 'moderate' | 'high';
+  intensityLevel: 'lightly' | 'light-moderate' | 'moderately' | 'active' | 'very' | 'extremely';
   
   // Exercise Preferences
   preferredActivities: Array<'Walking/Power Walking' | 'Running/Jogging' | 'Swimming' | 'Cycling/Mountain Biking' |
     'Rock Climbing/Bouldering' | 'Yoga' | 'Pilates' | 'Hiking' | 'Dancing' |
     'Team Sports' | 'Golf' | 'Martial Arts'>;
-  availableEquipment: Array<'Gym Membership' | 'Home Gym' | 'Dumbbells or Free Weights' |
-    'Resistance Bands' | 'Treadmill or Cardio Machines' | 'Yoga Mat' |
-    'Body Weight' | 'Kettlebells' | 'Access to Parks/Outdoor Spaces' |
-    'Swimming Pool' | 'Mountain Bike' | 'Road Bike (Cycling)'>;
+  availableLocations: Array<'Gym' | 'Home Gym' | 'Home' | 'Parks/Outdoor Spaces' | 'Swimming Pool' | 'Running Track'>;
+  availableEquipment: Array<'Barbells & Weight Plates' | 'Strength Machines' |
+    'Cardio Machines (Treadmill, Elliptical, Bike)' | 'Functional Training Area (Kettlebells, Resistance Bands, TRX)' |
+    'Stretching & Mobility Zone (Yoga Mats, Foam Rollers)' | 'Pool (If available)' |
+    'Dumbbells' | 'Resistance Bands' | 'Kettlebells' |
+    'Cardio Machine (Treadmill, Bike)' | 'Yoga Mat & Stretching Space' |
+    'Body Weight' | 'Yoga Mat' | 'Suspension Trainer/TRX' | 'No equipment required'>;
   
   // Goals & Timeline
   primaryGoal: 'Weight Loss' | 'Strength' | 'Cardio Health' | 'Flexibility & Mobility' |
@@ -88,7 +91,6 @@ export interface ProfileFormHookReturn {
   error: Error | null;
   hasUnsavedChanges: boolean;
   lastSaved: number;
-  restoreFromBackup: () => boolean;
 }
 
 export interface ValidationHookReturn {

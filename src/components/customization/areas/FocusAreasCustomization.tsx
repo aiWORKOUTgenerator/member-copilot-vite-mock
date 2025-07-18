@@ -5,7 +5,7 @@ import { CustomizationComponentProps } from '../../../types/core';
 import { HierarchicalSelectionData } from '../../../types/areas';
 import { UserProfile, AIRecommendationContext } from '../../../types';
 import HierarchicalAreaSelector from './HierarchicalAreaSelector';
-import { aiRecommendationEngine } from '../../../utils/migrationUtils';
+import { useAI } from '../../../contexts/AIContext';
 import { PRIMARY_REGIONS, findOptionInfo, getAllDescendants, getParentKey } from './data';
 
 // Helper function to consistently extract focus areas value
@@ -65,7 +65,7 @@ const generateAreasRecommendations = (
   }
 
   // User profile-based recommendations
-  if (userProfile.fitnessLevel === 'beginner' && currentAreas.includes('Full Body')) {
+  if (userProfile.fitnessLevel === 'new to exercise' && currentAreas.includes('Full Body')) {
     recommendations.push('Consider focusing on specific areas first to build foundation');
   }
 
@@ -73,8 +73,8 @@ const generateAreasRecommendations = (
     recommendations.push('Add cardio training to support weight loss goals');
   }
 
-  if (userProfile.limitations?.injuries && 
-      userProfile.limitations.injuries.length > 0 && 
+  if (userProfile.basicLimitations?.injuries && 
+      userProfile.basicLimitations.injuries.length > 0 && 
       currentAreas.includes('Core')) {
     warnings.push('Core training may need modification with current injuries');
   }
@@ -262,7 +262,7 @@ const FocusAreasCustomization: React.FC<CustomizationComponentProps<string[] | H
       metadata: {
         icon: Activity,
         anatomicalGroup: region.value,
-        difficultyLevel: 'intermediate' as const
+        difficultyLevel: 'some experience' as const
       }
     };
   });
@@ -450,7 +450,7 @@ const FocusAreasCustomization: React.FC<CustomizationComponentProps<string[] | H
         multi
         columns={{ base: 2, md: 3 }}
         userProfile={userProfile}
-        aiRecommendations={aiContext && userProfile ? aiRecommendationEngine.generateRecommendations(aiContext.currentSelections, userProfile).contextual : []}
+        aiRecommendations={[]}
         onAIRecommendationApply={onAIRecommendationApply}
       />
     </div>

@@ -3,6 +3,8 @@ import { Activity, AlertCircle } from 'lucide-react';
 import { StepProps } from '../../types/profile.types';
 import { OptionGrid, OptionConfig } from '../../shared';
 import ProfileHeader from '../ProfileHeader';
+import { createEquipmentOptions } from '../../../../config/equipmentOptions';
+import { DynamicEquipmentService } from '../../../../utils/dynamicEquipmentService';
 
 const PreferencesStep: React.FC<StepProps> = ({ 
   profileData, 
@@ -10,6 +12,7 @@ const PreferencesStep: React.FC<StepProps> = ({
   getFieldError
 }) => {
   const [showActivitiesInfo, setShowActivitiesInfo] = React.useState(false);
+  const [showLocationsInfo, setShowLocationsInfo] = React.useState(false);
   const [showEquipmentInfo, setShowEquipmentInfo] = React.useState(false);
 
   const activityOptions: OptionConfig[] = [
@@ -75,46 +78,21 @@ const PreferencesStep: React.FC<StepProps> = ({
     }
   ];
 
-  const equipmentOptions: OptionConfig[] = [
+  const locationOptions: OptionConfig[] = [
     { 
-      value: 'Gym Membership', 
-      label: 'Gym Membership',
-      description: 'Full access to a commercial gym facility with various equipment and amenities'
+      value: 'Gym', 
+      label: 'Gym',
+      description: 'Commercial gym facility with full equipment access'
     },
     { 
       value: 'Home Gym', 
       label: 'Home Gym',
-      description: 'Dedicated workout space with weights, machines, and other exercise equipment'
+      description: 'Dedicated workout space with equipment at home'
     },
     { 
-      value: 'Dumbbells or Free Weights', 
-      label: 'Dumbbells or Free Weights',
-      description: 'Various handheld weights for strength training and muscle building'
-    },
-    { 
-      value: 'Resistance Bands', 
-      label: 'Resistance Bands',
-      description: 'Elastic bands providing variable resistance for strength and mobility work'
-    },
-    { 
-      value: 'Treadmill or Cardio Machines', 
-      label: 'Treadmill or Cardio Machines',
-      description: 'Access to treadmill, stationary bike, elliptical, or other cardio equipment'
-    },
-    { 
-      value: 'Yoga Mat', 
-      label: 'Yoga Mat',
-      description: 'Exercise mat with optional accessories like straps, blocks, and blankets for floor work'
-    },
-    { 
-      value: 'Body Weight', 
-      label: 'Body Weight',
-      description: 'No equipment needed - exercises using your own body weight for resistance'
-    },
-    { 
-      value: 'Kettlebells', 
-      label: 'Kettlebells',
-      description: 'Weighted bells for dynamic strength training and conditioning exercises'
+      value: 'Home', 
+      label: 'Home',
+      description: 'General home space for body weight and light equipment exercises'
     },
     { 
       value: 'Parks/Outdoor Spaces', 
@@ -127,16 +105,38 @@ const PreferencesStep: React.FC<StepProps> = ({
       description: 'Access to a pool for swimming laps and water-based exercises'
     },
     { 
-      value: 'Mountain Bike', 
-      label: 'Mountain Bike',
-      description: 'Bike suitable for off-road trails and varied terrain'
-    },
-    { 
-      value: 'Road Bike (Cycling)', 
-      label: 'Road Bike (Cycling)',
-      description: 'Bike designed for road cycling and endurance training'
+      value: 'Running Track', 
+      label: 'Running Track',
+      description: 'Dedicated track for running and track-based workouts'
     }
   ];
+
+  // Dynamic equipment options based on selected locations
+  const equipmentOptions = React.useMemo(() => {
+    return createEquipmentOptions(profileData.availableLocations);
+  }, [profileData.availableLocations]);
+  
+  // Auto-select default equipment when locations change
+  React.useEffect(() => {
+    if (profileData.availableLocations.length > 0 && profileData.availableEquipment.length === 0) {
+      const defaultEquipment = DynamicEquipmentService.getDefaultEquipmentForLocations(
+        profileData.availableLocations
+      );
+      defaultEquipment.forEach(equipment => {
+        onArrayToggle('availableEquipment', equipment);
+      });
+    }
+  }, [profileData.availableLocations, profileData.availableEquipment.length, onArrayToggle]);
+  
+  // Clear equipment when locations are cleared
+  React.useEffect(() => {
+    if (profileData.availableLocations.length === 0 && profileData.availableEquipment.length > 0) {
+      // Clear equipment selection when no locations are selected
+      profileData.availableEquipment.forEach(equipment => {
+        onArrayToggle('availableEquipment', equipment);
+      });
+    }
+  }, [profileData.availableLocations.length, profileData.availableEquipment, onArrayToggle]);
 
   return (
     <div className="space-y-8">
@@ -204,8 +204,68 @@ const PreferencesStep: React.FC<StepProps> = ({
         <div>
           <div className="flex items-center gap-2 mb-4">
             <div className="inline-block px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white text-sm font-medium rounded-md shadow-sm">
+              Available Training Locations
+            </div>
+            <button 
+              onClick={() => setShowLocationsInfo(prev => !prev)}
+              className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="Toggle locations information"
+            >
+              <AlertCircle className="w-4 h-4 text-gray-400 hover:text-purple-500 transition-colors" />
+            </button>
+          </div>
+
+          {/* Locations Information Panel */}
+          <div className={`mb-6 bg-purple-50 border border-purple-100 rounded-lg p-6 ${showLocationsInfo ? 'block' : 'hidden'}`}>
+            <div className="prose prose-sm max-w-none">
+              <h4 className="text-purple-800 font-semibold mb-3">Available Training Locations</h4>
+              <p className="text-gray-700 mb-4">
+                Select all locations where you can regularly exercise. This helps us create workouts that match your available spaces and environments.
+              </p>
+              <div className="space-y-2">
+                <p className="text-gray-700">Your selections help us:</p>
+                <ul className="list-none pl-4 space-y-1">
+                  <li className="flex items-start">
+                    <span className="text-purple-600 mr-2">•</span>
+                    Design workouts appropriate for your training environments
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-purple-600 mr-2">•</span>
+                    Consider space constraints and exercise modifications
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-purple-600 mr-2">•</span>
+                    Suggest location-specific workout variations
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <OptionGrid
+            options={locationOptions}
+            selectedValues={profileData.availableLocations}
+            onSelect={(value: string) => onArrayToggle('availableLocations', value)}
+            multiple={true}
+            columns={3}
+            variant="default"
+            useTooltips={true}
+            className="[&_button]:w-full"
+            error={getFieldError ? getFieldError('availableLocations') : undefined}
+            aria-label="Select your available training locations"
+          />
+        </div>
+
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="inline-block px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white text-sm font-medium rounded-md shadow-sm">
               Available Equipment
             </div>
+            {profileData.availableLocations.length > 0 && (
+              <span className="text-sm text-gray-600">
+                Based on your selected locations
+              </span>
+            )}
             <button 
               onClick={() => setShowEquipmentInfo(prev => !prev)}
               className="p-1 rounded-full hover:bg-gray-100 transition-colors"
@@ -220,7 +280,10 @@ const PreferencesStep: React.FC<StepProps> = ({
             <div className="prose prose-sm max-w-none">
               <h4 className="text-purple-800 font-semibold mb-3">Available Equipment</h4>
               <p className="text-gray-700 mb-4">
-                Select all equipment you have regular access to. This helps us create workouts that match your available resources.
+                {profileData.availableLocations.length > 0 
+                  ? 'Equipment options are automatically filtered based on your selected training locations. This ensures workouts only use equipment you actually have access to.'
+                  : 'Select training locations first to see relevant equipment options for your workout environment.'
+                }
               </p>
               <div className="space-y-2">
                 <p className="text-gray-700">Why this matters:</p>
@@ -237,32 +300,46 @@ const PreferencesStep: React.FC<StepProps> = ({
                     <span className="text-purple-600 mr-2">•</span>
                     Allows for alternative suggestions when equipment is limited
                   </li>
+                  {profileData.availableLocations.length > 0 && (
+                    <li className="flex items-start">
+                      <span className="text-purple-600 mr-2">•</span>
+                      Automatically suggests appropriate equipment for your locations
+                    </li>
+                  )}
                 </ul>
               </div>
             </div>
           </div>
 
-          <OptionGrid
-            options={equipmentOptions}
-            selectedValues={profileData.availableEquipment}
-            onSelect={(value: string) => onArrayToggle('availableEquipment', value)}
-            multiple={true}
-            columns={3}
-            variant="default"
-            useTooltips={true}
-            className="[&_button]:w-full"
-            error={getFieldError ? getFieldError('availableEquipment') : undefined}
-            aria-label="Select your available equipment"
-          />
+          {profileData.availableLocations.length === 0 ? (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-yellow-800">
+                Please select training locations first to see relevant equipment options.
+              </p>
+            </div>
+          ) : (
+            <OptionGrid
+              options={equipmentOptions}
+              selectedValues={profileData.availableEquipment}
+              onSelect={(value: string) => onArrayToggle('availableEquipment', value)}
+              multiple={true}
+              columns={3}
+              variant="default"
+              useTooltips={true}
+              className="[&_button]:w-full"
+              error={getFieldError ? getFieldError('availableEquipment') : undefined}
+              aria-label="Select your available equipment"
+            />
+          )}
         </div>
 
         {/* Progress Indication */}
-        {profileData.preferredActivities.length > 0 && profileData.availableEquipment.length > 0 && (
+        {profileData.preferredActivities.length > 0 && profileData.availableLocations.length > 0 && profileData.availableEquipment.length > 0 && (
           <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
             <div className="flex items-center">
               <Activity className="w-5 h-5 text-green-600 mr-3" />
               <span className="text-green-800 font-medium">
-                Great! We'll create workouts based on your preferred activities and available equipment.
+                Great! We'll create workouts based on your preferred activities, training locations, and available equipment.
               </span>
             </div>
           </div>

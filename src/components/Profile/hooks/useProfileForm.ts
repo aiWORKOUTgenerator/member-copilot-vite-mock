@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useEnhancedPersistedState } from '../../../hooks/usePersistedState';
 import { ProfileData, ProfileFormHookReturn } from '../types/profile.types';
 import { calculateCompletionPercentage } from '../utils/profileHelpers';
+import { migrateProfileData } from '../../../utils/migrationUtils';
 
 // Default profile data with empty values
 const defaultProfileData: ProfileData = {
@@ -11,6 +12,7 @@ const defaultProfileData: ProfileData = {
   timeCommitment: '' as ProfileData['timeCommitment'],
   intensityLevel: '' as ProfileData['intensityLevel'],
   preferredActivities: [],
+  availableLocations: [],
   availableEquipment: [],
   primaryGoal: '' as ProfileData['primaryGoal'],
   goalTimeline: '' as ProfileData['goalTimeline'],
@@ -24,28 +26,36 @@ const defaultProfileData: ProfileData = {
 
 export const useProfileForm = (): ProfileFormHookReturn => {
   const {
-    state: profileData,
+    state: rawProfileData,
     setState: setProfileData,
     metadata,
     hasUnsavedChanges,
-    createBackup,
-    restoreFromBackup,
     forceSave
   } = useEnhancedPersistedState<ProfileData>(
     'profileData', 
     defaultProfileData,
     { debounceDelay: 500 } // Faster debounce for better responsiveness
   );
+
+  // Ensure profile data is properly migrated
+  const profileData = useMemo(() => migrateProfileData(rawProfileData), [rawProfileData]);
   
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [touchedFields, setTouchedFields] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  // Create backup when changing steps
+  // Handle unsaved changes warning
   useEffect(() => {
-    createBackup();
-  }, [currentStep, createBackup]);
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   const handleInputChange = useCallback(async (field: keyof ProfileData, value: string | string[]) => {
     try {
@@ -90,9 +100,8 @@ export const useProfileForm = (): ProfileFormHookReturn => {
   }, [profileData, handleInputChange]);
 
   const resetForm = useCallback(() => {
-    createBackup(); // Create backup before reset
     setProfileData(defaultProfileData);
-  }, [setProfileData, createBackup]);
+  }, [setProfileData]);
 
   // Step validation logic
   const validateStep = useCallback((step: number): boolean => {
@@ -102,7 +111,7 @@ export const useProfileForm = (): ProfileFormHookReturn => {
       case 2:
         return !!(profileData.preferredDuration && profileData.timeCommitment && profileData.intensityLevel);
       case 3:
-        return !!(profileData.preferredActivities.length > 0 && profileData.availableEquipment.length > 0);
+        return !!(profileData.preferredActivities.length > 0 && profileData.availableLocations.length > 0 && profileData.availableEquipment.length > 0);
       case 4:
         return !!(profileData.primaryGoal && profileData.goalTimeline);
       case 5:
@@ -130,7 +139,7 @@ export const useProfileForm = (): ProfileFormHookReturn => {
     const stepFields = {
       1: ['experienceLevel', 'physicalActivity'],
       2: ['preferredDuration', 'timeCommitment', 'intensityLevel'],
-      3: ['preferredActivities', 'availableEquipment'],
+      3: ['preferredActivities', 'availableLocations', 'availableEquipment'],
       4: ['primaryGoal', 'goalTimeline'],
       5: ['age', 'gender', 'hasCardiovascularConditions', 'injuries']
     };
@@ -211,7 +220,7 @@ export const useProfileForm = (): ProfileFormHookReturn => {
     return (completedSteps / 5) * 100;
   }, [stepCompletion]);
 
-  return {
+      return {
     profileData,
     handleInputChange,
     handleArrayToggle,
@@ -231,7 +240,6 @@ export const useProfileForm = (): ProfileFormHookReturn => {
     isLoading,
     error,
     hasUnsavedChanges,
-    lastSaved: metadata.lastSaved,
-    restoreFromBackup
+    lastSaved: metadata.lastSaved
   };
 }; 

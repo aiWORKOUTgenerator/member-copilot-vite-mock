@@ -9,7 +9,7 @@ import {
 } from '../../../types';
 
 import { FocusOptionsGrid } from './FocusOptionsGrid';
-import { aiRecommendationEngine } from '../../../utils/migrationUtils';
+import { useAI } from '../../../contexts/AIContext';
 
 // Helper function to consistently extract focus value
 const getCurrentFocus = (value: string | WorkoutFocusConfigurationData): string => {
@@ -36,10 +36,10 @@ const createComplexFocusData = (
     description: focusOption?.description || '',
     configuration: 'focus-only',
     metadata: {
-      intensity: focusOption?.metadata.difficulty === 'beginner' ? 'low' : 
-                 focusOption?.metadata.difficulty === 'intermediate' ? 'moderate' : 'high',
+      intensity: focusOption?.metadata.difficulty === 'new to exercise' ? 'low' : 
+                 focusOption?.metadata.difficulty === 'some experience' ? 'moderate' : 'high',
       equipment: 'moderate',
-      experience: focusOption?.metadata.difficulty || 'beginner',
+      experience: focusOption?.metadata.difficulty || 'some experience',
       duration_compatibility: [15, 30, 45, 60],
       category: focusOption?.metadata.category || 'strength_power',
       primaryBenefit: focusOption?.description || '',
@@ -67,8 +67,8 @@ const generateFocusRecommendations = (
   }
 
   // User profile-based recommendations
-  if (userProfile.fitnessLevel === 'beginner' && currentFocus === 'power') {
-    warnings.push('Power training is advanced - consider starting with strength or endurance');
+  if (userProfile.fitnessLevel === 'new to exercise' && currentFocus === 'power') {
+    warnings.push('Power training is for Advanced Athletes - consider starting with strength or endurance');
     recommendations.push('Try strength training first to build a foundation');
   }
 
@@ -76,8 +76,8 @@ const generateFocusRecommendations = (
     recommendations.push('Weight loss focus aligns with your goals');
   }
 
-  if (userProfile.limitations?.injuries && 
-      userProfile.limitations.injuries.length > 0 && 
+  if (userProfile.basicLimitations?.injuries && 
+      userProfile.basicLimitations.injuries.length > 0 && 
       currentFocus === 'power') {
     warnings.push('Power training may not be suitable with current injuries');
     recommendations.push('Consider recovery or flexibility focus');
@@ -100,7 +100,7 @@ const generateFocusRecommendations = (
       ? aiContext.currentSelections.customization_equipment
       : aiContext.currentSelections.customization_equipment?.specificEquipment;
     
-    if (equipment?.includes('bodyweight') && currentFocus === 'strength') {
+    if (equipment?.includes('Body Weight') && currentFocus === 'strength') {
       optimizations.push('Add resistance equipment for better strength gains');
     }
   }
@@ -271,7 +271,7 @@ export const FocusCustomization: React.FC<CustomizationComponentProps<string | W
       description: 'Focus on progressive overload and muscle building',
       metadata: { 
         icon: Dumbbell, 
-        difficulty: 'intermediate' as const,
+        difficulty: 'some experience' as const,
         category: 'strength_power' as const,
         badge: 'Popular'
       }
@@ -283,7 +283,7 @@ export const FocusCustomization: React.FC<CustomizationComponentProps<string | W
       description: 'Enhance stamina and aerobic capacity',
       metadata: { 
         icon: Heart, 
-        difficulty: 'beginner' as const,
+        difficulty: 'new to exercise' as const,
         category: 'conditioning_cardio' as const
       }
     },
@@ -294,7 +294,7 @@ export const FocusCustomization: React.FC<CustomizationComponentProps<string | W
       description: 'High-intensity fat burning workouts',
       metadata: { 
         icon: Activity, 
-        difficulty: 'beginner' as const,
+        difficulty: 'new to exercise' as const,
         category: 'conditioning_cardio' as const,
         badge: 'Effective'
       }
@@ -306,7 +306,7 @@ export const FocusCustomization: React.FC<CustomizationComponentProps<string | W
       description: 'Improve joint health and movement quality',
       metadata: { 
         icon: Users, 
-        difficulty: 'beginner' as const,
+        difficulty: 'new to exercise' as const,
         category: 'functional_recovery' as const
       }
     },
@@ -317,7 +317,7 @@ export const FocusCustomization: React.FC<CustomizationComponentProps<string | W
       description: 'Explosive movements and plyometrics',
       metadata: { 
         icon: Zap, 
-        difficulty: 'advanced' as const,
+        difficulty: 'advanced athlete' as const,
         category: 'strength_power' as const,
         badge: 'Advanced'
       }
@@ -329,7 +329,7 @@ export const FocusCustomization: React.FC<CustomizationComponentProps<string | W
       description: 'Gentle movements for recovery',
       metadata: { 
         icon: Moon, 
-        difficulty: 'beginner' as const,
+        difficulty: 'new to exercise' as const,
         category: 'functional_recovery' as const
       }
     }
@@ -436,7 +436,7 @@ export const FocusCustomization: React.FC<CustomizationComponentProps<string | W
             columns={{ base: 1, sm: 2, md: 3 }}
             size="lg"
             userProfile={userProfile}
-            aiRecommendations={aiContext && userProfile ? aiRecommendationEngine.generateRecommendations(aiContext.currentSelections, userProfile).contextual : []}
+            aiRecommendations={[]}
             onAIRecommendationApply={onAIRecommendationApply}
           />
         </div>
@@ -563,7 +563,7 @@ export const FocusCustomization: React.FC<CustomizationComponentProps<string | W
         columns={{ base: 1, sm: 2, md: 3 }}
         size="lg"
         userProfile={userProfile}
-        aiRecommendations={aiContext && userProfile ? aiRecommendationEngine.generateRecommendations(aiContext.currentSelections, userProfile).contextual : []}
+        aiRecommendations={[]}
         onAIRecommendationApply={onAIRecommendationApply}
       />
     </div>

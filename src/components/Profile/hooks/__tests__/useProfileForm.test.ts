@@ -3,13 +3,13 @@ import { useProfileForm } from '../useProfileForm';
 
 describe('useProfileForm', () => {
   const mockValidData = {
-    experienceLevel: 'Beginner',
+    experienceLevel: 'New to Exercise',
     physicalActivity: 'moderate',
     preferredDuration: '30-45 min',
     timeCommitment: '3-4',
-    intensityLevel: 'moderate',
+    intensityLevel: 'moderately',
     preferredActivities: ['Walking/Power Walking', 'Running/Jogging'],
-    availableEquipment: ['Dumbbells or Free Weights', 'Yoga Mat'],
+    availableEquipment: ['Dumbbells', 'Yoga Mat'],
     primaryGoal: 'Weight Loss',
     goalTimeline: '3 months',
     age: '26-35',
@@ -43,10 +43,10 @@ describe('useProfileForm', () => {
     const { result } = renderHook(() => useProfileForm());
 
     act(() => {
-      result.current.handleInputChange('experienceLevel', 'Beginner');
+      result.current.handleInputChange('experienceLevel', 'New to Exercise');
     });
 
-    expect(result.current.profileData.experienceLevel).toBe('Beginner');
+    expect(result.current.profileData.experienceLevel).toBe('New to Exercise');
   });
 
   it('should handle array toggles', () => {
@@ -82,7 +82,7 @@ describe('useProfileForm', () => {
 
     // Step 1
     act(() => {
-      result.current.handleInputChange('experienceLevel', 'Beginner');
+      result.current.handleInputChange('experienceLevel', 'New to Exercise');
       result.current.handleInputChange('physicalActivity', 'moderate');
     });
 

@@ -26,13 +26,20 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
     isLoading,
     error,
     hasUnsavedChanges,
-    lastSaved,
-    restoreFromBackup
+    lastSaved
   } = useProfileForm();
+
+  // State to control auto-save message visibility
+  const [showSaveMessage, setShowSaveMessage] = React.useState(false);
 
   const { trackProfileEvent } = useAnalytics();
   const stepStartTimeRef = useRef<number>(Date.now());
   const sessionStartTimeRef = useRef<number>(Date.now());
+
+  // Clean up any existing backup data
+  useEffect(() => {
+    localStorage.removeItem('profileData_backup');
+  }, []);
 
   // Track step changes
   useEffect(() => {
@@ -128,18 +135,20 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
-  // Handle auto-save recovery on page load
+  // Handle auto-save message visibility
   useEffect(() => {
-    const hasBackup = localStorage.getItem('profileData_backup');
-    if (hasBackup) {
-      const shouldRestore = window.confirm(
-        'We found unsaved changes from your previous session. Would you like to restore them?'
-      );
-      if (shouldRestore) {
-        restoreFromBackup();
-      }
+    if (!hasUnsavedChanges && lastSaved) {
+      setShowSaveMessage(true);
+      const timer = setTimeout(() => {
+        setShowSaveMessage(false);
+      }, 1500);
+      return () => clearTimeout(timer);
+    } else if (hasUnsavedChanges) {
+      setShowSaveMessage(false);
     }
-  }, [restoreFromBackup]);
+  }, [hasUnsavedChanges, lastSaved]);
+
+  // Removed backup functionality
 
   const handleSubmit = async () => {
     if (isProfileComplete()) {
@@ -243,7 +252,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
               className={`fixed top-4 right-4 flex items-center gap-2 px-4 py-2 rounded-lg shadow-lg transition-all duration-300 ${
                 hasUnsavedChanges
                   ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-                  : 'bg-green-50 text-green-700 border border-green-200'
+                  : showSaveMessage
+                  ? 'bg-green-50 text-green-700 border border-green-200'
+                  : 'opacity-0 pointer-events-none'
               }`}
               role="status"
               aria-live="polite"
@@ -253,7 +264,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
                   <AlertTriangle className="w-4 h-4" aria-hidden="true" />
                   <span>Saving changes...</span>
                 </>
-              ) : (
+              ) : showSaveMessage ? (
                 <>
                   <Save className="w-4 h-4" aria-hidden="true" />
                   <span>All changes saved</span>
@@ -263,7 +274,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
                     </span>
                   )}
                 </>
-              )}
+              ) : null}
             </div>
 
             {/* Section Navigation */}

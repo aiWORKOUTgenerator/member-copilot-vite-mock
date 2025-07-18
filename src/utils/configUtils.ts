@@ -1,13 +1,14 @@
 import { CustomizationConfig } from '../types/config';
 import { ValidationResult, PerWorkoutOptions, CustomizationComponentProps } from '../types/core';
 import React from 'react';
+import { FitnessLevel } from '../types/user';
 
 // ============================================================================
 // METADATA TEMPLATES - Common patterns for reducing repetition
 // ============================================================================
 
 export const createMetadataTemplate = (
-  difficulty: 'beginner' | 'intermediate' | 'advanced',
+  difficulty: 'new to exercise' | 'some experience' | 'advanced athlete',
   timeRequired: number,
   tags: string[],
   learningObjectives: string[],
@@ -23,19 +24,19 @@ export const createMetadataTemplate = (
 // Common metadata patterns
 export const METADATA_PATTERNS = {
   quickAssessment: (tags: string[], objectives: string[], benefits: string[]) => 
-    createMetadataTemplate('beginner', 1, tags, objectives, benefits),
+    createMetadataTemplate('new to exercise', 1, tags, objectives, benefits),
   
   basicSetup: (tags: string[], objectives: string[], benefits: string[]) => 
-    createMetadataTemplate('beginner', 2, tags, objectives, benefits),
+    createMetadataTemplate('new to exercise', 2, tags, objectives, benefits),
   
   detailedSetup: (tags: string[], objectives: string[], benefits: string[]) => 
-    createMetadataTemplate('beginner', 3, tags, objectives, benefits),
+    createMetadataTemplate('new to exercise', 3, tags, objectives, benefits),
   
-  intermediateCustomization: (tags: string[], objectives: string[], benefits: string[]) => 
-    createMetadataTemplate('intermediate', 2, tags, objectives, benefits),
+  someExperienceCustomization: (tags: string[], objectives: string[], benefits: string[]) => 
+    createMetadataTemplate('some experience', 2, tags, objectives, benefits),
   
   advancedCustomization: (tags: string[], objectives: string[], benefits: string[]) => 
-    createMetadataTemplate('intermediate', 3, tags, objectives, benefits)
+    createMetadataTemplate('some experience', 3, tags, objectives, benefits)
 };
 
 /**
@@ -83,7 +84,7 @@ export const createBaseConfig = (
   required: false,
   order: 999,
   metadata: {
-    difficulty: 'beginner',
+    difficulty: 'new to exercise',
     timeRequired: 2,
     tags: [],
     learningObjectives: [],
@@ -116,7 +117,7 @@ export const createTrainingStructureConfig = (
   required: true,
   order,
   metadata: {
-    difficulty: 'beginner',
+    difficulty: 'new to exercise',
     timeRequired: 3,
     tags: ['training', 'structure', 'planning'],
     learningObjectives: ['Understand training principles', 'Structure effective workouts'],
@@ -150,7 +151,7 @@ export const createTrainingDetailsConfig = (
   required: false,
   order,
   metadata: {
-    difficulty: 'intermediate',
+    difficulty: 'some experience',
     timeRequired: 3,
     tags: ['details', 'customization', 'specifics'],
     learningObjectives: ['Configure training details', 'Optimize workout settings'],
@@ -184,7 +185,7 @@ export const createPhysicalStateConfig = (
   required: false,
   order,
   metadata: {
-    difficulty: 'beginner',
+    difficulty: 'new to exercise',
     timeRequired: 1,
     tags: ['state', 'readiness', 'assessment'],
     learningObjectives: ['Assess current state', 'Adapt workout intensity'],
@@ -217,7 +218,7 @@ export const createExerciseSelectionConfig = (
   required: false,
   order,
   metadata: {
-    difficulty: 'intermediate',
+    difficulty: 'some experience',
     timeRequired: 2,
     tags: ['exercises', 'selection', 'preferences'],
     learningObjectives: ['Select exercises', 'Customize workout content'],
@@ -230,3 +231,29 @@ export const createExerciseSelectionConfig = (
   },
   ...overrides
 }); 
+
+/**
+ * Maps UI experience level values to AI service fitness levels by converting to lowercase
+ * This preserves the meaning while making them compatible with AI services
+ */
+export const mapExperienceLevelToFitnessLevel = (experienceLevel: string): FitnessLevel => {
+  return experienceLevel.toLowerCase() as FitnessLevel;
+};
+
+/**
+ * Maps AI service fitness levels back to UI experience level values
+ * This preserves the original UI meaning
+ */
+export const mapFitnessLevelToExperienceLevel = (fitnessLevel: string): string => {
+  // Convert back to proper case for UI display
+  switch (fitnessLevel) {
+    case 'new to exercise':
+      return 'New to Exercise';
+    case 'some experience':
+      return 'Some Experience';
+    case 'advanced athlete':
+      return 'Advanced Athlete';
+    default:
+      return 'Some Experience';
+  }
+}; 

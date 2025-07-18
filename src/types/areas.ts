@@ -11,7 +11,7 @@ export interface HierarchicalSelectionData {
     // Enhanced metadata for intelligent recommendations
     metadata?: {
       anatomicalGroup?: string;
-      difficultyLevel?: 'beginner' | 'intermediate' | 'advanced';
+      difficultyLevel?: 'new to exercise' | 'some experience' | 'advanced athlete';
       recoveryTime?: number; // hours needed for recovery
       synergisticMuscles?: string[]; // related muscle groups
       contraindications?: string[];
@@ -54,7 +54,7 @@ export interface FocusAreaOption {
     anatomicalGroup: AnatomicalGroup;
     primaryMuscles?: string[];
     secondaryMuscles?: string[];
-    difficulty?: 'beginner' | 'intermediate' | 'advanced';
+    difficulty?: 'new to exercise' | 'some experience' | 'advanced athlete';
     recoveryTime?: number;
   };
 }

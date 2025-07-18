@@ -30,21 +30,20 @@ const EquipmentSelection: React.FC<EquipmentSelectionProps> = ({
     const baseOptions = [
       { value: 'Dumbbells', label: 'Dumbbells', sublabel: 'Versatile weight training' },
       { value: 'Resistance Bands', label: 'Resistance Bands', sublabel: 'Portable resistance' },
-      { value: 'Bodyweight Only', label: 'Bodyweight Only', sublabel: 'No equipment needed' }
+      { value: 'Body Weight', label: 'Body Weight', sublabel: 'No equipment needed' }
     ];
     
     if (location === 'gym') {
       baseOptions.push(
-        { value: 'Barbell', label: 'Barbell', sublabel: 'Heavy compound movements' },
-        { value: 'Cable Machine', label: 'Cable Machine', sublabel: 'Constant tension' },
-        { value: 'Machines', label: 'Machines', sublabel: 'Guided movements' }
+        { value: 'Barbells & Weight Plates', label: 'Barbells & Weight Plates', sublabel: 'Heavy compound movements' },
+        { value: 'Strength Machines', label: 'Strength Machines', sublabel: 'Guided movements' },
+        { value: 'Cardio Machines (Treadmill, Elliptical, Bike)', label: 'Cardio Machines', sublabel: 'Cardiovascular training' }
       );
     }
     
     if (contexts.includes('cardio')) {
       baseOptions.push(
-        { value: 'Treadmill', label: 'Treadmill', sublabel: 'Running/walking' },
-        { value: 'Bike', label: 'Exercise Bike', sublabel: 'Low-impact cardio' }
+        { value: 'Cardio Machine (Treadmill, Bike)', label: 'Cardio Machine', sublabel: 'Running/walking or cycling' }
       );
     }
     
@@ -52,7 +51,7 @@ const EquipmentSelection: React.FC<EquipmentSelectionProps> = ({
   };
 
   const needsAdvancedSettings = (equipment: string[]) => {
-    return equipment.some(eq => ['Dumbbells', 'Barbell', 'Kettlebells'].includes(eq));
+    return equipment.some(eq => ['Dumbbells', 'Barbells & Weight Plates', 'Kettlebells'].includes(eq));
   };
 
   return (

@@ -15,7 +15,7 @@ export interface CustomizationConfig {
   
   // Rich metadata for AI recommendations and validation
   metadata?: {
-    difficulty: 'beginner' | 'intermediate' | 'advanced';
+    difficulty: 'new to exercise' | 'some experience' | 'advanced athlete';
     timeRequired: number; // minutes to complete
     dependencies?: Array<keyof PerWorkoutOptions>; // other fields this depends on
     aiContext?: string; // context for AI recommendations

@@ -202,8 +202,8 @@ export function OptionGrid<T>({
                   {opt.metadata?.difficulty && (
                     <div className="mt-2">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                        opt.metadata.difficulty === 'beginner' ? 'bg-green-100 text-green-800' :
-                        opt.metadata.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                        opt.metadata.difficulty === 'new to exercise' ? 'bg-green-100 text-green-800' :
+                        opt.metadata.difficulty === 'some experience' ? 'bg-yellow-100 text-yellow-800' :
                         'bg-red-100 text-red-800'
                       }`}>
                         {opt.metadata.difficulty}
@@ -294,7 +294,7 @@ export function RatingScale({
       }
       
       // User profile analysis
-      if (userProfile?.fitnessLevel === 'beginner') {
+      if (userProfile?.fitnessLevel === 'new to exercise') {
         insights.push('This is normal for beginners - focus on consistency over intensity');
       }
     }
@@ -464,7 +464,7 @@ export function CustomizationWrapper({
   const enhancementAnalysis = useMemo(() => {
     // This would use the shouldEnhanceComponent utility
     return {
-      shouldEnhance: userProfile.fitnessLevel === 'advanced' && !isEnhanced,
+      shouldEnhance: userProfile.fitnessLevel === 'advanced athlete' && !isEnhanced,
       confidence: 0.7,
       reasons: ['Advanced users benefit from detailed controls'],
       benefits: ['More precise workout customization', 'Better results tracking']

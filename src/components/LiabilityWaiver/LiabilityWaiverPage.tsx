@@ -1,5 +1,5 @@
-import React, { Suspense } from 'react';
-import { Shield, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle } from 'lucide-react';
+import React, { Suspense, useEffect } from 'react';
+import { Shield, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, Save } from 'lucide-react';
 import { PageHeader, SectionNavigation } from '../shared';
 import { useWaiverForm } from './hooks/useWaiverForm';
 import { LiabilityWaiverPageProps } from './types/liability-waiver.types';
@@ -16,19 +16,46 @@ const LiabilityWaiverPage: React.FC<LiabilityWaiverPageProps> = ({ onNavigate })
     prevSection,
     setSection,
     isWaiverComplete,
-    getTotalProgress
+    getTotalProgress,
+    hasUnsavedChanges,
+    lastSaved,
+    forceSave
   } = useWaiverForm();
+
+  // Clean up any existing backup data
+  useEffect(() => {
+    localStorage.removeItem('waiverData_backup');
+  }, []);
+
+  // Handle unsaved changes warning
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  // Removed backup functionality
 
   const handleSubmit = () => {
     if (isWaiverComplete()) {
+      forceSave(); // Ensure all changes are saved before proceeding
       console.log('Waiver completed:', waiverData);
       onNavigate('focus');
     }
   };
 
   const handleSectionChange = React.useCallback((index: number) => {
+    if (hasUnsavedChanges) {
+      forceSave(); // Save changes before switching sections
+    }
     setSection(index + 1); // Convert 0-based index to 1-based section number
-  }, [setSection]);
+  }, [setSection, hasUnsavedChanges, forceSave]);
 
   const renderSection = () => {
     switch (currentSection) {
@@ -76,6 +103,21 @@ const LiabilityWaiverPage: React.FC<LiabilityWaiverPageProps> = ({ onNavigate })
             gradient="from-red-600 to-orange-600"
             className="mb-8"
           />
+
+          {/* Save Status Indicator */}
+          <div className="flex items-center justify-end mb-4 text-sm">
+            {hasUnsavedChanges ? (
+              <span className="text-orange-600 flex items-center gap-1">
+                <Save className="w-4 h-4" />
+                Saving...
+              </span>
+            ) : (
+              <span className="text-gray-600 flex items-center gap-1">
+                <Save className="w-4 h-4" />
+                Last saved: {new Date(lastSaved).toLocaleTimeString()}
+              </span>
+            )}
+          </div>
 
           {/* Section Navigation */}
           <SectionNavigation

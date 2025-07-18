@@ -3,55 +3,184 @@ import { PenLine, ChevronLeft, ClipboardList, Sparkles, ArrowRight } from 'lucid
 import { PageHeader } from './shared';
 import { QuickWorkoutForm } from './quickWorkout/components';
 import DetailedWorkoutContainer from './DetailedWorkoutContainer';
-import { PerWorkoutOptions, UserProfile, AIRecommendationContext } from '../types/enhanced-workout-types';
+import { PerWorkoutOptions, AIRecommendationContext, WorkoutType } from '../types/enhanced-workout-types';
+import { UserProfile, TimePreference, AIAssistanceLevel, RecoveryStatus } from '../types/user';
+import { ProfileData } from './Profile/types/profile.types';
+import { mapExperienceLevelToFitnessLevel } from '../utils/configUtils';
 
-interface WorkoutFocusPageProps {
-  onNavigate: (page: 'profile' | 'focus' | 'review' | 'results') => void;
+// Helper function to convert ProfileData to UserProfile
+const convertProfileDataToUserProfile = (profileData: ProfileData): UserProfile => {
+  return {
+    fitnessLevel: mapExperienceLevelToFitnessLevel(profileData.experienceLevel),
+    goals: [profileData.primaryGoal.toLowerCase().replace(' ', '_')],
+    preferences: {
+      workoutStyle: profileData.preferredActivities.map(activity => 
+        activity.toLowerCase().replace(/[^a-z0-9]/g, '_')
+      ),
+      timePreference: 'morning' as TimePreference,
+      intensityPreference: (() => {
+        // Map target activity level to progression rate (not immediate intensity)
+        let targetProgressionRate: 'conservative' | 'moderate' | 'aggressive';
+        switch (profileData.intensityLevel) {
+          case 'lightly':
+          case 'light-moderate':
+            targetProgressionRate = 'conservative';
+            break;
+          case 'moderately':
+          case 'active':
+            targetProgressionRate = 'moderate';
+            break;
+          case 'very':
+          case 'extremely':
+            targetProgressionRate = 'aggressive';
+            break;
+          default:
+            targetProgressionRate = 'moderate';
+        }
+
+        // Calculate appropriate starting intensity based on current activity level
+        // This ensures safety while working toward the target goal
+        switch (profileData.physicalActivity) {
+          case 'sedentary':
+            // Sedentary users start with low intensity regardless of target
+            return 'low';
+            
+          case 'light':
+            // Lightly active users start with low-to-moderate intensity
+            return targetProgressionRate === 'aggressive' ? 'moderate' : 'low';
+            
+          case 'moderate':
+            // Moderately active users can start with moderate intensity
+            return 'moderate';
+            
+          case 'very':
+            // Very active users can handle moderate-to-high intensity
+            return targetProgressionRate === 'conservative' ? 'moderate' : 'high';
+            
+          case 'extremely':
+            // Extremely active users can handle high intensity
+            return targetProgressionRate === 'conservative' ? 'moderate' : 'high';
+            
+          case 'varies':
+            // For users with varying activity, use moderate as default
+            return 'moderate';
+            
+          default:
+            return 'moderate';
+        }
+      })(),
+      advancedFeatures: profileData.experienceLevel === 'Advanced Athlete',
+      aiAssistanceLevel: 'moderate' as AIAssistanceLevel
+    },
+    basicLimitations: {
+      injuries: profileData.injuries.filter(injury => injury !== 'No Injuries'),
+      availableEquipment: profileData.availableEquipment,
+      availableLocations: profileData.availableLocations
+    },
+    enhancedLimitations: {
+      timeConstraints: 0, // Will be calculated by AI service
+      equipmentConstraints: [],
+      locationConstraints: [],
+      recoveryNeeds: {
+        restDays: 2,
+        sleepHours: 7,
+        hydrationLevel: 'moderate'
+      },
+      mobilityLimitations: [],
+      progressionRate: 'moderate'
+    },
+    workoutHistory: {
+      estimatedCompletedWorkouts: 0,
+      averageDuration: 45,
+      preferredFocusAreas: [],
+      progressiveEnhancementUsage: {},
+      aiRecommendationAcceptance: 0.7,
+      consistencyScore: 0.5,
+      plateauRisk: 'low'
+    },
+    learningProfile: {
+      prefersSimplicity: profileData.experienceLevel === 'New to Exercise',
+      explorationTendency: 'moderate',
+      feedbackPreference: 'simple',
+      learningStyle: 'visual',
+      motivationType: 'intrinsic',
+      adaptationSpeed: 'moderate'
+    }
+  };
+};
+
+export interface WorkoutFocusPageProps {
+  onNavigate: (page: 'profile' | 'waiver' | 'focus' | 'review' | 'results') => void;
+  onDataUpdate?: (data: PerWorkoutOptions, workoutType: WorkoutType) => void;
+  initialData?: PerWorkoutOptions;
+  profileData?: ProfileData | null;
 }
 
 type ViewMode = 'selection' | 'quick' | 'detailed';
 
-const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
+const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ 
+  onNavigate,
+  onDataUpdate,
+  initialData,
+  profileData 
+}) => {
   const [viewMode, setViewMode] = useState<ViewMode>('selection');
-  const [options, setOptions] = useState<PerWorkoutOptions>({});
+  const [options, setOptions] = useState<PerWorkoutOptions>(initialData || {});
 
   const handleOptionsChange = (key: keyof PerWorkoutOptions, value: PerWorkoutOptions[keyof PerWorkoutOptions]) => {
-    setOptions(prev => ({ ...prev, [key]: value }));
+    const newOptions = { ...options, [key]: value };
+    setOptions(newOptions);
+    onDataUpdate?.(newOptions, viewMode === 'quick' ? 'quick' : 'detailed');
   };
 
-  // Mock user profile for demo purposes
-  const mockUserProfile: UserProfile = {
-    fitnessLevel: 'intermediate',
-    goals: ['strength', 'muscle_building'],
-    preferences: {
-      workoutStyle: ['strength_training', 'functional'],
-      timePreference: 'morning',
-      intensityPreference: 'moderate',
-      advancedFeatures: false,
-      aiAssistanceLevel: 'moderate'
-    },
-    limitations: {
-      timeConstraints: 60,
-      equipmentConstraints: ['home_gym']
-    },
-    history: {
-      completedWorkouts: 15,
-      averageDuration: 45,
-      preferredFocusAreas: ['upper_body', 'core'],
-      progressiveEnhancementUsage: {},
-      aiRecommendationAcceptance: 0.7
-    },
-    learningProfile: {
-      prefersSimplicity: false,
-      explorationTendency: 'moderate',
-      feedbackPreference: 'detailed'
-    }
-  };
-
-  // Mock AI context
-  const mockAIContext: AIRecommendationContext = {
+  // Create AI context with real data
+  const aiContext: AIRecommendationContext = {
     currentSelections: options,
-    userProfile: mockUserProfile,
+    userProfile: profileData ? convertProfileDataToUserProfile(profileData) : {
+      fitnessLevel: 'some experience',
+      goals: ['general_fitness'],
+      preferences: {
+        workoutStyle: ['balanced'],
+        timePreference: 'morning' as TimePreference,
+        intensityPreference: 'moderate',
+        advancedFeatures: false,
+        aiAssistanceLevel: 'moderate' as AIAssistanceLevel
+      },
+      basicLimitations: {
+        injuries: [],
+        availableEquipment: ['Body Weight'],
+        availableLocations: ['Home']
+      },
+      enhancedLimitations: {
+        timeConstraints: 0,
+        equipmentConstraints: [],
+        locationConstraints: [],
+        recoveryNeeds: {
+          restDays: 2,
+          sleepHours: 7,
+          hydrationLevel: 'moderate'
+        },
+        mobilityLimitations: [],
+        progressionRate: 'moderate'
+      },
+      workoutHistory: {
+        estimatedCompletedWorkouts: 0,
+        averageDuration: 45,
+        preferredFocusAreas: [],
+        progressiveEnhancementUsage: {},
+        aiRecommendationAcceptance: 0.7,
+        consistencyScore: 0.5,
+        plateauRisk: 'low'
+      },
+      learningProfile: {
+        prefersSimplicity: true,
+        explorationTendency: 'moderate',
+        feedbackPreference: 'simple',
+        learningStyle: 'visual',
+        motivationType: 'intrinsic',
+        adaptationSpeed: 'moderate'
+      }
+    },
     environmentalFactors: {
       timeOfDay: 'morning',
       location: 'home',
@@ -60,7 +189,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
     recentActivity: {
       lastWorkoutDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
       lastWorkoutType: 'strength',
-      recoveryStatus: 'full'
+      recoveryStatus: 'full' as RecoveryStatus
     }
   };
 
@@ -179,8 +308,10 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
       <QuickWorkoutForm
         onNavigate={onNavigate}
         onBack={() => setViewMode('selection')}
-        userProfile={mockUserProfile}
-        aiContext={mockAIContext}
+        userProfile={profileData ? convertProfileDataToUserProfile(profileData) : undefined}
+        aiContext={aiContext}
+        initialData={options}
+        onDataUpdate={(data) => onDataUpdate?.(data, 'quick')}
       />
     );
   }
@@ -193,8 +324,9 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({ onNavigate }) => {
       errors={{}}
       disabled={false}
       onNavigate={onNavigate}
-      userProfile={mockUserProfile}
-      aiContext={mockAIContext}
+      userProfile={profileData ? convertProfileDataToUserProfile(profileData) : undefined}
+      aiContext={aiContext}
+      workoutType="detailed"
     />
   );
 };

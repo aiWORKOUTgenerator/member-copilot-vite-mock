@@ -59,7 +59,7 @@ export interface OptionDefinition<T = any> {
   
   // Enhanced metadata for intelligent rendering
   metadata?: {
-    difficulty?: 'beginner' | 'intermediate' | 'advanced';
+    difficulty?: 'new to exercise' | 'some experience' | 'advanced athlete';
     icon?: React.ComponentType<{ className?: string }>;
     badge?: string;
     category?: string;

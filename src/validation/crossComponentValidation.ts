@@ -51,9 +51,9 @@ export const validateCrossComponent = (allOptions: PerWorkoutOptions): Validatio
       ? allOptions.customization_areas 
       : Object.keys(allOptions.customization_areas || {}).filter(k => allOptions.customization_areas?.[k]?.selected);
     
-    if (focus === 'strength' && areas.includes('Upper Body') && equipment.includes('Bodyweight Only')) {
+    if (focus === 'strength' && areas.includes('Upper Body') && equipment.includes('Body Weight')) {
       result.warnings = result.warnings || [];
-      result.warnings.push('Upper body strength training is challenging with bodyweight only');
+              result.warnings.push('Upper body strength training is challenging with Body Weight only');
       result.recommendations = result.recommendations || [];
       result.recommendations.push('Consider adding resistance bands or weights for upper body development');
     }

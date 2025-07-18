@@ -1,68 +1,283 @@
-import React, { useState } from 'react';
-import { User, Target, Zap, ChevronRight, Eye, Shield } from 'lucide-react';
-import { ProfilePage } from './components/Profile';
+import React, { useState, useCallback, useEffect } from 'react';
+import { User, Shield, Target, Eye, Zap, ChevronRight } from 'lucide-react';
+import { ProfilePage, ProfilePageProps } from './components/Profile';
 import { LiabilityWaiverPage } from './components/LiabilityWaiver';
+import type { LiabilityWaiverPageProps } from './components/LiabilityWaiver/types/liability-waiver.types';
 import WorkoutFocusPage from './components/WorkoutFocusPage';
+import type { WorkoutFocusPageProps } from './components/WorkoutFocusPage';
 import ReviewPage from './components/ReviewPage';
+import type { ReviewPageProps } from './components/ReviewPage';
 import WorkoutResultsPage from './components/WorkoutResultsPage';
+import type { WorkoutResultsPageProps } from './components/WorkoutResultsPage';
+import { AIProvider, AIDevTools, useAI } from './contexts/AIContext';
+import { useWorkoutGeneration } from './hooks/useWorkoutGeneration';
+import type { UseWorkoutGenerationReturn } from './hooks/useWorkoutGeneration';
+import { GeneratedWorkout } from './services/ai/external/types/external-ai.types';
+import { PerWorkoutOptions, WorkoutType } from './types/enhanced-workout-types';
+import { UserProfile, FitnessLevel, IntensityLevel } from './types/user';
+import { ProfileData } from './components/Profile/types/profile.types';
+import { LiabilityWaiverData } from './components/LiabilityWaiver/types/liability-waiver.types';
+import { mapExperienceLevelToFitnessLevel } from './utils/configUtils';
 
 type PageType = 'profile' | 'waiver' | 'focus' | 'review' | 'results';
 
-function App() {
+// App state for managing data across pages
+interface AppState {
+  profileData: ProfileData | null;
+  waiverData: LiabilityWaiverData | null;
+  workoutFocusData: PerWorkoutOptions | null;
+  generatedWorkout: GeneratedWorkout | null;
+}
+
+// Define page components with their props
+type PageComponents = {
+  [K in PageType]: React.ComponentType<{
+    onNavigate: (page: PageType, data?: any) => void;
+    onDataUpdate?: (data: any) => void;
+    initialData?: any;
+    profileData?: ProfileData | null;
+    waiverData?: LiabilityWaiverData | null;
+    workoutFocusData?: PerWorkoutOptions | null;
+    workoutGeneration?: UseWorkoutGenerationReturn;
+    onWorkoutGenerated?: (workout: GeneratedWorkout) => void;
+    generatedWorkout?: GeneratedWorkout | null;
+    onWorkoutUpdate?: (workout: GeneratedWorkout) => void;
+  }>;
+};
+
+// Separate component for content that needs AI context
+function AppContent() {
   const [currentPage, setCurrentPage] = useState<PageType>('profile');
+  const [appState, setAppState] = useState<AppState>(() => {
+    // Load initial state from localStorage
+    try {
+      const profileData = localStorage.getItem('profileData');
+      if (profileData) {
+        const parsed = JSON.parse(profileData);
+        if (parsed.data) { // Check for enhanced persisted state format
+          return {
+            profileData: parsed.data,
+            waiverData: null,
+            workoutFocusData: null,
+            generatedWorkout: null
+          };
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load profile data from localStorage:', error);
+    }
+    return {
+      profileData: null,
+      waiverData: null,
+      workoutFocusData: null,
+      generatedWorkout: null
+    };
+  });
+
+  // AI service initialization
+  const { initialize, serviceStatus } = useAI();
+
+  // Load profile data from localStorage when it changes
+  useEffect(() => {
+    try {
+      const profileData = localStorage.getItem('profileData');
+      if (profileData) {
+        const parsed = JSON.parse(profileData);
+        if (parsed.data) {
+          setAppState(prev => ({
+            ...prev,
+            profileData: parsed.data
+          }));
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load profile data from localStorage:', error);
+    }
+  }, []);
+
+  // Initialize AI service when profile data is available
+  useEffect(() => {
+    if (appState.profileData?.experienceLevel && serviceStatus === 'initializing') {
+      // Convert experience level to fitness level using proper mapping
+      const fitnessLevel = mapExperienceLevelToFitnessLevel(appState.profileData.experienceLevel);
+
+      // Convert primary goal
+      const primaryGoal = appState.profileData.primaryGoal?.toLowerCase().replace(/\s+/g, '_') || 'general_fitness';
+
+      // Convert preferred activities
+      const workoutStyle = (appState.profileData.preferredActivities || []).map(activity => 
+        activity.toLowerCase().replace(/[^a-z0-9]/g, '_')
+      );
+
+      // Convert intensity level
+      const intensityLevel = (appState.profileData.intensityLevel || 'moderate').toLowerCase();
+      if (!['low', 'moderate', 'high'].includes(intensityLevel)) {
+        console.warn('Invalid intensity level:', intensityLevel);
+        return;
+      }
+
+      const userProfile: UserProfile = {
+        fitnessLevel,
+        goals: [primaryGoal],
+        preferences: {
+          workoutStyle,
+          timePreference: 'morning',
+          intensityPreference: intensityLevel as IntensityLevel,
+          advancedFeatures: appState.profileData.experienceLevel === 'Advanced Athlete',
+          aiAssistanceLevel: 'moderate'
+        },
+        basicLimitations: {
+          injuries: (appState.profileData.injuries || []).filter(injury => injury !== 'No Injuries'),
+          availableEquipment: appState.profileData.availableEquipment || [],
+          availableLocations: appState.profileData.availableLocations || []
+        },
+        enhancedLimitations: {
+          timeConstraints: appState.profileData.preferredDuration ? 
+            parseInt(appState.profileData.preferredDuration.split('-')[1]) || 60 : 60,
+          equipmentConstraints: [],
+          locationConstraints: [],
+          recoveryNeeds: {
+            restDays: 2,
+            sleepHours: 7,
+            hydrationLevel: 'moderate'
+          },
+          mobilityLimitations: [],
+          progressionRate: 'moderate'
+        },
+        workoutHistory: {
+          estimatedCompletedWorkouts: 0,
+          averageDuration: appState.profileData.preferredDuration ? 
+            parseInt(appState.profileData.preferredDuration.split('-')[0]) || 30 : 30,
+          preferredFocusAreas: [],
+          progressiveEnhancementUsage: {},
+          aiRecommendationAcceptance: 0.7,
+          consistencyScore: 0.5,
+          plateauRisk: 'low'
+        },
+        learningProfile: {
+          prefersSimplicity: appState.profileData.experienceLevel === 'New to Exercise',
+          explorationTendency: 'moderate',
+          feedbackPreference: 'simple',
+          learningStyle: 'visual',
+          motivationType: 'intrinsic',
+          adaptationSpeed: 'moderate'
+        }
+      };
+
+      initialize(userProfile);
+    }
+  }, [appState.profileData, initialize, serviceStatus]);
+
+  // Workout generation hook - now inside AIProvider context
+  const workoutGeneration = useWorkoutGeneration();
 
   const pages = [
-    { id: 'profile', title: 'Profile', icon: User, component: ProfilePage },
-    { id: 'waiver', title: 'Waiver', icon: Shield, component: LiabilityWaiverPage },
-    { id: 'focus', title: 'Workout Focus', icon: Target, component: WorkoutFocusPage },
-    { id: 'review', title: 'Review', icon: Eye, component: ReviewPage },
-    { id: 'results', title: 'Results', icon: Zap, component: WorkoutResultsPage }
+    { id: 'profile' as const, title: 'Profile', icon: User, component: ProfilePage },
+    { id: 'waiver' as const, title: 'Waiver', icon: Shield, component: LiabilityWaiverPage },
+    { id: 'focus' as const, title: 'Workout Focus', icon: Target, component: WorkoutFocusPage },
+    { id: 'review' as const, title: 'Review', icon: Eye, component: ReviewPage },
+    { id: 'results' as const, title: 'Results', icon: Zap, component: WorkoutResultsPage }
   ];
 
   const currentPageIndex = pages.findIndex(page => page.id === currentPage);
-  const CurrentPageComponent = pages[currentPageIndex].component;
+  const CurrentPageComponent = pages[currentPageIndex].component as PageComponents[typeof currentPage];
+
+  // Navigation handler with data persistence
+  const handleNavigation = useCallback((page: PageType, data?: any) => {
+    // Save any data passed with navigation
+    if (data) {
+      setAppState(prev => ({ ...prev, ...data }));
+    }
+    
+    setCurrentPage(page);
+  }, []);
+
+  // Update app state handlers
+  const updateProfileData = useCallback((profileData: ProfileData) => {
+    // Update app state
+    setAppState(prev => ({ ...prev, profileData }));
+
+    // Log the profile data being saved
+    console.log('Saving profile data:', profileData);
+
+    // Verify the data in localStorage
+    const stored = localStorage.getItem('profileData');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      console.log('Current localStorage data:', parsed);
+    }
+  }, []);
+
+  const updateWaiverData = useCallback((waiverData: LiabilityWaiverData) => {
+    setAppState(prev => ({ ...prev, waiverData }));
+  }, []);
+
+  const updateWorkoutFocusData = useCallback((workoutFocusData: PerWorkoutOptions) => {
+    setAppState(prev => ({ ...prev, workoutFocusData }));
+  }, []);
+
+  const updateGeneratedWorkout = useCallback((generatedWorkout: GeneratedWorkout) => {
+    setAppState(prev => ({ ...prev, generatedWorkout }));
+  }, []);
+
+  // Get page-specific props
+  const getPageProps = useCallback(() => {
+    const baseProps = {
+      onNavigate: handleNavigation,
+    };
+
+    switch (currentPage) {
+      case 'profile':
+        return {
+          ...baseProps,
+          onDataUpdate: updateProfileData,
+          initialData: appState.profileData
+        } as ProfilePageProps;
+      
+      case 'waiver':
+        return {
+          ...baseProps,
+          onDataUpdate: updateWaiverData,
+          initialData: appState.waiverData
+        } as LiabilityWaiverPageProps;
+      
+      case 'focus':
+        return {
+          ...baseProps,
+          onDataUpdate: updateWorkoutFocusData,
+          initialData: appState.workoutFocusData,
+          profileData: appState.profileData
+        } as WorkoutFocusPageProps;
+      
+      case 'review':
+        return {
+          ...baseProps,
+          profileData: appState.profileData,
+          waiverData: appState.waiverData,
+          workoutFocusData: appState.workoutFocusData,
+          workoutGeneration,
+          onWorkoutGenerated: updateGeneratedWorkout
+        } as ReviewPageProps;
+      
+      case 'results':
+        return {
+          ...baseProps,
+          generatedWorkout: appState.generatedWorkout,
+          workoutGeneration,
+          onWorkoutUpdate: updateGeneratedWorkout
+        } as WorkoutResultsPageProps;
+      
+      default:
+        return baseProps;
+    }
+  }, [currentPage, appState, handleNavigation, workoutGeneration, updateProfileData, updateWaiverData, updateWorkoutFocusData, updateGeneratedWorkout]);
+
+  // Type assertion for CurrentPageComponent
+  const TypedCurrentPageComponent = CurrentPageComponent as React.ComponentType<ReturnType<typeof getPageProps>>;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
-                <Zap className="w-5 h-5 text-white" />
-              </div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                AI Workout Generator
-              </h1>
-            </div>
-
-            {/* Progress Indicator */}
-            <div className="flex items-center space-x-2">
-              {pages.map((page, index) => (
-                <div key={page.id} className="flex items-center">
-                  <div 
-                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
-                      index <= currentPageIndex 
-                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' 
-                        : 'bg-gray-200 text-gray-400'
-                    }`}
-                  >
-                    <page.icon className="w-4 h-4" />
-                  </div>
-                  {index < pages.length - 1 && (
-                    <ChevronRight className={`w-4 h-4 mx-2 transition-colors duration-300 ${
-                      index < currentPageIndex ? 'text-blue-600' : 'text-gray-300'
-                    }`} />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Navigation Tabs */}
+    <div className="min-h-screen bg-gray-50">
+      {/* Navigation */}
       <div className="bg-white/60 backdrop-blur-sm border-b border-gray-200/50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex space-x-8" aria-label="Tabs">
@@ -90,19 +305,28 @@ function App() {
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="transition-all duration-500 ease-in-out">
-          <CurrentPageComponent onNavigate={setCurrentPage} />
+          <TypedCurrentPageComponent {...getPageProps()} />
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="bg-white/80 backdrop-blur-md border-t border-gray-200/50 mt-auto">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="text-center text-sm text-gray-500">
-            <p>AI-powered workout generation tailored to your fitness goals</p>
-          </div>
+      <footer className="bg-white/60 backdrop-blur-sm border-t border-gray-200/50 mt-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <p className="text-sm text-gray-500 text-center">
+            © 2024 Your Workout App. All rights reserved.
+          </p>
         </div>
       </footer>
     </div>
+  );
+}
+
+// Main App component
+function App() {
+  return (
+    <AIProvider>
+      <AppContent />
+    </AIProvider>
   );
 }
 

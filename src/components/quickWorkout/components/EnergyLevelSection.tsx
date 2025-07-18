@@ -2,46 +2,11 @@ import React from 'react';
 import { Battery } from 'lucide-react';
 import { SectionProps } from '../types/quick-workout.types';
 import { RatingScaleWrapper } from '../../customization/rating';
-import { RATING_THRESHOLDS } from '../../../types/rating';
 import { AIInsight } from '../../../types/insights';
 import { logger } from '../../../utils/logger';
+import { useAI } from '../../../contexts/AIContext';
 
 const DEFAULT_ENERGY_LEVEL = 5;
-
-const generateEnergyInsights = (value: number): AIInsight[] => {
-  const { ENERGY } = RATING_THRESHOLDS;
-  
-  if (value >= ENERGY.HIGH) {
-    return [{
-      type: 'opportunity',
-      message: 'High energy level detected',
-      recommendation: 'Great opportunity for an intense, challenging workout'
-    }];
-  }
-  
-  if (value >= ENERGY.MODERATE) {
-    return [{
-      type: 'opportunity',
-      message: 'Good energy level',
-      recommendation: 'Ready for a moderate to high-intensity workout'
-    }];
-  }
-  
-  if (value > ENERGY.CRITICAL_LOW) {
-    return [{
-      type: 'warning',
-      message: 'Moderate energy level',
-      recommendation: 'Consider a balanced, moderate-intensity workout'
-    }];
-  }
-  
-  // Critical low energy
-  return [{
-    type: 'critical_warning',
-    message: 'Very low energy level detected',
-    recommendation: 'Consider resting or limiting to light mobility work today'
-  }];
-};
 
 export const EnergyLevelSection: React.FC<SectionProps> = ({
   focusData,
@@ -50,12 +15,49 @@ export const EnergyLevelSection: React.FC<SectionProps> = ({
   _aiContext, // Prefix with _ to indicate intentionally unused
   userProfile
 }) => {
+  const { aiService, serviceStatus } = useAI();
+
   const handleEnergyChange = (value: number) => {
     onInputChange('energyLevel', value);
   };
 
   const handleAIInsight = (insight: AIInsight) => {
     logger.debug('Energy AI Insight:', insight);
+  };
+
+  // Generate AI insights using the new service
+  const generateEnergyInsights = (value: number): AIInsight[] => {
+    if (serviceStatus !== 'ready') {
+      // Fallback to basic insights if service isn't ready
+      return [{
+        type: 'optimization',
+        title: 'Energy Level',
+        content: `Current energy level: ${value}/10`,
+        priority: 'low',
+        category: 'performance',
+        metadata: {
+          recommendation: 'Service initializing - please wait'
+        }
+      }];
+    }
+
+    try {
+      // Use the new AI service
+      const insights = aiService.getEnergyInsights(value);
+      return insights;
+    } catch (error) {
+      logger.error('Failed to generate energy insights:', error);
+      return [{
+        type: 'warning',
+        title: 'Service Error',
+        content: 'Unable to generate energy insights at this time',
+        priority: 'medium',
+        category: 'performance',
+        metadata: {
+          recommendation: 'Try refreshing the page or contact support'
+        }
+      }];
+    }
   };
 
   const renderHeader = () => (
@@ -67,7 +69,7 @@ export const EnergyLevelSection: React.FC<SectionProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-xl font-semibold text-gray-900">Energy Level</h3>
-            {typeof focusData.energyLevel === 'number' && (
+            {typeof focusData.energyLevel === 'number' && focusData.energyLevel > 0 && (
               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                 Level {focusData.energyLevel}
               </span>
@@ -88,7 +90,7 @@ export const EnergyLevelSection: React.FC<SectionProps> = ({
 
   const currentEnergyLevel = typeof focusData.energyLevel === 'number' 
     ? focusData.energyLevel 
-    : DEFAULT_ENERGY_LEVEL;
+    : 0; // Show 0 initially, not DEFAULT_ENERGY_LEVEL
 
   const renderRatingScale = () => (
     <RatingScaleWrapper
@@ -125,11 +127,48 @@ export const EnergyLevelSection: React.FC<SectionProps> = ({
           customization_energy: currentEnergyLevel
         },
         userProfile: userProfile ?? {
-          fitnessLevel: 'intermediate',
+          fitnessLevel: 'some experience',
           goals: ['general_fitness'],
           preferences: {
             workoutStyle: ['balanced'],
-            intensityPreference: 'moderate'
+            timePreference: 'morning',
+            intensityPreference: 'moderate',
+            advancedFeatures: false,
+            aiAssistanceLevel: 'moderate'
+          },
+          basicLimitations: {
+            injuries: [],
+            availableEquipment: ['Body Weight'],
+            availableLocations: ['Home']
+          },
+          enhancedLimitations: {
+            timeConstraints: 0,
+            equipmentConstraints: [],
+            locationConstraints: [],
+            recoveryNeeds: {
+              restDays: 2,
+              sleepHours: 7,
+              hydrationLevel: 'moderate'
+            },
+            mobilityLimitations: [],
+            progressionRate: 'moderate'
+          },
+          workoutHistory: {
+            estimatedCompletedWorkouts: 0,
+            averageDuration: 45,
+            preferredFocusAreas: [],
+            progressiveEnhancementUsage: {},
+            aiRecommendationAcceptance: 0.7,
+            consistencyScore: 0.5,
+            plateauRisk: 'low'
+          },
+          learningProfile: {
+            prefersSimplicity: true,
+            explorationTendency: 'moderate',
+            feedbackPreference: 'simple',
+            learningStyle: 'visual',
+            motivationType: 'intrinsic',
+            adaptationSpeed: 'moderate'
           }
         },
         generateInsights: generateEnergyInsights
@@ -141,12 +180,22 @@ export const EnergyLevelSection: React.FC<SectionProps> = ({
     <>
       {renderRatingScale()}
       
+      {/* Warning Message Box */}
+      {currentEnergyLevel <= 3 && (
+        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <h4 className="font-medium text-yellow-800">Low energy level detected</h4>
+          <p className="mt-1 text-sm text-yellow-700">
+            Consider a lighter workout or focus on mobility and recovery
+          </p>
+        </div>
+      )}
+      
       {/* Metadata Footer */}
       <div className="mt-4 p-3 bg-gray-50 rounded-lg">
         <div className="flex items-center justify-between text-sm text-gray-600">
           <div className="flex items-center gap-4">
             <span>
-              Difficulty: <span className="font-medium">Beginner</span>
+              Difficulty: <span className="font-medium">New to Exercise</span>
             </span>
             <span>
               Time: <span className="font-medium">1 min</span>

@@ -7,7 +7,7 @@ export interface IncludeExercisesData {
   metadata?: {
     primaryMuscleGroups?: string[];
     equipmentUsed?: string[];
-    difficultyLevel?: 'beginner' | 'intermediate' | 'advanced';
+    difficultyLevel?: 'new to exercise' | 'some experience' | 'advanced athlete';
     estimatedTime?: number; // minutes
   };
 }
@@ -35,7 +35,7 @@ export interface ExerciseDefinition {
     secondary: string[];
   };
   equipment: string[];
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  difficulty: 'new to exercise' | 'some experience' | 'advanced athlete';
   category: string;
   tags: string[];
   variations?: string[];

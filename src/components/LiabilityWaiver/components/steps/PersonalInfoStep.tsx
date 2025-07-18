@@ -263,13 +263,11 @@ const PersonalInfoStep: React.FC<StepProps> = ({
               <p className="text-sm text-yellow-700">
                 If you have any medical conditions, injuries, or take medications that may affect your ability to exercise safely, 
                 please consult with your physician before beginning any exercise program.
-                <br />  
-                <br />
-                <p>✅ Obtained medical clearance from my physician to participate in the activities described above, or</p>
-                <p>⚠️ Voluntarily chosen to proceed without such clearance and hereby assume all risks associated with my participation.</p>
-                <br />
-            
               </p>
+              <div className="mt-3 text-sm text-yellow-700">
+                <div>✅ Obtained medical clearance from my physician to participate in the activities described above, or</div>
+                <div>⚠️ Voluntarily chosen to proceed without such clearance and hereby assume all risks associated with my participation.</div>
+              </div>
             </div>
           </div>
           <div className="mt-4">

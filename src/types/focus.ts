@@ -15,7 +15,7 @@ export interface WorkoutFocusConfigurationData {
   metadata: {
     intensity: 'low' | 'moderate' | 'high' | 'variable';
     equipment: 'minimal' | 'moderate' | 'full-gym';
-    experience: 'beginner' | 'intermediate' | 'advanced' | 'all-levels';
+    experience: 'new to exercise' | 'some experience' | 'advanced athlete';
     duration_compatibility: number[];
     category: 'strength_power' | 'muscle_building' | 'conditioning_cardio' | 'functional_recovery';
     
@@ -59,17 +59,21 @@ export type TrainingFormat =
 
 // Focus option definition
 export interface FocusOption {
-  value: WorkoutFocus;
-  label: string;
-  sublabel: string;
+  id: string;
+  name: string;
   description: string;
-  metadata: {
-    icon: React.ComponentType<{ className?: string }>;
-    difficulty: 'beginner' | 'intermediate' | 'advanced';
-    category: FocusCategory;
-    badge?: string;
-    formats?: TrainingFormat[];
-  };
+  icon: string;
+  category: FocusCategory;
+  difficulty: 'new to exercise' | 'some experience' | 'advanced athlete';
+  equipment: string[];
+  duration: number;
+  intensity: 'low' | 'moderate' | 'high';
+  muscleGroups: string[];
+  benefits: string[];
+  contraindications?: string[];
+  alternatives?: string[];
+  progression?: string;
+  regression?: string;
 }
 
 // Focus validation rules
@@ -78,5 +82,5 @@ export interface FocusValidationRules {
   incompatibleWith?: string[];
   minimumDuration?: number;
   maximumDuration?: number;
-  experienceLevel?: 'beginner' | 'intermediate' | 'advanced';
+  experienceLevel?: 'new to exercise' | 'some experience' | 'advanced athlete';
 } 

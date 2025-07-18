@@ -66,6 +66,10 @@ export interface WaiverFormHookReturn {
   setSection: (section: number) => void;
   isWaiverComplete: () => boolean;
   getTotalProgress: () => number;
+  // Enhanced persistence features
+  hasUnsavedChanges: boolean;
+  lastSaved: number;
+  forceSave: () => void;
 }
 
 export interface ValidationHookReturn {

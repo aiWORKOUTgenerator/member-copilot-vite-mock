@@ -1,3 +1,7 @@
+import { UserProfile, EnvironmentalFactors, RecentActivity } from './user';
+import { ProfileData } from '../components/Profile/types/profile.types';
+import { LiabilityWaiverData } from '../components/LiabilityWaiver/types/liability-waiver.types';
+
 // Enhanced Core Type System with Configuration-Driven Architecture
 // Updated to support DRY principles, validation, and AI integration
 
@@ -62,7 +66,7 @@ export interface EquipmentSelectionData {
     totalValue?: number;                // Equipment investment level
     spaceRequired?: 'minimal' | 'moderate' | 'large';
     maintenanceLevel?: 'low' | 'medium' | 'high';
-    userExperience?: 'beginner' | 'intermediate' | 'advanced';
+    userExperience?: 'new to exercise' | 'some experience' | 'advanced athlete';
     aiRecommendations?: string[];
   };
   
@@ -88,7 +92,7 @@ export interface HierarchicalSelectionData {
     // Enhanced metadata for intelligent recommendations
     metadata?: {
       anatomicalGroup?: string;
-      difficultyLevel?: 'beginner' | 'intermediate' | 'advanced';
+      difficultyLevel?: 'new to exercise' | 'some experience' | 'advanced athlete';
       recoveryTime?: number; // hours needed for recovery
       synergisticMuscles?: string[]; // related muscle groups
       contraindications?: string[];
@@ -143,7 +147,7 @@ export interface DurationConfigurationData {
   // Metadata for AI recommendations
   metadata?: {
     intensityLevel?: 'low' | 'moderate' | 'high' | 'variable';
-    fitnessLevel?: 'beginner' | 'intermediate' | 'advanced';
+    fitnessLevel?: 'new to exercise' | 'some experience' | 'advanced athlete';
     timeOfDay?: 'morning' | 'afternoon' | 'evening';
     workoutDensity?: number; // exercises per minute
     userPreferences?: Record<string, any>;
@@ -165,7 +169,7 @@ export interface WorkoutFocusConfigurationData {
   metadata: {
     intensity: 'low' | 'moderate' | 'high' | 'variable';
     equipment: 'minimal' | 'moderate' | 'full-gym';
-    experience: 'beginner' | 'intermediate' | 'advanced' | 'all-levels';
+    experience: 'new to exercise' | 'some experience' | 'advanced athlete' | 'all-levels';
     duration_compatibility: number[];
     category: 'strength_power' | 'muscle_building' | 'conditioning_cardio' | 'functional_recovery';
     
@@ -193,7 +197,7 @@ export interface IncludeExercisesData {
   metadata?: {
     primaryMuscleGroups?: string[];
     equipmentUsed?: string[];
-    difficultyLevel?: 'beginner' | 'intermediate' | 'advanced';
+    difficultyLevel?: 'new to exercise' | 'some experience' | 'advanced athlete';
     estimatedTime?: number; // minutes
   };
 }
@@ -210,58 +214,12 @@ export interface ExcludeExercisesData {
   };
 }
 
-// User profile interface for personalization
-export interface UserProfile {
-  fitnessLevel: 'beginner' | 'intermediate' | 'advanced';
-  goals: string[];
-  preferences: {
-    workoutStyle?: string[];
-    timePreference?: 'morning' | 'afternoon' | 'evening';
-    intensityPreference?: 'low' | 'moderate' | 'high' | 'variable';
-    advancedFeatures?: boolean;
-    aiAssistanceLevel?: 'minimal' | 'moderate' | 'comprehensive';
-  };
-  limitations?: {
-    injuries?: string[];
-    timeConstraints?: number; // max minutes
-    equipmentConstraints?: string[];
-    physicalLimitations?: string[];
-  };
-  history?: {
-    completedWorkouts?: number;
-    averageDuration?: number;
-    preferredFocusAreas?: string[];
-    progressiveEnhancementUsage?: Record<string, number>;
-    aiRecommendationAcceptance?: number;
-  };
-  learningProfile?: {
-    prefersSimplicity?: boolean;
-    explorationTendency?: 'conservative' | 'moderate' | 'adventurous';
-    feedbackPreference?: 'minimal' | 'detailed' | 'comprehensive';
-  };
-}
-
 // AI recommendation context
 export interface AIRecommendationContext {
-  currentSelections: Partial<PerWorkoutOptions>;
+  currentSelections: PerWorkoutOptions;
   userProfile: UserProfile;
-  environmentalFactors?: {
-    timeOfDay?: string;
-    weather?: string;
-    location?: string;
-    availableTime?: number;
-  };
-  recentActivity?: {
-    lastWorkoutDate?: Date;
-    lastWorkoutType?: string;
-    recoveryStatus?: 'full' | 'partial' | 'minimal';
-    performanceMetrics?: Record<string, number>;
-  };
-  crossComponentAnalysis?: {
-    conflicts?: string[];
-    optimizations?: string[];
-    missingComplements?: string[];
-  };
+  environmentalFactors: EnvironmentalFactors;
+  recentActivity: RecentActivity;
 }
 
 // Enhanced option interface for DRY components
@@ -274,7 +232,7 @@ export interface OptionDefinition<T = any> {
   
   // Enhanced metadata for intelligent rendering
   metadata?: {
-    difficulty?: 'beginner' | 'intermediate' | 'advanced';
+    difficulty?: 'new to exercise' | 'some experience' | 'advanced athlete';
     icon?: React.ComponentType<{ className?: string }>;
     badge?: string;
     category?: string;
@@ -339,7 +297,7 @@ export interface CustomizationConfig {
   
   // Rich metadata for AI recommendations and validation
   metadata?: {
-    difficulty: 'beginner' | 'intermediate' | 'advanced';
+    difficulty: 'new to exercise' | 'some experience' | 'advanced athlete';
     timeRequired: number; // minutes to complete
     dependencies?: Array<keyof PerWorkoutOptions>; // other fields this depends on
     aiContext?: string; // context for AI recommendations
@@ -425,4 +383,15 @@ export interface AIRecommendationEngine {
     optimizations: string[];
     missingComplements: string[];
   };
+} 
+
+// Literal type for workout types
+export type WorkoutType = 'quick' | 'detailed';
+
+export interface WorkoutGenerationRequest {
+  workoutType: WorkoutType;
+  profileData: ProfileData;
+  waiverData?: LiabilityWaiverData;
+  workoutFocusData: PerWorkoutOptions;
+  userProfile: UserProfile;
 } 

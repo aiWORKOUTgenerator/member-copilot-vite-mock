@@ -2,7 +2,7 @@
 export interface EquipmentSelectionData {
   location?: string;                    // Gym, Home, Outdoor
   contexts: string[];                   // Weight Training, Cardio, etc.
-  specificEquipment: string[];          // Dumbbells, Barbell, etc.
+  specificEquipment: string[];          // Dumbbells, Barbells & Weight Plates, etc.
   weights?: { [equipmentType: string]: number[] }; // Available weights
   lastUpdated?: Date;                   // For smart recommendations
   
@@ -11,7 +11,7 @@ export interface EquipmentSelectionData {
     totalValue?: number;                // Equipment investment level
     spaceRequired?: 'minimal' | 'moderate' | 'large';
     maintenanceLevel?: 'low' | 'medium' | 'high';
-    userExperience?: 'beginner' | 'intermediate' | 'advanced';
+    userExperience?: 'new to exercise' | 'some experience' | 'advanced athlete';
     aiRecommendations?: string[];
   };
   
@@ -46,7 +46,7 @@ export interface EquipmentSpec {
   category: string;
   defaultWeights?: number[];
   spaceRequired: 'minimal' | 'moderate' | 'large';
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  difficulty: 'new to exercise' | 'some experience' | 'advanced athlete';
   versatility: number; // 1-10 scale
 }
 
