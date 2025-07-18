@@ -111,31 +111,5 @@ export interface MigrationUtils {
   };
 }
 
-// AI integration interfaces
-export interface AIRecommendationEngine {
-  generateRecommendations: (
-    options: PerWorkoutOptions,
-    userProfile: UserProfile
-  ) => {
-    immediate: string[];
-    contextual: string[];
-    learning: string[];
-    optimization: string[];
-  };
-  
-  parseAIRecommendation: (
-    configKey: string,
-    recommendation: string,
-    options: PerWorkoutOptions,
-    userProfile: UserProfile
-  ) => any;
-  
-  analyzeCrossComponentConflicts: (
-    options: PerWorkoutOptions,
-    userProfile: UserProfile
-  ) => {
-    conflicts: string[];
-    optimizations: string[];
-    missingComplements: string[];
-  };
-} 
+// AI integration interfaces - Legacy AIRecommendationEngine interface removed
+// Use the new AIService architecture instead 

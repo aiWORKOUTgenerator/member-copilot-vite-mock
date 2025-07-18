@@ -485,13 +485,11 @@ export class MigrationUtils {
   
   /**
    * Create compatibility wrapper for legacy functions
+   * @deprecated This method is no longer needed as legacy AI engine has been removed
    */
   createCompatibilityWrapper(newService: AIService): {
     generateEnergyInsights: (value: number) => AIInsight[];
     generateSorenessInsights: (value: number) => AIInsight[];
-    aiRecommendationEngine: {
-      generateRecommendations: (options: PerWorkoutOptions, userProfile: UserProfile) => any;
-    };
   } {
     return {
       generateEnergyInsights: (value: number) => {
@@ -501,22 +499,9 @@ export class MigrationUtils {
       
       generateSorenessInsights: (value: number) => {
         console.warn('Using legacy compatibility wrapper for generateSorenessInsights');
-        return newService.getSorenessInsights(value);
-      },
-      
-      aiRecommendationEngine: {
-        generateRecommendations: (options: PerWorkoutOptions, userProfile: UserProfile) => {
-          console.warn('Using legacy compatibility wrapper for aiRecommendationEngine');
-          
-          // This would need to be implemented as a sync wrapper
-          // For now, return empty recommendations
-          return {
-            immediate: [],
-            contextual: [],
-            learning: [],
-            optimization: []
-          };
-        }
+        // Convert number to array format for compatibility
+        const sorenessAreas = value > 3 ? ['General'] : [];
+        return newService.getSorenessInsights(sorenessAreas);
       }
     };
   }
