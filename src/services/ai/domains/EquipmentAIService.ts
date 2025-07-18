@@ -75,41 +75,104 @@ export class EquipmentAIService {
   }
 
   /**
-   * Analyze equipment variety and balance
+   * Analyze equipment variety and balance with comprehensive context awareness
    */
   private analyzeEquipmentVariety(equipment: string[], context: GlobalAIContext): AIInsight | null {
     const categories = this.getEquipmentCategories(equipment);
+    const userProfile: UserProfile = context.userProfile;
+    const sessionHistory = context.sessionHistory || [];
+    const environmentalFactors = context.environmentalFactors;
     
+    // Check for bodyweight-only selection
     if (categories.length === 1 && categories[0] === 'BODYWEIGHT') {
+      // Enhanced analysis based on user profile and history
+      const isNewToExercise = userProfile?.fitnessLevel === 'new to exercise';
+      const hasEquipmentHistory = sessionHistory.some(interaction => 
+        interaction.component === 'equipment' && 
+        interaction.action === 'recommendation_applied'
+      );
+      
+      let message = 'Body weight workouts are excellent for building strength and endurance. Consider adding resistance equipment for progressive overload.';
+      let recommendation = 'Add resistance bands or dumbbells for variety';
+      let confidence = 0.7;
+      
+      if (isNewToExercise) {
+        message = 'Great choice for starting your fitness journey! Body weight exercises are perfect for building foundational strength.';
+        recommendation = 'Start with body weight, then gradually add resistance bands';
+        confidence = 0.8;
+      } else if (hasEquipmentHistory) {
+        message = 'You\'ve used equipment before - consider adding some resistance for continued progress.';
+        recommendation = 'Reintroduce dumbbells or resistance bands for variety';
+        confidence = 0.75;
+      }
+      
       return this.createInsight(
         'education',
         'info',
-        'Body weight workouts are excellent for building strength and endurance. Consider adding resistance equipment for progressive overload.',
-        0.7,
+        message,
+        confidence,
         true,
         ['customization_equipment'],
         { 
           context: 'bodyweight_only',
-          recommendation: 'Add resistance bands or dumbbells for variety',
-          categories: categories
+          recommendation,
+          categories,
+          userFitnessLevel: userProfile?.fitnessLevel,
+          hasEquipmentHistory
         }
       );
     }
 
+    // Check for limited variety
     if (categories.length < 2) {
+      // Enhanced analysis based on user preferences and environmental factors
+      const aiAssistanceLevel = userProfile?.preferences?.aiAssistanceLevel;
+      const timeOfDay = environmentalFactors?.timeOfDay;
+      const availableTime = environmentalFactors?.availableTime;
+      
+      let message = 'Limited equipment variety may restrict workout options. Consider adding equipment from different categories.';
+      let recommendation = 'Add equipment from different categories';
+      let confidence = 0.6;
+      
+      // Time-based recommendations
+      if (timeOfDay === 'morning' && availableTime && availableTime < 30) {
+        message = 'Morning quick workout detected - limited variety is fine for short sessions.';
+        recommendation = 'Focus on efficiency with current equipment';
+        confidence = 0.5; // Lower confidence since limited variety is acceptable
+      } else if (aiAssistanceLevel === 'low') {
+        message = 'You prefer minimal equipment - current selection aligns with your preferences.';
+        recommendation = 'Continue with current approach if it works for you';
+        confidence = 0.4; // Lower confidence since user prefers simplicity
+      }
+      
       return this.createInsight(
         'warning',
         'warning',
-        'Limited equipment variety may restrict workout options. Consider adding equipment from different categories.',
-        0.6,
+        message,
+        confidence,
         true,
         ['customization_equipment'],
         { 
           context: 'low_variety',
-          recommendation: 'Add equipment from different categories',
-          categories: categories
+          recommendation,
+          categories,
+          timeOfDay,
+          availableTime,
+          aiAssistanceLevel
         }
       );
+    }
+
+    // Check for equipment usage patterns from session history
+    const equipmentUsagePattern = this.analyzeEquipmentUsagePattern(sessionHistory, equipment);
+    if (equipmentUsagePattern) {
+      return equipmentUsagePattern;
+    }
+
+    // Check for environmental factor considerations
+    const environmentalInsight = this.analyzeEnvironmentalFactors(equipment, environmentalFactors, userProfile);
+    if (environmentalInsight) {
+      return environmentalInsight;
     }
 
     return null;
@@ -338,5 +401,98 @@ export class EquipmentAIService {
     }
     
     return defaultEquipment;
+  }
+
+  /**
+   * Analyze equipment usage patterns from session history
+   */
+  private analyzeEquipmentUsagePattern(sessionHistory: any[], equipment: string[]): AIInsight | null {
+    // Check for repetitive equipment usage
+    const equipmentInteractions = sessionHistory.filter(interaction => 
+      interaction.component === 'equipment'
+    );
+    
+    if (equipmentInteractions.length >= 5) {
+      const recentInteractions = equipmentInteractions.slice(-5);
+      const sameEquipmentCount = recentInteractions.filter(interaction => 
+        interaction.action === 'recommendation_applied'
+      ).length;
+      
+      if (sameEquipmentCount >= 4) {
+        return this.createInsight(
+          'education',
+          'info',
+          'You\'ve been using similar equipment consistently - great for building habits!',
+          0.7,
+          false,
+          ['customization_equipment'],
+          {
+            context: 'consistent_usage',
+            recommendation: 'Continue with current approach if it\'s working well'
+          }
+        );
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Analyze environmental factors for equipment recommendations
+   */
+  private analyzeEnvironmentalFactors(equipment: string[], environmentalFactors: any, userProfile: UserProfile): AIInsight | null {
+    if (!environmentalFactors) return null;
+    
+    const { timeOfDay, location, availableTime } = environmentalFactors;
+    
+    // Time-based recommendations
+    if (timeOfDay === 'evening' && equipment.includes('Cardio Machines (Treadmill, Elliptical, Bike)')) {
+      return this.createInsight(
+        'optimization',
+        'info',
+        'Evening cardio can affect sleep - consider lower intensity options',
+        0.6,
+        true,
+        ['customization_equipment'],
+        {
+          context: 'evening_cardio',
+          recommendation: 'Switch to strength training or gentle cardio for evening workouts'
+        }
+      );
+    }
+    
+    // Location-based recommendations
+    if (location === 'home' && equipment.includes('Strength Machines')) {
+      return this.createInsight(
+        'optimization',
+        'info',
+        'Strength machines typically require gym access - consider home alternatives',
+        0.8,
+        true,
+        ['customization_equipment'],
+        {
+          context: 'home_equipment_mismatch',
+          recommendation: 'Use dumbbells, resistance bands, or body weight alternatives'
+        }
+      );
+    }
+    
+    // Time constraint recommendations
+    if (availableTime && availableTime < 30 && equipment.length > 3) {
+      return this.createInsight(
+        'optimization',
+        'warning',
+        'Limited time with many equipment options - focus on efficiency',
+        0.7,
+        true,
+        ['customization_equipment'],
+        {
+          context: 'time_constraint',
+          recommendation: 'Select 2-3 key pieces of equipment for time efficiency'
+        }
+      );
+    }
+    
+    return null;
   }
 } 
