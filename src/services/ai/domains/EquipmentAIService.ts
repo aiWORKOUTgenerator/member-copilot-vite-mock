@@ -169,7 +169,7 @@ export class EquipmentAIService {
    * Analyze equipment complexity level
    */
   private analyzeComplexityLevel(equipment: string[], context: GlobalAIContext): AIInsight | null {
-    const userProfile = context.userProfile;
+    const userProfile: UserProfile = context.userProfile;
     if (!userProfile) return null;
 
     const experienceLevel = userProfile.fitnessLevel || 'new to exercise';
@@ -263,7 +263,7 @@ export class EquipmentAIService {
    */
   getRecommendations(context: GlobalAIContext): string[] {
     const focus = context.currentSelections?.customization_focus;
-    const userProfile = context.userProfile;
+    const userProfile: UserProfile = context.userProfile;
 
     if (!focus || typeof focus !== 'string') {
       return ['Body Weight', 'Resistance Bands'];
@@ -317,7 +317,7 @@ export class EquipmentAIService {
     const defaultEquipment = ['Body Weight', 'Resistance Bands'];
     
     // Try to get location from user profile if available
-    const userProfile = context.userProfile;
+    const userProfile: UserProfile = context.userProfile;
     if (userProfile?.basicLimitations?.availableLocations) {
       const locations = userProfile.basicLimitations.availableLocations;
       
