@@ -69,9 +69,7 @@ export class EquipmentAIService {
 
     // Space requirements analysis removed
 
-    // Analyze cost considerations
-    const costInsight = this.analyzeCostConsiderations(equipment, context);
-    if (costInsight) insights.push(costInsight);
+    // Cost considerations analysis removed
 
     return insights;
   }
@@ -214,40 +212,6 @@ export class EquipmentAIService {
     return null;
   }
 
-
-
-  /**
-   * Analyze cost considerations
-   */
-  private analyzeCostConsiderations(equipment: string[], context: GlobalAIContext): AIInsight | null {
-    const userProfile = context.userProfile;
-    if (!userProfile) return null;
-
-    const budget = userProfile.preferences?.budget;
-    if (!budget) return null;
-
-    const expensiveEquipment = ['Treadmill', 'Stationary Bike', 'Rowing Machine', 'Elliptical', 'Weight Machine', 'Cable Machine'];
-    const expensiveCount = equipment.filter(eq => expensiveEquipment.includes(eq)).length;
-
-    if (budget === 'low' && expensiveCount > 0) {
-      return this.createInsight(
-        'budget_concern',
-        'warning',
-        'Expensive equipment selected for low budget. Consider cost-effective alternatives or gradual equipment acquisition.',
-        0.7,
-        true,
-        ['customization_equipment'],
-        {
-          context: 'budget_concern',
-          budget: budget,
-          expensiveCount: expensiveCount,
-          recommendation: 'Consider budget-friendly alternatives'
-        }
-      );
-    }
-
-    return null;
-  }
 
   /**
    * Get equipment categories for the selected equipment

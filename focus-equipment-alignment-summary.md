@@ -46,7 +46,7 @@ private readonly EQUIPMENT_CATEGORIES = {
 - **Equipment Variety Analysis**: Ensures diverse equipment selection across categories
 - **Complexity Level Analysis**: Matches equipment complexity to user experience level
 - **Space Requirements Analysis**: Considers location constraints
-- **Cost Considerations**: Filters equipment based on user preferences
+- **Equipment Variety**: Ensures diverse equipment selection across categories
 
 ### **5. Enhanced Recommendations System**
 ```typescript
@@ -82,7 +82,7 @@ getRecommendations(context: GlobalAIContext): string[] {
 2. **`analyzeEquipmentVariety()`**: Ensures diverse equipment selection
 3. **`analyzeComplexityLevel()`**: Matches equipment to user experience
 4. **`analyzeSpaceRequirements()`**: Considers location constraints
-5. **`analyzeCostConsiderations()`**: Respects user budget preferences
+5. **`analyzeEquipmentVariety()`**: Ensures diverse equipment selection
 
 ### **Recommendation Methods**
 1. **`getRecommendations()`**: Main recommendation engine
