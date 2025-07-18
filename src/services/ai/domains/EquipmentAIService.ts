@@ -444,51 +444,101 @@ export class EquipmentAIService {
     if (!environmentalFactors) return null;
     
     const { timeOfDay, location, availableTime } = environmentalFactors;
+    const fitnessLevel = userProfile?.fitnessLevel;
+    const aiAssistanceLevel = userProfile?.preferences?.aiAssistanceLevel;
     
-    // Time-based recommendations
+    // Time-based recommendations with user profile consideration
     if (timeOfDay === 'evening' && equipment.includes('Cardio Machines (Treadmill, Elliptical, Bike)')) {
+      let message = 'Evening cardio can affect sleep - consider lower intensity options';
+      let recommendation = 'Switch to strength training or gentle cardio for evening workouts';
+      let confidence = 0.6;
+      
+      // Adjust based on user's fitness level
+      if (fitnessLevel === 'new to exercise') {
+        message = 'Evening cardio might be too stimulating for sleep - try gentle movement instead';
+        recommendation = 'Choose yoga, stretching, or light body weight exercises for evening';
+        confidence = 0.7;
+      } else if (fitnessLevel === 'advanced athlete') {
+        message = 'Evening cardio may affect sleep quality - consider timing adjustments';
+        recommendation = 'Complete cardio 2-3 hours before bedtime or switch to strength training';
+        confidence = 0.5; // Lower confidence for advanced users who may handle it better
+      }
+      
       return this.createInsight(
         'optimization',
         'info',
-        'Evening cardio can affect sleep - consider lower intensity options',
-        0.6,
+        message,
+        confidence,
         true,
         ['customization_equipment'],
         {
           context: 'evening_cardio',
-          recommendation: 'Switch to strength training or gentle cardio for evening workouts'
+          recommendation,
+          fitnessLevel,
+          timeOfDay
         }
       );
     }
     
-    // Location-based recommendations
+    // Location-based recommendations with user profile consideration
     if (location === 'home' && equipment.includes('Strength Machines')) {
+      let message = 'Strength machines typically require gym access - consider home alternatives';
+      let recommendation = 'Use dumbbells, resistance bands, or body weight alternatives';
+      let confidence = 0.8;
+      
+      // Adjust based on user's AI assistance preference
+      if (aiAssistanceLevel === 'low') {
+        message = 'You prefer minimal equipment - strength machines may be too complex for home use';
+        recommendation = 'Stick with simple equipment like dumbbells and resistance bands';
+        confidence = 0.9;
+      }
+      
       return this.createInsight(
         'optimization',
         'info',
-        'Strength machines typically require gym access - consider home alternatives',
-        0.8,
+        message,
+        confidence,
         true,
         ['customization_equipment'],
         {
           context: 'home_equipment_mismatch',
-          recommendation: 'Use dumbbells, resistance bands, or body weight alternatives'
+          recommendation,
+          location,
+          aiAssistanceLevel
         }
       );
     }
     
-    // Time constraint recommendations
+    // Time constraint recommendations with user profile consideration
     if (availableTime && availableTime < 30 && equipment.length > 3) {
+      let message = 'Limited time with many equipment options - focus on efficiency';
+      let recommendation = 'Select 2-3 key pieces of equipment for time efficiency';
+      let confidence = 0.7;
+      
+      // Adjust based on user's fitness level and preferences
+      if (fitnessLevel === 'new to exercise') {
+        message = 'Short workout time - keep it simple with 1-2 pieces of equipment';
+        recommendation = 'Choose body weight and one resistance option for quick, effective workouts';
+        confidence = 0.8;
+      } else if (aiAssistanceLevel === 'low') {
+        message = 'Quick workout with minimal equipment complexity';
+        recommendation = 'Focus on 2-3 simple, versatile pieces of equipment';
+        confidence = 0.6;
+      }
+      
       return this.createInsight(
         'optimization',
         'warning',
-        'Limited time with many equipment options - focus on efficiency',
-        0.7,
+        message,
+        confidence,
         true,
         ['customization_equipment'],
         {
           context: 'time_constraint',
-          recommendation: 'Select 2-3 key pieces of equipment for time efficiency'
+          recommendation,
+          availableTime,
+          fitnessLevel,
+          aiAssistanceLevel
         }
       );
     }
