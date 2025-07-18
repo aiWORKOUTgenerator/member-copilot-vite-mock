@@ -1,4 +1,4 @@
-import { AIInsight, AIInsightType } from '../../../types/insights';
+import { AIInsight, AIInsightType, AIInsightPriority } from '../../../types/insights';
 import { GlobalAIContext } from '../core/AIService';
 import { UserProfile } from '../../../types/user';
 import { WorkoutFocus } from '../../../types/focus';
@@ -45,6 +45,7 @@ export class EquipmentAIService {
     if (!equipment || equipment.length === 0) {
       insights.push(this.createInsight(
         'warning',
+        'warning',
         'No equipment selected. Consider adding equipment for more varied workouts.',
         0.8,
         true,
@@ -82,6 +83,7 @@ export class EquipmentAIService {
     if (categories.length === 1 && categories[0] === 'BODYWEIGHT') {
       return this.createInsight(
         'education',
+        'info',
         'Body weight workouts are excellent for building strength and endurance. Consider adding resistance equipment for progressive overload.',
         0.7,
         true,
@@ -96,6 +98,7 @@ export class EquipmentAIService {
 
     if (categories.length < 2) {
       return this.createInsight(
+        'warning',
         'warning',
         'Limited equipment variety may restrict workout options. Consider adding equipment from different categories.',
         0.6,
@@ -230,15 +233,24 @@ export class EquipmentAIService {
    */
   private createInsight(
     type: AIInsightType,
+    severity: 'info' | 'warning' | 'success' | 'error',
     message: string,
     confidence: number,
     actionable: boolean,
     relatedFields: string[],
     metadata: Record<string, any>
   ): AIInsight {
+    // Map severity to priority
+    const priority: AIInsightPriority = 
+      severity === 'error' ? 'high' :
+      severity === 'warning' ? 'medium' :
+      'low';
+
     return {
       type,
       message,
+      priority,
+      category: 'equipment',
       confidence,
       actionable,
       relatedFields,
@@ -296,7 +308,7 @@ export class EquipmentAIService {
       return 0;
     });
   }
-
+  
   /**
    * Get location-specific equipment recommendations
    */
