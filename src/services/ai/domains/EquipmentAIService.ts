@@ -433,6 +433,110 @@ export class EquipmentAIService {
         );
       }
     }
+
+    // Analyze current equipment selection against historical patterns
+    const currentEquipmentCategories = this.getEquipmentCategories(equipment);
+    const equipmentVariety = currentEquipmentCategories.length;
+    
+    // Check if user is trying new equipment types
+    const historicalEquipmentInteractions = sessionHistory.filter(interaction => 
+      interaction.component === 'equipment' && 
+      interaction.action === 'recommendation_applied'
+    );
+    
+    if (historicalEquipmentInteractions.length >= 3) {
+      // Analyze if current selection represents a change in approach
+      const recentEquipmentSelections = historicalEquipmentInteractions.slice(-3);
+      const hasRecentVariety = recentEquipmentSelections.some(interaction => 
+        interaction.metadata?.equipmentVariety > 1
+      );
+      
+      // If user typically uses limited variety but current selection has more variety
+      if (!hasRecentVariety && equipmentVariety > 1) {
+        return this.createInsight(
+          'encouragement',
+          'success',
+          'Great progress! You\'re expanding your equipment variety - this will add more workout options.',
+          0.8,
+          false,
+          ['customization_equipment'],
+          {
+            context: 'variety_expansion',
+            recommendation: 'Continue exploring different equipment types for balanced training',
+            currentVariety: equipmentVariety,
+            equipmentCategories: currentEquipmentCategories
+          }
+        );
+      }
+      
+      // If user typically uses variety but current selection is limited
+      if (hasRecentVariety && equipmentVariety === 1) {
+        return this.createInsight(
+          'optimization',
+          'info',
+          'You\'ve simplified your equipment selection - this can be great for focused training.',
+          0.6,
+          false,
+          ['customization_equipment'],
+          {
+            context: 'simplified_selection',
+            recommendation: 'Consider if this focused approach aligns with your current goals',
+            currentVariety: equipmentVariety,
+            equipmentCategories: currentEquipmentCategories
+          }
+        );
+      }
+    }
+
+    // Check for equipment progression patterns
+    const currentComplexity = this.assessEquipmentComplexity(equipment);
+    const historicalComplexity = this.analyzeHistoricalComplexity(sessionHistory);
+    
+    if (historicalComplexity && currentComplexity > historicalComplexity) {
+      return this.createInsight(
+        'encouragement',
+        'success',
+        'You\'re progressing to more advanced equipment - excellent for continued growth!',
+        0.8,
+        false,
+        ['customization_equipment'],
+        {
+          context: 'complexity_progression',
+          recommendation: 'Ensure proper form and safety with new equipment',
+          currentComplexity,
+          historicalComplexity,
+          equipment
+        }
+      );
+    }
+
+    // Check for equipment consistency with focus areas
+    const focusInteractions = sessionHistory.filter(interaction => 
+      interaction.component === 'focus' && 
+      interaction.action === 'recommendation_applied'
+    );
+    
+    if (focusInteractions.length >= 2) {
+      const recentFocus = focusInteractions.slice(-2);
+      const focusConsistency = this.assessFocusEquipmentConsistency(equipment, recentFocus);
+      
+      if (focusConsistency.isConsistent) {
+        return this.createInsight(
+          'encouragement',
+          'success',
+          `Your equipment selection aligns well with your recent ${focusConsistency.focusType} focus - great consistency!`,
+          0.7,
+          false,
+          ['customization_equipment', 'customization_focus'],
+          {
+            context: 'focus_equipment_alignment',
+            recommendation: 'Maintain this alignment for optimal training results',
+            focusType: focusConsistency.focusType,
+            equipment
+          }
+        );
+      }
+    }
     
     return null;
   }
@@ -544,5 +648,69 @@ export class EquipmentAIService {
     }
     
     return null;
+  }
+
+  /**
+   * Assess the complexity level of current equipment selection
+   */
+  private assessEquipmentComplexity(equipment: string[]): number {
+    let complexityScore = 0;
+    
+    equipment.forEach(eq => {
+      if (this.EQUIPMENT_COMPLEXITY.BEGINNER.includes(eq)) {
+        complexityScore += 1;
+      } else if (this.EQUIPMENT_COMPLEXITY.INTERMEDIATE.includes(eq)) {
+        complexityScore += 2;
+      } else if (this.EQUIPMENT_COMPLEXITY.ADVANCED.includes(eq)) {
+        complexityScore += 3;
+      }
+    });
+    
+    return complexityScore;
+  }
+
+  /**
+   * Analyze historical equipment complexity from session history
+   */
+  private analyzeHistoricalComplexity(sessionHistory: any[]): number | null {
+    const equipmentInteractions = sessionHistory.filter(interaction => 
+      interaction.component === 'equipment' && 
+      interaction.action === 'recommendation_applied'
+    );
+    
+    if (equipmentInteractions.length === 0) return null;
+    
+    // For now, return a simple complexity score based on interaction count
+    // In a real implementation, this would analyze actual equipment data from history
+    return equipmentInteractions.length >= 5 ? 2 : 1;
+  }
+
+  /**
+   * Assess if current equipment selection is consistent with recent focus choices
+   */
+  private assessFocusEquipmentConsistency(equipment: string[], focusInteractions: any[]): { isConsistent: boolean; focusType: string } {
+    // Extract focus types from recent interactions
+    const focusTypes = focusInteractions.map(interaction => 
+      interaction.metadata?.focus || 'strength' // Default to strength if not specified
+    );
+    
+    // Get the most common focus type
+    const focusCount = new Map<string, number>();
+    focusTypes.forEach(focus => {
+      focusCount.set(focus, (focusCount.get(focus) || 0) + 1);
+    });
+    
+    const mostCommonFocus = Array.from(focusCount.entries())
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || 'strength';
+    
+    // Check if current equipment aligns with the most common focus
+    const recommendedEquipment = this.FOCUS_EQUIPMENT_ALIGNMENT.get(mostCommonFocus as WorkoutFocus) || [];
+    const alignedEquipment = equipment.filter(eq => recommendedEquipment.includes(eq));
+    const alignmentPercentage = (alignedEquipment.length / equipment.length) * 100;
+    
+    return {
+      isConsistent: alignmentPercentage >= 50,
+      focusType: mostCommonFocus
+    };
   }
 } 
