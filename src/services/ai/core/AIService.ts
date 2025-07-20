@@ -28,12 +28,14 @@ import { AIServiceContext } from './context/AIServiceContext';
 import { AIServiceCache } from './caching/AIServiceCache';
 import { AIServiceHealthChecker } from './health/AIServiceHealthChecker';
 import { AIServicePerformanceMonitor } from './performance/AIServicePerformanceMonitor';
-import { AIServiceExternalStrategy } from './external/AIServiceExternalStrategy';
 import { AIServiceAnalyzer } from './analysis/AIServiceAnalyzer';
 import { AIServiceValidator } from './validation/AIServiceValidator';
 import { AIServiceErrorHandler } from './error/AIServiceErrorHandler';
 import { AIServiceInteractionTracker } from './interaction/AIServiceInteractionTracker';
 import { AIServiceLearningEngine } from './interaction/AIServiceLearningEngine';
+
+// OpenAI Strategy - Direct Integration
+import { OpenAIStrategy } from '../external/OpenAIStrategy';
 
 /**
  * Main AI Service Orchestrator
@@ -45,12 +47,14 @@ export class AIService {
   private cache!: AIServiceCache;
   private healthChecker!: AIServiceHealthChecker;
   private performanceMonitor!: AIServicePerformanceMonitor;
-  private externalStrategy!: AIServiceExternalStrategy;
   private analyzer!: AIServiceAnalyzer;
   private validator!: AIServiceValidator;
   private errorHandler!: AIServiceErrorHandler;
   private interactionTracker!: AIServiceInteractionTracker;
   private learningEngine!: AIServiceLearningEngine;
+  
+  // OpenAI Strategy - Direct Integration
+  private openAIStrategy?: OpenAIStrategy;
   
   // Configuration and domain services
   private config: AIServiceConfig;
@@ -101,43 +105,32 @@ export class AIService {
    */
   async analyze(partialSelections?: Partial<PerWorkoutOptions>): Promise<UnifiedAIAnalysis> {
     try {
-      // Validate context
       const context = this.context.getContext();
       if (!context) {
         throw new Error('Context not set');
       }
 
+      // Merge partial selections with current context
+      const fullSelections = {
+        ...context.currentSelections,
+        ...partialSelections
+      };
+
       // Generate cache key
-      const currentSelections = { ...context.currentSelections, ...partialSelections };
-      const cacheKey = this.generateCacheKey(currentSelections);
-
-      // Check cache
-      const cachedAnalysis = this.cache.get(cacheKey);
-      if (cachedAnalysis) {
-        this.performanceMonitor.recordCacheHit();
-        return cachedAnalysis;
+      const cacheKey = this.generateCacheKey(fullSelections);
+      
+      // Check cache first
+      const cached = this.cache.get(cacheKey);
+      if (cached) {
+        return cached as UnifiedAIAnalysis;
       }
 
-      this.performanceMonitor.recordCacheMiss();
-
-      // Perform analysis
-      const analysis = await this.analyzer.analyze(partialSelections || {}, context);
-
-      // Validate analysis if validation is enabled
-      if (this.config.enableValidation) {
-        const validationResult = await this.validator.validateAnalysis(analysis, currentSelections, context);
-        if (!validationResult.isValid) {
-          this.errorHandler.handleError(
-            new Error(`Analysis validation failed: ${JSON.stringify(validationResult.discrepancies)}`),
-            'analyze',
-            { validationResult }
-          );
-        }
-      }
-
+      // Perform analysis using domain services
+      const analysis = await this.analyzer.analyze(fullSelections, context);
+      
       // Cache the result
       this.cache.set(cacheKey, analysis);
-
+      
       return analysis;
     } catch (error) {
       this.errorHandler.handleError(error as Error, 'analyze', { partialSelections });
@@ -146,18 +139,21 @@ export class AIService {
   }
 
   // ============================================================================
-  // PUBLIC API - External Strategy
+  // PUBLIC API - OpenAI Strategy Integration
   // ============================================================================
 
   /**
-   * Set external AI strategy
+   * Set OpenAI strategy directly
    */
-  setExternalStrategy(strategy: any): void {
-    this.externalStrategy.setExternalStrategy(strategy);
+  setOpenAIStrategy(strategy: OpenAIStrategy | null): void {
+    this.openAIStrategy = strategy || undefined;
+    this.log('info', 'OpenAI strategy configured', {
+      strategyType: strategy?.constructor?.name || 'none'
+    });
   }
 
   /**
-   * Generate workout using external strategy
+   * Generate workout using OpenAI strategy
    */
   async generateWorkout(workoutData: any): Promise<any> {
     try {
@@ -236,8 +232,13 @@ export class AIService {
       // Set the updated context
       await this.context.setContext(context);
       
-      // Now proceed with workout generation using the updated context
-      return await this.externalStrategy.generateWorkout(workoutData, context);
+      // Check if OpenAI strategy is configured
+      if (!this.openAIStrategy) {
+        throw new Error('OpenAI strategy not configured');
+      }
+      
+      // Generate workout using OpenAI strategy directly
+      return await this.openAIStrategy.generateWorkout(workoutData);
     } catch (error) {
       this.errorHandler.handleError(error as Error, 'generateWorkout', { workoutData });
       throw error;
@@ -245,11 +246,14 @@ export class AIService {
   }
 
   /**
-   * Generate recommendations using external strategy
+   * Generate recommendations using OpenAI strategy
    */
   async generateRecommendations(context: GlobalAIContext): Promise<PrioritizedRecommendation[]> {
     try {
-      return await this.externalStrategy.generateRecommendations(context);
+      if (!this.openAIStrategy) {
+        throw new Error('OpenAI strategy not configured');
+      }
+      return await this.openAIStrategy.generateRecommendations(context);
     } catch (error) {
       this.errorHandler.handleError(error as Error, 'generateRecommendations', { context });
       throw error;
@@ -257,11 +261,14 @@ export class AIService {
   }
 
   /**
-   * Enhance insights using external strategy
+   * Enhance insights using OpenAI strategy
    */
   async enhanceInsights(insights: AIInsight[], context: GlobalAIContext): Promise<any> {
     try {
-      return await this.externalStrategy.enhanceInsights(insights, context);
+      if (!this.openAIStrategy) {
+        throw new Error('OpenAI strategy not configured');
+      }
+      return await this.openAIStrategy.enhanceInsights(insights, context);
     } catch (error) {
       this.errorHandler.handleError(error as Error, 'enhanceInsights', { insights, context });
       throw error;
@@ -269,11 +276,14 @@ export class AIService {
   }
 
   /**
-   * Analyze user preferences using external strategy
+   * Analyze user preferences using OpenAI strategy
    */
   async analyzeUserPreferences(context: GlobalAIContext): Promise<any> {
     try {
-      return await this.externalStrategy.analyzeUserPreferences(context);
+      if (!this.openAIStrategy) {
+        throw new Error('OpenAI strategy not configured');
+      }
+      return await this.openAIStrategy.analyzeUserPreferences(context);
     } catch (error) {
       this.errorHandler.handleError(error as Error, 'analyzeUserPreferences', { context });
       throw error;
@@ -288,7 +298,18 @@ export class AIService {
    * Get overall health status
    */
   getHealthStatus(): AIServiceHealthStatus {
-    return this.healthChecker.checkOverallHealth();
+    const baseHealth = this.healthChecker.checkOverallHealth();
+    
+    // Add OpenAI strategy status
+    const openAIStrategyStatus = this.openAIStrategy ? 'configured' : 'not_configured';
+    
+    return {
+      ...baseHealth,
+      details: {
+        ...baseHealth.details,
+        openAIStrategy: openAIStrategyStatus
+      }
+    };
   }
 
   /**
@@ -435,7 +456,6 @@ export class AIService {
     this.cache = new AIServiceCache(this.config);
     this.healthChecker = new AIServiceHealthChecker(this.domainServices, this.config);
     this.performanceMonitor = new AIServicePerformanceMonitor(this.config);
-    this.externalStrategy = new AIServiceExternalStrategy();
     this.analyzer = new AIServiceAnalyzer(this.domainServices, this.config);
     this.validator = new AIServiceValidator();
     this.errorHandler = new AIServiceErrorHandler(this.config);
@@ -459,5 +479,26 @@ export class AIService {
    */
   private generateId(): string {
     return `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
+   * Log message with component prefix
+   */
+  private log(level: 'debug' | 'info' | 'warn' | 'error', message: string, data?: any): void {
+    const prefix = `[AIService]`;
+    switch (level) {
+      case 'debug':
+        console.debug(`${prefix} 🔍 ${message}`, data);
+        break;
+      case 'info':
+        console.info(`${prefix} ℹ️ ${message}`, data);
+        break;
+      case 'warn':
+        console.warn(`${prefix} ⚠️ ${message}`, data);
+        break;
+      case 'error':
+        console.error(`${prefix} ❌ ${message}`, data);
+        break;
+    }
   }
 } 

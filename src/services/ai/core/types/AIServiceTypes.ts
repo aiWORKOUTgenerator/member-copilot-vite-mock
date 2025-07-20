@@ -135,7 +135,7 @@ export interface AIServiceHealthStatus {
       crossComponent: 'healthy' | 'degraded' | 'unhealthy';
     };
     contextStatus: 'set' | 'not_set' | 'invalid';
-    externalStrategy: 'configured' | 'not_configured' | 'error';
+    openAIStrategy: 'configured' | 'not_configured' | 'error';
     memoryUsage: number;
     uptime: number;
     lastError?: {

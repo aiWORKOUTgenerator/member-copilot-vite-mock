@@ -237,11 +237,11 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       
       // Initialize external AI strategy if enabled
       if (isFeatureEnabled('openai_workout_generation') || isFeatureEnabled('openai_enhanced_recommendations')) {
-        console.log('🔄 AIProvider: Initializing external AI strategy...');
-        aiService.setExternalStrategy(openAIStrategy);
-        console.log('✅ AIProvider: External AI strategy initialized');
+        console.log('🔄 AIProvider: Initializing OpenAI strategy...');
+        aiService.setOpenAIStrategy(openAIStrategy);
+        console.log('✅ AIProvider: OpenAI strategy initialized');
       } else {
-        console.log('ℹ️ AIProvider: External AI strategy not enabled, using internal services');
+        console.log('ℹ️ AIProvider: OpenAI strategy not enabled, using internal services');
       }
       
       // Verify service is ready
@@ -328,7 +328,8 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         data: { value, service: 'unified', flagEnabled: true }
       });
       
-      return aiService.getEnergyInsights(value);
+      // Use legacy function for now - AIService uses domain services for analysis
+      return getLegacyEnergyInsights(value);
     } else {
       // Fall back to legacy implementation
       trackAIInteraction({
@@ -354,9 +355,8 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         data: { value, service: 'unified', flagEnabled: true }
       });
       
-      // Convert number to array format for compatibility
-      const sorenessAreas = value > 3 ? ['General'] : [];
-      return aiService.getSorenessInsights(sorenessAreas);
+      // Use legacy function for now - AIService uses domain services for analysis
+      return getLegacySorenessInsights(value);
     } else {
       trackAIInteraction({
         type: 'insight_shown',
@@ -505,15 +505,27 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   }, [aiService, currentUserProfile]);
 
   const getEnhancedRecommendations = useCallback(async () => {
-    return await aiService.getEnhancedRecommendations();
+    const context = aiService.getContext();
+    if (!context) {
+      throw new Error('AI service context not set');
+    }
+    return await aiService.generateRecommendations(context);
   }, [aiService]);
 
   const getEnhancedInsights = useCallback(async () => {
-    return await aiService.getEnhancedInsights();
+    const context = aiService.getContext();
+    if (!context) {
+      throw new Error('AI service context not set');
+    }
+    return await aiService.enhanceInsights([], context);
   }, [aiService]);
 
   const analyzeUserPreferences = useCallback(async () => {
-    return await aiService.analyzeUserPreferences();
+    const context = aiService.getContext();
+    if (!context) {
+      throw new Error('AI service context not set');
+    }
+    return await aiService.analyzeUserPreferences(context);
   }, [aiService]);
 
   const contextValue: AIContextValue = {

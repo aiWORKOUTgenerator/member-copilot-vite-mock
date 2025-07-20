@@ -26,7 +26,7 @@ describe('AI Service Health Monitoring and Domain Integration', () => {
       expect(healthStatus.details).toBeDefined();
       expect(healthStatus.details.domainServices).toBeDefined();
       expect(healthStatus.details.contextStatus).toBeDefined();
-      expect(healthStatus.details.externalStrategy).toBeDefined();
+      expect(healthStatus.details.openAIStrategy).toBeDefined();
       expect(healthStatus.details.memoryUsage).toBeGreaterThanOrEqual(0);
       expect(healthStatus.details.uptime).toBeGreaterThanOrEqual(0);
       
@@ -41,8 +41,8 @@ describe('AI Service Health Monitoring and Domain Integration', () => {
       // Check context status
       expect(['set', 'not_set', 'invalid']).toContain(healthStatus.details.contextStatus);
       
-      // Check external strategy status
-      expect(['configured', 'not_configured', 'error']).toContain(healthStatus.details.externalStrategy);
+      // Check OpenAI strategy status
+      expect(['configured', 'not_configured', 'error']).toContain(healthStatus.details.openAIStrategy);
     });
 
     it('should detect unhealthy status when domain services fail', () => {
