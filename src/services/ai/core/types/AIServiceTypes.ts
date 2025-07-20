@@ -169,30 +169,6 @@ export interface AIServiceCacheEntry {
   lastAccessed: Date;
 }
 
-export interface AIServiceExternalStrategyConfig {
-  strategyType: string;
-  isConfigured: boolean;
-  healthStatus: 'healthy' | 'degraded' | 'unhealthy';
-  lastError?: Error;
-}
-
-export interface AIServiceWorkoutRequest {
-  userProfile: UserProfile;
-  workoutOptions: PerWorkoutOptions;
-  preferences: {
-    duration: number;
-    focus: string;
-    intensity: 'low' | 'moderate' | 'high';
-    equipment: string[];
-    location: string;
-  };
-  constraints: {
-    timeOfDay: string;
-    energyLevel: number;
-    sorenessAreas: string[];
-  };
-}
-
 export interface AIServiceRecoveryResult {
   success: boolean;
   recoveredServices: string[];

@@ -138,12 +138,12 @@ describe('AIService Orchestrator', () => {
     });
   });
 
-  describe('External Strategy Integration', () => {
+  describe('OpenAI Strategy Integration', () => {
     beforeEach(async () => {
       await aiService.setContext(mockContext);
     });
 
-    it('should set external strategy', () => {
+    it('should set OpenAI strategy', () => {
       const mockStrategy = {
         generateWorkout: jest.fn(),
         generateRecommendations: jest.fn(),
@@ -151,10 +151,10 @@ describe('AIService Orchestrator', () => {
         analyzeUserPreferences: jest.fn()
       };
 
-      expect(() => aiService.setExternalStrategy(mockStrategy)).not.toThrow();
+      expect(() => aiService.setOpenAIStrategy(mockStrategy as any)).not.toThrow();
     });
 
-    it('should handle external strategy methods', async () => {
+    it('should handle OpenAI strategy methods', async () => {
       const mockStrategy = {
         generateWorkout: jest.fn().mockResolvedValue({ workout: 'mock' }),
         generateRecommendations: jest.fn().mockResolvedValue([]),
@@ -162,7 +162,7 @@ describe('AIService Orchestrator', () => {
         analyzeUserPreferences: jest.fn().mockResolvedValue({ preferences: 'mock' })
       };
 
-      aiService.setExternalStrategy(mockStrategy);
+      aiService.setOpenAIStrategy(mockStrategy as any);
 
       // Set context first so the methods work
       await aiService.setContext(mockContext);
@@ -221,7 +221,7 @@ describe('AIService Orchestrator', () => {
         analyzeUserPreferences: jest.fn().mockResolvedValue({ preferences: 'mock' })
       };
 
-      aiService.setExternalStrategy(mockStrategy);
+      aiService.setOpenAIStrategy(mockStrategy as any);
 
       // Pass complete workout data with all required fields
       const completeWorkoutData = {
