@@ -1,6 +1,8 @@
 // External AI Service Types
-import { AIInsight, PrioritizedRecommendation, GlobalAIContext } from '../../core/AIService';
-import { PerWorkoutOptions, UserProfile } from '../../../../types';
+import { PrioritizedRecommendation, GlobalAIContext } from '../../core/AIService';
+import { AIInsight } from '../../../../types/insights';
+// PerWorkoutOptions and UserProfile are now imported from the unified types
+import { WorkoutGenerationRequest } from '../../../../types/workout-generation.types';
 
 // OpenAI Configuration
 export interface OpenAIConfig {
@@ -20,14 +22,8 @@ export interface AIStrategy {
   analyzeUserPreferences(context: GlobalAIContext): Promise<UserPreferenceAnalysis>;
 }
 
-// Workout Generation Types
-export interface WorkoutGenerationRequest {
-  userProfile: UserProfile;
-  workoutOptions: PerWorkoutOptions;
-  preferences: WorkoutPreferences;
-  constraints?: WorkoutConstraints;
-  environmentalFactors?: EnvironmentalFactors;
-}
+// Workout Generation Types - MIGRATED TO workout-generation.types.ts
+// Use the unified WorkoutGenerationRequest from '../../../types/workout-generation.types'
 
 export interface WorkoutPreferences {
   duration: number; // in minutes
@@ -316,21 +312,4 @@ export interface WorkoutProgressUpdate {
   fatigue?: number;
   difficulty?: 'too_easy' | 'just_right' | 'too_hard';
   aiAdjustments?: Exercise[];
-}
-
-// Export all types for easy importing
-export type {
-  OpenAIConfig,
-  AIStrategy,
-  WorkoutGenerationRequest,
-  GeneratedWorkout,
-  EnhancedRecommendation,
-  UserPreferenceAnalysis,
-  ExternalAIError,
-  ExternalAIMetrics,
-  ExternalAIFeatureFlags,
-  ExternalAIServiceConfig,
-  PromptTemplate,
-  ExternalAIIntegration,
-  WorkoutProgressUpdate
-}; 
+} 

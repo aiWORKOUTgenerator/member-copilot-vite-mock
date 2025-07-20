@@ -104,12 +104,12 @@ const DEFAULT_AI_FLAGS: FeatureFlag[] = [
     name: 'OpenAI Workout Generation',
     description: 'Generate personalized workouts using OpenAI',
     enabled: true,
-    rolloutPercentage: 10, // Conservative initial rollout
+    rolloutPercentage: 100, // Enable for all users
     metadata: {
       experimentId: 'openai_workout_gen_2024',
       startDate: new Date(),
       owner: 'ai_team',
-      notes: 'OpenAI-powered workout generation for enhanced personalization'
+      notes: 'OpenAI-powered workout generation - enabled for all users'
     }
   },
   {
@@ -117,12 +117,12 @@ const DEFAULT_AI_FLAGS: FeatureFlag[] = [
     name: 'OpenAI Enhanced Recommendations',
     description: 'Enhance AI recommendations with OpenAI insights',
     enabled: true,
-    rolloutPercentage: 15, // Slightly higher rollout for recommendations
+    rolloutPercentage: 100, // Enable for all users
     metadata: {
       experimentId: 'openai_recommendations_2024',
       startDate: new Date(),
       owner: 'ai_team',
-      notes: 'OpenAI-enhanced recommendation system for better user guidance'
+      notes: 'OpenAI-enhanced recommendation system - enabled for all users'
     }
   },
   {
@@ -130,12 +130,12 @@ const DEFAULT_AI_FLAGS: FeatureFlag[] = [
     name: 'OpenAI User Analysis',
     description: 'Analyze user preferences and patterns using OpenAI',
     enabled: true,
-    rolloutPercentage: 5, // Very conservative for user analysis
+    rolloutPercentage: 100, // Enable for all users
     metadata: {
       experimentId: 'openai_user_analysis_2024',
       startDate: new Date(),
       owner: 'ai_team',
-      notes: 'OpenAI-powered user preference analysis'
+      notes: 'OpenAI-powered user preference analysis - enabled for all users'
     }
   }
 ];
@@ -156,16 +156,18 @@ export class FeatureFlagService {
   }
 
   // Core feature flag evaluation
-  isEnabled(flagId: string, user: UserProfile): boolean {
+  isEnabled = (flagId: string, user: UserProfile): boolean => {
     const flag = this.flags.get(flagId);
     if (!flag?.enabled) {
       return false;
     }
 
     // Check for user-specific override
-    if (flag.overrides?.[user.id || '']) {
-      this.recordAllocation(user, flag, flag.overrides[user.id], 'override');
-      return flag.overrides[user.id];
+    const userId = this.generateUserId(user);
+    
+    if (flag.overrides?.[userId]) {
+      this.recordAllocation(user, flag, flag.overrides[userId], 'override');
+      return flag.overrides[userId];
     }
 
     // Check user group targeting
@@ -185,18 +187,22 @@ export class FeatureFlagService {
   }
 
   // Check multiple flags at once
-  getEnabledFlags(user: UserProfile, flagIds: string[]): Record<string, boolean> {
+  getEnabledFlags = (user: UserProfile, flagIds: string[]): Record<string, boolean> => {
     const result: Record<string, boolean> = {};
     flagIds.forEach(flagId => {
       result[flagId] = this.isEnabled(flagId, user);
     });
+    
     return result;
   }
 
   // Get all AI-related flags for a user
-  getAIFlags(user: UserProfile): Record<string, boolean> {
-    const aiFlags = Array.from(this.flags.keys()).filter(id => id.startsWith('ai_'));
-    return this.getEnabledFlags(user, aiFlags);
+  getAIFlags = (user: UserProfile): Record<string, boolean> => {
+    const aiFlags = Array.from(this.flags.keys()).filter(id => id.startsWith('ai_') || id.startsWith('openai_'));
+    
+    const result = this.getEnabledFlags(user, aiFlags);
+    
+    return result;
   }
 
   // Administrative methods for managing flags
@@ -306,15 +312,26 @@ export class FeatureFlagService {
   }
 
   // Private helper methods
-  private isUserAllocated(user: UserProfile, flag: FeatureFlag): boolean {
-    // Consistent hashing based on user ID and flag ID
-    const userId = user.id || 'anonymous';
+  private isUserAllocated = (user: UserProfile, flag: FeatureFlag): boolean => {
+    // Consistent hashing based on user profile data and flag ID
+    const userId = this.generateUserId(user);
     const hash = this.hashString(`${userId}:${flag.id}`);
     const percentage = (hash % 100) + 1; // 1-100
     return percentage <= flag.rolloutPercentage;
   }
 
-  private hashString(str: string): number {
+  private generateUserId = (user: UserProfile): string => {
+    // Generate a consistent user ID based on user profile data
+    const fitnessLevel = user.fitnessLevel || 'unknown';
+    const goals = user.goals?.join(',') || 'no-goals';
+    const workoutStyle = user.preferences?.workoutStyle?.join(',') || 'no-style';
+    const userData = `${fitnessLevel}-${goals}-${workoutStyle}`;
+    const userId = this.hashString(userData).toString();
+    
+    return userId;
+  }
+
+  private hashString = (str: string): number => {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
@@ -324,29 +341,29 @@ export class FeatureFlagService {
     return Math.abs(hash);
   }
 
-  private getUserGroups(user: UserProfile): string[] {
+  private getUserGroups = (user: UserProfile): string[] => {
     const groups: string[] = [];
     
     // Add groups based on user characteristics
     if (user.fitnessLevel) groups.push(`fitness_${user.fitnessLevel}`);
     if (user.preferences?.advancedFeatures) groups.push('power_users');
-    if (user.history?.completedWorkouts && user.history.completedWorkouts > 50) {
+    if (user.workoutHistory?.estimatedCompletedWorkouts && user.workoutHistory.estimatedCompletedWorkouts > 50) {
       groups.push('experienced_users');
     }
-    if (user.limitations?.injuries && user.limitations.injuries.length > 0) {
+    if (user.basicLimitations?.injuries && user.basicLimitations.injuries.length > 0) {
       groups.push('users_with_limitations');
     }
     
     return groups;
   }
 
-  private recordAllocation(
+  private recordAllocation = (
     user: UserProfile, 
     flag: FeatureFlag, 
     allocated: boolean, 
     reason: FeatureFlagAllocation['reason']
-  ): void {
-    const userId = user.id || 'anonymous';
+  ): void => {
+    const userId = this.generateUserId(user);
     const allocation: FeatureFlagAllocation = {
       userId,
       flagId: flag.id,
@@ -375,11 +392,11 @@ export class FeatureFlagService {
     }
   }
 
-  private getAllocations(flagId: string): FeatureFlagAllocation[] {
+  private getAllocations = (flagId: string): FeatureFlagAllocation[] => {
     return this.allocations.get(flagId) || [];
   }
 
-  private trackEvent(event: AnalyticsEvent): void {
+  private trackEvent = (event: AnalyticsEvent): void => {
     if (this.analyticsCallback) {
       this.analyticsCallback(event);
     }

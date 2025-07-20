@@ -2,15 +2,55 @@
 import { AIInsight } from '../../../types/insights';
 import { GlobalAIContext } from '../core/AIService';
 import { PerWorkoutOptions } from '../../../types';
+import { 
+  extractDurationValue, 
+  extractFocusValue, 
+  extractSorenessAreas, 
+  extractAreasList,
+  extractEquipmentList 
+} from '../../../types/guards';
+
+// Configuration Constants - Extracted from magic numbers
+export const CROSS_COMPONENT_CONSTANTS = {
+  // Energy thresholds
+  LOW_ENERGY_THRESHOLD: 2,
+  HIGH_ENERGY_THRESHOLD: 4,
+  
+  // Duration thresholds
+  SHORT_DURATION_THRESHOLD: 30,
+  LONG_DURATION_THRESHOLD: 60,
+  VERY_LONG_DURATION_THRESHOLD: 45,
+  
+  // Soreness thresholds
+  HIGH_SORENESS_THRESHOLD: 3,
+  
+  // Equipment thresholds
+  MIN_EQUIPMENT_FOR_STRENGTH: 2,
+  MAX_EQUIPMENT_FOR_SHORT_DURATION: 4,
+  
+  // Confidence levels
+  HIGH_CONFIDENCE: 0.95,
+  MEDIUM_HIGH_CONFIDENCE: 0.9,
+  MEDIUM_CONFIDENCE: 0.85,
+  MEDIUM_LOW_CONFIDENCE: 0.8,
+  LOW_CONFIDENCE: 0.75,
+  VERY_LOW_CONFIDENCE: 0.7,
+  
+  // Warm-up duration
+  WARMUP_DURATION_MINUTES: 5,
+  WARMUP_DURATION_MAX_MINUTES: 10
+} as const;
 
 export interface CrossComponentConflict {
+  id: string;                    // Unique identifier for the conflict
   components: string[];
   type: 'safety' | 'efficiency' | 'goal_alignment' | 'user_experience';
   severity: 'low' | 'medium' | 'high' | 'critical';
   description: string;
   suggestedResolution: string;
   confidence: number;
-  metadata?: Record<string, any>;
+  impact: 'performance' | 'safety' | 'effectiveness';  // Impact assessment
+  metadata?: Record<string, unknown>;
 }
 
 interface ConflictDetectionRule {
@@ -18,155 +58,187 @@ interface ConflictDetectionRule {
   generateConflict: (options: PerWorkoutOptions, context: GlobalAIContext) => CrossComponentConflict;
 }
 
+interface SynergyDetectionRule {
+  condition: (options: PerWorkoutOptions, context: GlobalAIContext) => boolean;
+  generateSynergy: (options: PerWorkoutOptions, context: GlobalAIContext) => Synergy;
+}
+
+interface Synergy {
+  id: string;
+  components: string[];
+  type: string;
+  description: string;
+  confidence: number;
+  metadata?: Record<string, unknown>;
+}
+
 export class CrossComponentAIService {
   private readonly CONFLICT_DETECTION_RULES: ConflictDetectionRule[] = [
     // Energy vs Duration conflicts
     {
-      condition: (options, context) => {
+      condition: (options, _context) => {
         const energy = options.customization_energy;
-        const duration = options.customization_duration;
-        return energy && duration && energy <= 2 && duration > 60;
+        const duration = extractDurationValue(options.customization_duration);
+        return !!(typeof energy === 'number' && duration && energy <= CROSS_COMPONENT_CONSTANTS.LOW_ENERGY_THRESHOLD && duration > CROSS_COMPONENT_CONSTANTS.LONG_DURATION_THRESHOLD);
       },
-      generateConflict: (options, context) => ({
+      generateConflict: (options, _context) => ({
+        id: this.generateConflictId('energy_duration'),
         components: ['customization_energy', 'customization_duration'],
         type: 'efficiency',
         severity: 'high',
         description: 'Low energy level paired with long workout duration may lead to poor performance',
         suggestedResolution: 'Reduce duration to 30-45 minutes or focus on recovery activities',
-        confidence: 0.9,
+        confidence: CROSS_COMPONENT_CONSTANTS.MEDIUM_HIGH_CONFIDENCE,
+        impact: 'performance',
         metadata: {
           energyLevel: options.customization_energy,
-          duration: options.customization_duration
+          duration: extractDurationValue(options.customization_duration)
         }
       })
     },
     
     // Energy vs Focus conflicts
     {
-      condition: (options, context) => {
+      condition: (options, _context) => {
         const energy = options.customization_energy;
-        const focus = options.customization_focus;
-        return energy && focus && energy <= 2 && ['strength', 'power'].includes(focus);
+        const focus = extractFocusValue(options.customization_focus);
+        return !!(typeof energy === 'number' && focus && energy <= CROSS_COMPONENT_CONSTANTS.LOW_ENERGY_THRESHOLD && ['strength', 'power'].includes(focus));
       },
-      generateConflict: (options, context) => ({
+      generateConflict: (options, _context) => ({
+        id: this.generateConflictId('energy_focus'),
         components: ['customization_energy', 'customization_focus'],
         type: 'safety',
         severity: 'high',
         description: 'Low energy with high-intensity focus may increase injury risk',
         suggestedResolution: 'Switch to mobility, flexibility, or recovery focus',
-        confidence: 0.95,
+        confidence: CROSS_COMPONENT_CONSTANTS.HIGH_CONFIDENCE,
+        impact: 'safety',
         metadata: {
           energyLevel: options.customization_energy,
-          focus: options.customization_focus
+          focus: extractFocusValue(options.customization_focus)
         }
       })
     },
     
     // Soreness vs Areas conflicts
     {
-      condition: (options, context) => {
-        const soreness = options.customization_soreness;
-        const areas = options.customization_areas;
-        return soreness && areas && soreness.length > 0 && 
-               areas.some(area => soreness.includes(area));
+      condition: (options, _context) => {
+        const sorenessAreas = extractSorenessAreas(options.customization_soreness);
+        const areas = extractAreasList(options.customization_areas);
+        return !!(sorenessAreas.length > 0 && areas.length > 0 && 
+               areas.some(area => sorenessAreas.includes(area)));
       },
-      generateConflict: (options, context) => ({
+      generateConflict: (options, _context) => {
+        const sorenessAreas = extractSorenessAreas(options.customization_soreness);
+        const areas = extractAreasList(options.customization_areas);
+        const overlappingAreas = areas.filter(area => sorenessAreas.includes(area));
+        
+        return {
+          id: this.generateConflictId('soreness_areas'),
         components: ['customization_soreness', 'customization_areas'],
         type: 'safety',
         severity: 'medium',
         description: 'Selected workout areas overlap with sore muscle groups',
         suggestedResolution: 'Choose different areas or reduce intensity for sore regions',
-        confidence: 0.85,
+        confidence: CROSS_COMPONENT_CONSTANTS.MEDIUM_CONFIDENCE,
+          impact: 'safety',
         metadata: {
-          overlappingAreas: options.customization_areas?.filter(area => 
-            options.customization_soreness?.includes(area)
-          ),
-          sorenessLevel: options.customization_soreness?.length
+            overlappingAreas,
+            sorenessLevel: sorenessAreas.length
         }
-      })
+        };
+      }
     },
     
     // Soreness vs Focus conflicts
     {
-      condition: (options, context) => {
-        const soreness = options.customization_soreness;
-        const focus = options.customization_focus;
-        return soreness && focus && soreness.length >= 3 && 
-               ['strength', 'power', 'endurance'].includes(focus);
+      condition: (options, _context) => {
+        const sorenessAreas = extractSorenessAreas(options.customization_soreness);
+        const focus = extractFocusValue(options.customization_focus);
+        return !!(sorenessAreas.length >= CROSS_COMPONENT_CONSTANTS.HIGH_SORENESS_THRESHOLD && focus && 
+               ['strength', 'power', 'endurance'].includes(focus));
       },
-      generateConflict: (options, context) => ({
+      generateConflict: (options, _context) => ({
+        id: this.generateConflictId('soreness_focus'),
         components: ['customization_soreness', 'customization_focus'],
         type: 'safety',
         severity: 'high',
         description: 'High soreness with intense focus may worsen muscle recovery',
         suggestedResolution: 'Switch to recovery or flexibility focus',
-        confidence: 0.9,
+        confidence: CROSS_COMPONENT_CONSTANTS.MEDIUM_HIGH_CONFIDENCE,
+        impact: 'safety',
         metadata: {
-          sorenessAreas: options.customization_soreness?.length,
-          focus: options.customization_focus
+          sorenessAreas: extractSorenessAreas(options.customization_soreness).length,
+          focus: extractFocusValue(options.customization_focus)
         }
       })
     },
     
     // Focus vs Duration conflicts
     {
-      condition: (options, context) => {
-        const focus = options.customization_focus;
-        const duration = options.customization_duration;
-        return focus && duration && focus === 'strength' && duration < 30;
+      condition: (options, _context) => {
+        const focus = extractFocusValue(options.customization_focus);
+        const duration = extractDurationValue(options.customization_duration);
+        return !!(focus && duration && focus === 'strength' && duration < CROSS_COMPONENT_CONSTANTS.SHORT_DURATION_THRESHOLD);
       },
-      generateConflict: (options, context) => ({
+      generateConflict: (options, _context) => ({
+        id: this.generateConflictId('focus_duration'),
         components: ['customization_focus', 'customization_duration'],
         type: 'efficiency',
         severity: 'medium',
         description: 'Strength focus with very short duration may limit training effectiveness',
         suggestedResolution: 'Increase duration to 45+ minutes or switch to mobility focus',
-        confidence: 0.8,
+        confidence: CROSS_COMPONENT_CONSTANTS.MEDIUM_LOW_CONFIDENCE,
+        impact: 'effectiveness',
         metadata: {
-          focus: options.customization_focus,
-          duration: options.customization_duration
+          focus: extractFocusValue(options.customization_focus),
+          duration: extractDurationValue(options.customization_duration)
         }
       })
     },
     
     // Equipment vs Focus conflicts
     {
-      condition: (options, context) => {
-        const equipment = options.customization_equipment;
-        const focus = options.customization_focus;
-        return equipment && focus && focus === 'strength' && equipment.length === 0;
+      condition: (options, _context) => {
+        const equipment = extractEquipmentList(options.customization_equipment);
+        const focus = extractFocusValue(options.customization_focus);
+        return !!(equipment.length === 0 && focus && focus === 'strength');
       },
-      generateConflict: (options, context) => ({
+      generateConflict: (options, _context) => ({
+        id: this.generateConflictId('equipment_focus'),
         components: ['customization_equipment', 'customization_focus'],
         type: 'efficiency',
         severity: 'medium',
         description: 'Strength focus without equipment may limit training options',
         suggestedResolution: 'Add resistance equipment or switch to body weight-friendly focus',
-        confidence: 0.75,
+        confidence: CROSS_COMPONENT_CONSTANTS.LOW_CONFIDENCE,
+        impact: 'effectiveness',
         metadata: {
-          focus: options.customization_focus,
-          equipmentCount: equipment?.length || 0
+          focus: extractFocusValue(options.customization_focus),
+          equipmentCount: extractEquipmentList(options.customization_equipment).length
         }
       })
     },
     
     // Equipment vs Duration conflicts
     {
-      condition: (options, context) => {
-        const equipment = options.customization_equipment;
-        const duration = options.customization_duration;
-        return equipment && duration && equipment.length > 4 && duration < 45;
+      condition: (options, _context) => {
+        const equipment = extractEquipmentList(options.customization_equipment);
+        const duration = extractDurationValue(options.customization_duration);
+        return !!(equipment.length > CROSS_COMPONENT_CONSTANTS.MAX_EQUIPMENT_FOR_SHORT_DURATION && duration && duration < CROSS_COMPONENT_CONSTANTS.VERY_LONG_DURATION_THRESHOLD);
       },
-      generateConflict: (options, context) => ({
+      generateConflict: (options, _context) => ({
+        id: this.generateConflictId('equipment_duration'),
         components: ['customization_equipment', 'customization_duration'],
         type: 'efficiency',
         severity: 'medium',
         description: 'Many equipment pieces with short duration may rush transitions',
         suggestedResolution: 'Reduce equipment selection or extend duration',
-        confidence: 0.8,
+        confidence: CROSS_COMPONENT_CONSTANTS.MEDIUM_LOW_CONFIDENCE,
+        impact: 'effectiveness',
         metadata: {
-          equipmentCount: equipment?.length,
-          duration: options.customization_duration
+          equipmentCount: extractEquipmentList(options.customization_equipment).length,
+          duration: extractDurationValue(options.customization_duration)
         }
       })
     },
@@ -174,19 +246,21 @@ export class CrossComponentAIService {
     // Experience level vs Focus conflicts
     {
       condition: (options, context) => {
-        const focus = options.customization_focus;
+        const focus = extractFocusValue(options.customization_focus);
         const fitnessLevel = context.userProfile.fitnessLevel;
-        return focus && fitnessLevel === 'new to exercise' && ['power', 'endurance'].includes(focus);
+        return !!(focus && fitnessLevel === 'new to exercise' && ['power', 'endurance'].includes(focus));
       },
       generateConflict: (options, context) => ({
+        id: this.generateConflictId('experience_focus'),
         components: ['customization_focus', 'user_profile'],
         type: 'safety',
         severity: 'medium',
         description: 'Advanced focus may be inappropriate for someone new to exercise',
         suggestedResolution: 'Start with strength or flexibility focus to build foundation',
-        confidence: 0.85,
+        confidence: CROSS_COMPONENT_CONSTANTS.MEDIUM_CONFIDENCE,
+        impact: 'safety',
         metadata: {
-          focus: options.customization_focus,
+          focus: extractFocusValue(options.customization_focus),
           fitnessLevel: context.userProfile.fitnessLevel
         }
       })
@@ -195,81 +269,67 @@ export class CrossComponentAIService {
     // Time of day vs Focus conflicts
     {
       condition: (options, context) => {
-        const focus = options.customization_focus;
+        const focus = extractFocusValue(options.customization_focus);
         const timeOfDay = context.environmentalFactors?.timeOfDay;
-        return focus && timeOfDay === 'evening' && ['power', 'strength'].includes(focus) && 
-               options.customization_duration && options.customization_duration > 60;
+        return !!(focus && timeOfDay === 'evening' && ['power', 'strength'].includes(focus) && 
+               context.userProfile.fitnessLevel !== 'advanced athlete');
       },
       generateConflict: (options, context) => ({
-        components: ['customization_focus', 'customization_duration', 'time_of_day'],
+        id: this.generateConflictId('time_focus'),
+        components: ['customization_focus', 'environmental_factors'],
         type: 'user_experience',
-        severity: 'low',
-        description: 'Intense evening workout may affect sleep quality',
-        suggestedResolution: 'Reduce intensity or duration for evening sessions',
-        confidence: 0.7,
+        severity: 'medium',
+        description: 'High-intensity focus in the evening may affect sleep quality',
+        suggestedResolution: 'Consider morning workouts or switch to recovery focus',
+        confidence: CROSS_COMPONENT_CONSTANTS.MEDIUM_LOW_CONFIDENCE,
+        impact: 'effectiveness',
         metadata: {
-          focus: options.customization_focus,
+          focus: extractFocusValue(options.customization_focus),
           timeOfDay: context.environmentalFactors?.timeOfDay,
-          duration: options.customization_duration
-        }
-      })
-    },
-    
-    // Goal alignment conflicts
-    {
-      condition: (options, context) => {
-        const focus = options.customization_focus;
-        const goals = context.userProfile.goals;
-        return focus && goals && goals.includes('weight_loss') && focus === 'strength' && 
-               options.customization_duration && options.customization_duration > 60;
-      },
-      generateConflict: (options, context) => ({
-        components: ['customization_focus', 'customization_duration', 'user_goals'],
-        type: 'goal_alignment',
-        severity: 'low',
-        description: 'Long strength sessions may not align with weight loss goals',
-        suggestedResolution: 'Consider cardio focus or circuit training for weight loss',
-        confidence: 0.65,
-        metadata: {
-          focus: options.customization_focus,
-          goals: context.userProfile.goals,
-          duration: options.customization_duration
+          fitnessLevel: context.userProfile.fitnessLevel
         }
       })
     }
   ];
   
-  private readonly SYNERGY_DETECTION_RULES = [
-    // Positive combinations
+  private readonly SYNERGY_DETECTION_RULES: SynergyDetectionRule[] = [
+    // Energy + Focus synergies
     {
-      condition: (options: PerWorkoutOptions, context: GlobalAIContext) => {
-        const focus = options.customization_focus;
-        const equipment = options.customization_equipment;
-        return focus === 'strength' && equipment?.includes('Dumbbells');
+      condition: (options, _context) => {
+        const energy = options.customization_energy;
+        const focus = extractFocusValue(options.customization_focus);
+        return !!(typeof energy === 'number' && focus && energy >= CROSS_COMPONENT_CONSTANTS.HIGH_ENERGY_THRESHOLD && ['strength', 'power'].includes(focus));
       },
-      generateSynergy: (options: PerWorkoutOptions, context: GlobalAIContext) => ({
-        components: ['customization_focus', 'customization_equipment'],
-        type: 'optimization',
-        description: 'Strength focus with dumbbells creates excellent training synergy',
-        benefit: 'Allows for unilateral training and full range of motion',
-        confidence: 0.9
+      generateSynergy: (options, _context) => ({
+        id: this.generateSynergyId('energy_focus_synergy'),
+        components: ['customization_energy', 'customization_focus'],
+        type: 'performance_boost',
+        description: 'High energy perfectly matches strength/power focus',
+        confidence: CROSS_COMPONENT_CONSTANTS.MEDIUM_HIGH_CONFIDENCE,
+        metadata: {
+          energyLevel: options.customization_energy,
+          focus: extractFocusValue(options.customization_focus)
+        }
       })
     },
     
+    // Equipment + Focus synergies
     {
-      condition: (options: PerWorkoutOptions, context: GlobalAIContext) => {
-        const focus = options.customization_focus;
-        const soreness = options.customization_soreness;
-        const equipment = options.customization_equipment;
-        return focus === 'recovery' && soreness && soreness.length > 0 && 
-               equipment?.includes('Foam Roller');
+      condition: (options, _context) => {
+        const equipment = extractEquipmentList(options.customization_equipment);
+        const focus = extractFocusValue(options.customization_focus);
+        return !!(equipment.length >= CROSS_COMPONENT_CONSTANTS.MIN_EQUIPMENT_FOR_STRENGTH && focus && focus === 'strength');
       },
-      generateSynergy: (options: PerWorkoutOptions, context: GlobalAIContext) => ({
-        components: ['customization_focus', 'customization_soreness', 'customization_equipment'],
-        type: 'optimization',
-        description: 'Recovery focus with foam roller addresses soreness effectively',
-        benefit: 'Perfect combination for active recovery and muscle maintenance',
-        confidence: 0.95
+      generateSynergy: (options, _context) => ({
+        id: this.generateSynergyId('equipment_focus_synergy'),
+        components: ['customization_equipment', 'customization_focus'],
+        type: 'efficiency_boost',
+        description: 'Good equipment selection supports strength training',
+        confidence: CROSS_COMPONENT_CONSTANTS.MEDIUM_CONFIDENCE,
+        metadata: {
+          equipmentCount: extractEquipmentList(options.customization_equipment).length,
+          focus: extractFocusValue(options.customization_focus)
+        }
       })
     }
   ];
@@ -280,11 +340,9 @@ export class CrossComponentAIService {
   async detectConflicts(options: PerWorkoutOptions, context: GlobalAIContext): Promise<CrossComponentConflict[]> {
     const conflicts: CrossComponentConflict[] = [];
     
-    // Apply conflict detection rules
     for (const rule of this.CONFLICT_DETECTION_RULES) {
       if (rule.condition(options, context)) {
-        const conflict = rule.generateConflict(options, context);
-        conflicts.push(conflict);
+        conflicts.push(rule.generateConflict(options, context));
       }
     }
     
@@ -298,15 +356,14 @@ export class CrossComponentAIService {
   }
   
   /**
-   * Find positive synergies between workout parameters
+   * Find synergies between different workout parameters
    */
-  async findSynergies(options: PerWorkoutOptions, context: GlobalAIContext): Promise<any[]> {
-    const synergies: any[] = [];
+  async findSynergies(options: PerWorkoutOptions, context: GlobalAIContext): Promise<Synergy[]> {
+    const synergies: Synergy[] = [];
     
     for (const rule of this.SYNERGY_DETECTION_RULES) {
       if (rule.condition(options, context)) {
-        const synergy = rule.generateSynergy(options, context);
-        synergies.push(synergy);
+        synergies.push(rule.generateSynergy(options, context));
       }
     }
     
@@ -314,134 +371,174 @@ export class CrossComponentAIService {
   }
   
   /**
-   * Analyze component interactions and provide recommendations
+   * Analyze all interactions between components
    */
   async analyzeInteractions(options: PerWorkoutOptions, context: GlobalAIContext): Promise<{
     conflicts: CrossComponentConflict[];
-    synergies: any[];
+    synergies: Synergy[];
     recommendations: AIInsight[];
   }> {
-    const conflicts = await this.detectConflicts(options, context);
-    const synergies = await this.findSynergies(options, context);
+    const [conflicts, synergies] = await Promise.all([
+      this.detectConflicts(options, context),
+      this.findSynergies(options, context)
+    ]);
+    
     const recommendations = this.generateRecommendations(conflicts, synergies, options, context);
     
-    return { conflicts, synergies, recommendations };
+    return {
+      conflicts,
+      synergies,
+      recommendations
+    };
   }
   
   /**
-   * Generate recommendations based on conflicts and synergies
+   * Generate AI insights from conflicts and synergies
    */
   private generateRecommendations(
     conflicts: CrossComponentConflict[],
-    synergies: any[],
+    synergies: Synergy[],
     options: PerWorkoutOptions,
     context: GlobalAIContext
   ): AIInsight[] {
-    const recommendations: AIInsight[] = [];
+    const insights: AIInsight[] = [];
     
-    // Convert conflicts to actionable insights
+    // Convert conflicts to insights
     conflicts.forEach(conflict => {
-      recommendations.push({
-        id: this.generateInsightId('conflict_resolution'),
-        type: conflict.severity === 'critical' || conflict.severity === 'high' ? 'warning' : 'optimization',
+      insights.push({
+        id: this.generateInsightId(`conflict_${conflict.id}`),
+        type: conflict.severity === 'critical' ? 'critical_warning' : 'warning',
         message: conflict.description,
+        recommendation: conflict.suggestedResolution,
         confidence: conflict.confidence,
         actionable: true,
         relatedFields: conflict.components,
         metadata: {
           conflictType: conflict.type,
-          severity: conflict.severity,
-          resolution: conflict.suggestedResolution,
+          impact: conflict.impact,
           ...conflict.metadata
         }
       });
     });
     
-    // Convert synergies to positive insights
+    // Convert synergies to insights
     synergies.forEach(synergy => {
-      recommendations.push({
-        id: this.generateInsightId('synergy_highlight'),
-        type: 'encouragement',
+      insights.push({
+        id: this.generateInsightId(`synergy_${synergy.id}`),
+        type: 'optimization',
         message: synergy.description,
+        recommendation: 'Continue with this combination for optimal results',
         confidence: synergy.confidence,
         actionable: false,
         relatedFields: synergy.components,
         metadata: {
           synergyType: synergy.type,
-          benefit: synergy.benefit
+          ...synergy.metadata
         }
       });
     });
     
-    // Generate optimization insights
-    const optimizations = this.generateOptimizationInsights(options, context);
-    recommendations.push(...optimizations);
+    // Add optimization insights
+    const optimizationInsights = this.generateOptimizationInsights(options, context);
+    insights.push(...optimizationInsights);
     
-    return recommendations.sort((a, b) => {
+    return insights.sort((a, b) => {
       if (a.actionable && !b.actionable) return -1;
       if (!a.actionable && b.actionable) return 1;
-      return b.confidence - a.confidence;
+      return (b.confidence ?? 0) - (a.confidence ?? 0);
     });
   }
   
   /**
    * Generate optimization insights based on current selections
    */
-  private generateOptimizationInsights(options: PerWorkoutOptions, context: GlobalAIContext): AIInsight[] {
+  private generateOptimizationInsights(options: PerWorkoutOptions, _context: GlobalAIContext): AIInsight[] {
     const insights: AIInsight[] = [];
     
     // Check for missing components that could enhance the workout
-    if (!options.customization_equipment || options.customization_equipment.length === 0) {
-      if (options.customization_focus === 'strength') {
+    const duration = extractDurationValue(options.customization_duration);
+    const focus = extractFocusValue(options.customization_focus);
+    const equipment = extractEquipmentList(options.customization_equipment);
+    const areas = extractAreasList(options.customization_areas);
+    
+    // Suggest warm-up if duration is long but no warm-up specified
+    if (duration && duration > CROSS_COMPONENT_CONSTANTS.VERY_LONG_DURATION_THRESHOLD && typeof options.customization_duration === 'object' && !options.customization_duration?.warmUp?.included) {
         insights.push({
-          id: this.generateInsightId('missing_equipment'),
+        id: this.generateInsightId('warmup_suggestion'),
           type: 'optimization',
-          message: 'Adding resistance equipment could enhance strength training',
-          confidence: 0.8,
+        message: 'Long workout duration detected - consider adding warm-up',
+        recommendation: `Include ${CROSS_COMPONENT_CONSTANTS.WARMUP_DURATION_MINUTES}-${CROSS_COMPONENT_CONSTANTS.WARMUP_DURATION_MAX_MINUTES} minutes of dynamic warm-up to prevent injury`,
+          confidence: CROSS_COMPONENT_CONSTANTS.MEDIUM_LOW_CONFIDENCE,
           actionable: true,
-          relatedFields: ['customization_equipment', 'customization_focus'],
+        relatedFields: ['customization_duration'],
           metadata: {
-            suggestion: 'Consider adding dumbbells or resistance bands',
-            reason: 'Equipment allows for progressive overload in strength training'
+          duration,
+          suggestion: 'add_warmup'
           }
         });
-      }
     }
     
-    // Check for balanced workout structure
-    if (options.customization_focus === 'strength' && options.customization_duration && options.customization_duration >= 45) {
-      const hasFlexibilityEquipment = options.customization_equipment?.some(eq => 
-        ['Yoga Mat', 'Yoga Mat & Stretching Space', 'Stretching & Mobility Zone (Yoga Mats, Foam Rollers)'].includes(eq)
-      );
-      
-      if (!hasFlexibilityEquipment) {
+    // Suggest equipment if strength focus but minimal equipment
+    if (focus === 'strength' && equipment.length < CROSS_COMPONENT_CONSTANTS.MIN_EQUIPMENT_FOR_STRENGTH) {
         insights.push({
-          id: this.generateInsightId('balance_suggestion'),
+        id: this.generateInsightId('equipment_suggestion'),
           type: 'optimization',
-          message: 'Consider adding flexibility equipment for post-workout recovery',
-          confidence: 0.75,
-          actionable: true,
+        message: 'Strength focus with minimal equipment may limit progression',
+        recommendation: 'Consider adding resistance bands or dumbbells for variety',
+        confidence: CROSS_COMPONENT_CONSTANTS.LOW_CONFIDENCE,
+        actionable: true,
           relatedFields: ['customization_equipment', 'customization_focus'],
           metadata: {
-            suggestion: 'Add foam roller or yoga mat for recovery',
-            reason: 'Flexibility work enhances strength training recovery'
+          focus,
+          equipmentCount: equipment.length,
+          suggestion: 'add_equipment'
           }
         });
       }
+    
+    // Suggest area selection if focus is specified but no areas selected
+    if (focus && areas.length === 0) {
+      insights.push({
+        id: this.generateInsightId('areas_suggestion'),
+        type: 'optimization',
+        message: 'Focus specified but no target areas selected',
+        recommendation: 'Select specific muscle groups to target for better results',
+        confidence: CROSS_COMPONENT_CONSTANTS.VERY_LOW_CONFIDENCE,
+        actionable: true,
+        relatedFields: ['customization_areas', 'customization_focus'],
+        metadata: {
+          focus,
+          suggestion: 'select_areas'
+        }
+      });
     }
     
     return insights;
   }
   
   /**
-   * Generate unique insight ID
+   * Generate unique conflict ID
    */
-  private generateInsightId(type: string): string {
-    return `cross_component_${type}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+  private generateConflictId(type: string): string {
+    return `conflict_${type}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
   }
   
   /**
-   * Validate workout configuration for safety and effectiveness
+   * Generate unique synergy ID
+   */
+  private generateSynergyId(type: string): string {
+    return `synergy_${type}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+  }
+  
+  /**
+   * Generate unique insight ID
+   */
+  private generateInsightId(type: string): string {
+    return `cross_component_${type}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+  }
+  
+  /**
+   * Validate configuration for conflicts and issues
    */
   async validateConfiguration(options: PerWorkoutOptions, context: GlobalAIContext): Promise<{
     isValid: boolean;
@@ -450,40 +547,41 @@ export class CrossComponentAIService {
     suggestions: AIInsight[];
   }> {
     const conflicts = await this.detectConflicts(options, context);
-    const synergies = await this.findSynergies(options, context);
+    const optimizationInsights = this.generateOptimizationInsights(options, context);
     
     const criticalIssues = conflicts.filter(c => c.severity === 'critical');
     const warnings = conflicts.filter(c => c.severity === 'high' || c.severity === 'medium');
-    const suggestions = this.generateRecommendations(conflicts, synergies, options, context);
     
     return {
       isValid: criticalIssues.length === 0,
       criticalIssues,
       warnings,
-      suggestions: suggestions.filter(s => s.type === 'optimization')
+      suggestions: optimizationInsights
     };
   }
   
   /**
-   * Get component dependency map
+   * Get component dependencies for analysis
    */
   getComponentDependencies(): Map<string, string[]> {
-    return new Map([
-      ['customization_focus', ['customization_duration', 'customization_equipment', 'customization_energy']],
-      ['customization_energy', ['customization_duration', 'customization_focus', 'customization_soreness']],
-      ['customization_soreness', ['customization_areas', 'customization_focus', 'customization_duration']],
-      ['customization_duration', ['customization_focus', 'customization_energy', 'customization_equipment']],
-      ['customization_equipment', ['customization_focus', 'customization_areas', 'customization_duration']],
-      ['customization_areas', ['customization_soreness', 'customization_equipment', 'customization_focus']]
-    ]);
+    const dependencies = new Map<string, string[]>();
+    
+    dependencies.set('customization_energy', ['customization_focus', 'customization_duration']);
+    dependencies.set('customization_focus', ['customization_equipment', 'customization_areas']);
+    dependencies.set('customization_duration', ['customization_energy', 'customization_focus']);
+    dependencies.set('customization_equipment', ['customization_focus', 'customization_duration']);
+    dependencies.set('customization_areas', ['customization_soreness', 'customization_focus']);
+    dependencies.set('customization_soreness', ['customization_areas', 'customization_focus']);
+    
+    return dependencies;
   }
   
   /**
-   * Analyze impact of changing one component on others
+   * Analyze the impact of changing a specific component
    */
   async analyzeComponentChange(
     component: keyof PerWorkoutOptions,
-    newValue: any,
+    newValue: unknown,
     currentOptions: PerWorkoutOptions,
     context: GlobalAIContext
   ): Promise<{
@@ -495,14 +593,25 @@ export class CrossComponentAIService {
     }>;
     recommendations: AIInsight[];
   }> {
+    // Create new options with the changed value
     const newOptions = { ...currentOptions, [component]: newValue };
-    const currentConflicts = await this.detectConflicts(currentOptions, context);
-    const newConflicts = await this.detectConflicts(newOptions, context);
     
-    const impacts = this.compareConflictStates(currentConflicts, newConflicts);
+    // Get conflicts before and after the change
+    const [oldConflicts, newConflicts] = await Promise.all([
+      this.detectConflicts(currentOptions, context),
+      this.detectConflicts(newOptions, context)
+    ]);
+    
+    // Compare conflict states
+    const impacts = this.compareConflictStates(oldConflicts, newConflicts);
+    
+    // Generate recommendations based on the change
     const recommendations = this.generateRecommendations(newConflicts, [], newOptions, context);
     
-    return { impacts, recommendations };
+    return {
+      impacts,
+      recommendations
+    };
   }
   
   /**
@@ -524,8 +633,43 @@ export class CrossComponentAIService {
       confidence: number;
     }> = [];
     
-    // This would implement detailed conflict comparison logic
-    // For now, return basic impact analysis
+    // Find resolved conflicts (positive impact)
+    const resolvedConflicts = currentConflicts.filter(oldConflict => 
+      !newConflicts.some(newConflict => newConflict.id === oldConflict.id)
+    );
+    
+    resolvedConflicts.forEach(conflict => {
+      impacts.push({
+        affectedComponent: conflict.components[0],
+        impactType: 'positive',
+        description: `Resolved: ${conflict.description}`,
+        confidence: conflict.confidence
+      });
+    });
+    
+    // Find new conflicts (negative impact)
+    const newConflictsOnly = newConflicts.filter(conflict => 
+      !currentConflicts.some(oldConflict => oldConflict.id === conflict.id)
+    );
+    
+    newConflictsOnly.forEach(conflict => {
+      impacts.push({
+        affectedComponent: conflict.components[0],
+        impactType: 'negative',
+        description: `New issue: ${conflict.description}`,
+        confidence: conflict.confidence
+      });
+    });
+    
+    // If no changes, mark as neutral
+    if (impacts.length === 0) {
+      impacts.push({
+        affectedComponent: 'general',
+        impactType: 'neutral',
+        description: 'No significant changes to conflict status',
+        confidence: 0.5
+      });
+    }
     
     return impacts;
   }

@@ -43,15 +43,16 @@ export class EquipmentAIService {
 
     // Validate input
     if (!equipment || equipment.length === 0) {
-      insights.push(this.createInsight(
+      const insight = this.createInsight(
         'warning',
         'warning',
         'No equipment selected. Consider adding equipment for more varied workouts.',
         0.8,
         true,
         ['customization_equipment'],
-        { context: 'empty_selection', recommendation: 'Select at least one equipment option' }
-      ));
+        { context: 'empty_selection' }
+      );
+      insights.push({ ...insight, recommendation: 'Select at least one equipment option' });
       return insights;
     }
 
@@ -106,7 +107,7 @@ export class EquipmentAIService {
         confidence = 0.75;
       }
       
-      return this.createInsight(
+      const insight = this.createInsight(
         'education',
         'info',
         message,
@@ -115,12 +116,12 @@ export class EquipmentAIService {
         ['customization_equipment'],
         { 
           context: 'bodyweight_only',
-          recommendation,
           categories,
           userFitnessLevel: userProfile?.fitnessLevel,
           hasEquipmentHistory
         }
       );
+      return { ...insight, recommendation };
     }
 
     // Check for limited variety
@@ -139,13 +140,13 @@ export class EquipmentAIService {
         message = 'Morning quick workout detected - limited variety is fine for short sessions.';
         recommendation = 'Focus on efficiency with current equipment';
         confidence = 0.5; // Lower confidence since limited variety is acceptable
-      } else if (aiAssistanceLevel === 'low') {
+      } else if (aiAssistanceLevel === 'minimal') {
         message = 'You prefer minimal equipment - current selection aligns with your preferences.';
         recommendation = 'Continue with current approach if it works for you';
         confidence = 0.4; // Lower confidence since user prefers simplicity
       }
       
-      return this.createInsight(
+      const insight = this.createInsight(
         'warning',
         'warning',
         message,
@@ -154,13 +155,13 @@ export class EquipmentAIService {
         ['customization_equipment'],
         { 
           context: 'low_variety',
-          recommendation,
           categories,
           timeOfDay,
           availableTime,
           aiAssistanceLevel
         }
       );
+      return { ...insight, recommendation };
     }
 
     // Check for equipment usage patterns from session history
@@ -191,7 +192,7 @@ export class EquipmentAIService {
     const alignmentPercentage = (alignedEquipment.length / equipment.length) * 100;
 
     if (alignmentPercentage < 50) {
-      return this.createInsight(
+      const insight = this.createInsight(
         'warning',
         'warning',
         `Your equipment selection has limited alignment with ${focus} training. Consider adding focus-specific equipment.`,
@@ -202,14 +203,14 @@ export class EquipmentAIService {
           context: 'focus_misalignment',
           focus: focus,
           alignedEquipment: alignedEquipment,
-          alignmentPercentage: alignmentPercentage,
-          recommendation: `Add ${focus}-specific equipment`
+          alignmentPercentage: alignmentPercentage
         }
       );
+      return { ...insight, recommendation: `Add ${focus}-specific equipment` };
     }
 
     if (alignmentPercentage > 80) {
-      return this.createInsight(
+      const insight = this.createInsight(
         'encouragement',
         'success',
         `Excellent equipment selection for ${focus} training! Your equipment is well-aligned with your focus area.`,
@@ -223,6 +224,7 @@ export class EquipmentAIService {
           alignmentPercentage: alignmentPercentage
         }
       );
+      return { ...insight, recommendation: 'Maintain this excellent equipment selection for continued progress' };
     }
 
     return null;
@@ -240,7 +242,7 @@ export class EquipmentAIService {
     const beginnerEquipment = equipment.filter(eq => this.EQUIPMENT_COMPLEXITY.BEGINNER.includes(eq));
 
     if (experienceLevel === 'new to exercise' && advancedEquipment.length > 0) {
-      return this.createInsight(
+      const insight = this.createInsight(
         'warning',
         'warning',
         'Advanced equipment detected for beginner level. Consider starting with simpler equipment and progressing gradually.',
@@ -250,14 +252,14 @@ export class EquipmentAIService {
         {
           context: 'complexity_mismatch',
           experienceLevel: experienceLevel,
-          advancedEquipment: advancedEquipment,
-          recommendation: 'Start with beginner-friendly equipment'
+          advancedEquipment: advancedEquipment
         }
       );
+      return { ...insight, recommendation: 'Start with beginner-friendly equipment' };
     }
 
     if (experienceLevel === 'advanced athlete' && beginnerEquipment.length === equipment.length) {
-      return this.createInsight(
+      const insight = this.createInsight(
         'opportunity',
         'info',
         'Consider adding more advanced equipment to challenge your current fitness level.',
@@ -266,10 +268,10 @@ export class EquipmentAIService {
         ['customization_equipment'],
         {
           context: 'under_challenging',
-          experienceLevel: experienceLevel,
-          recommendation: 'Add advanced equipment for progression'
+          experienceLevel: experienceLevel
         }
       );
+      return { ...insight, recommendation: 'Add advanced equipment for progression' };
     }
 
     return null;
@@ -292,6 +294,13 @@ export class EquipmentAIService {
   }
 
   /**
+   * Generate unique insight ID
+   */
+  private generateInsightId(type: string): string {
+    return `equipment_${type}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+  }
+
+  /**
    * Create a standardized AI insight
    */
   private createInsight(
@@ -310,6 +319,7 @@ export class EquipmentAIService {
       'low';
 
     return {
+      id: this.generateInsightId(type),
       type,
       message,
       priority,
@@ -345,7 +355,7 @@ export class EquipmentAIService {
     recommendations = this.prioritizeByFocus(recommendations, focusValue);
     
     // Filter by user preferences if available
-    if (userProfile?.preferences?.aiAssistanceLevel === 'low') {
+    if (userProfile?.preferences?.aiAssistanceLevel === 'minimal') {
       recommendations = recommendations.filter(eq => 
         !['Strength Machines', 'Cardio Machines (Treadmill, Elliptical, Bike)'].includes(eq)
       );
@@ -419,7 +429,7 @@ export class EquipmentAIService {
       ).length;
       
       if (sameEquipmentCount >= 4) {
-        return this.createInsight(
+        const insight = this.createInsight(
           'education',
           'info',
           'You\'ve been using similar equipment consistently - great for building habits!',
@@ -427,10 +437,10 @@ export class EquipmentAIService {
           false,
           ['customization_equipment'],
           {
-            context: 'consistent_usage',
-            recommendation: 'Continue with current approach if it\'s working well'
+            context: 'consistent_usage'
           }
         );
+        return { ...insight, recommendation: 'Continue with current approach if it\'s working well' };
       }
     }
 
@@ -453,7 +463,7 @@ export class EquipmentAIService {
       
       // If user typically uses limited variety but current selection has more variety
       if (!hasRecentVariety && equipmentVariety > 1) {
-        return this.createInsight(
+        const insight = this.createInsight(
           'encouragement',
           'success',
           'Great progress! You\'re expanding your equipment variety - this will add more workout options.',
@@ -462,16 +472,16 @@ export class EquipmentAIService {
           ['customization_equipment'],
           {
             context: 'variety_expansion',
-            recommendation: 'Continue exploring different equipment types for balanced training',
             currentVariety: equipmentVariety,
             equipmentCategories: currentEquipmentCategories
           }
         );
+        return { ...insight, recommendation: 'Continue exploring different equipment types for balanced training' };
       }
       
       // If user typically uses variety but current selection is limited
       if (hasRecentVariety && equipmentVariety === 1) {
-        return this.createInsight(
+        const insight = this.createInsight(
           'optimization',
           'info',
           'You\'ve simplified your equipment selection - this can be great for focused training.',
@@ -480,11 +490,11 @@ export class EquipmentAIService {
           ['customization_equipment'],
           {
             context: 'simplified_selection',
-            recommendation: 'Consider if this focused approach aligns with your current goals',
             currentVariety: equipmentVariety,
             equipmentCategories: currentEquipmentCategories
           }
         );
+        return { ...insight, recommendation: 'Consider if this focused approach aligns with your current goals' };
       }
     }
 
@@ -493,7 +503,7 @@ export class EquipmentAIService {
     const historicalComplexity = this.analyzeHistoricalComplexity(sessionHistory);
     
     if (historicalComplexity && currentComplexity > historicalComplexity) {
-      return this.createInsight(
+      const insight = this.createInsight(
         'encouragement',
         'success',
         'You\'re progressing to more advanced equipment - excellent for continued growth!',
@@ -502,12 +512,12 @@ export class EquipmentAIService {
         ['customization_equipment'],
         {
           context: 'complexity_progression',
-          recommendation: 'Ensure proper form and safety with new equipment',
           currentComplexity,
           historicalComplexity,
           equipment
         }
       );
+      return { ...insight, recommendation: 'Ensure proper form and safety with new equipment' };
     }
 
     // Check for equipment consistency with focus areas
@@ -521,7 +531,7 @@ export class EquipmentAIService {
       const focusConsistency = this.assessFocusEquipmentConsistency(equipment, recentFocus);
       
       if (focusConsistency.isConsistent) {
-        return this.createInsight(
+        const insight = this.createInsight(
           'encouragement',
           'success',
           `Your equipment selection aligns well with your recent ${focusConsistency.focusType} focus - great consistency!`,
@@ -530,11 +540,11 @@ export class EquipmentAIService {
           ['customization_equipment', 'customization_focus'],
           {
             context: 'focus_equipment_alignment',
-            recommendation: 'Maintain this alignment for optimal training results',
             focusType: focusConsistency.focusType,
             equipment
           }
         );
+        return { ...insight, recommendation: 'Maintain this alignment for optimal training results' };
       }
     }
     
@@ -568,7 +578,7 @@ export class EquipmentAIService {
         confidence = 0.5; // Lower confidence for advanced users who may handle it better
       }
       
-      return this.createInsight(
+      const insight = this.createInsight(
         'optimization',
         'info',
         message,
@@ -577,11 +587,11 @@ export class EquipmentAIService {
         ['customization_equipment'],
         {
           context: 'evening_cardio',
-          recommendation,
           fitnessLevel,
           timeOfDay
         }
       );
+      return { ...insight, recommendation };
     }
     
     // Location-based recommendations with user profile consideration
@@ -591,13 +601,13 @@ export class EquipmentAIService {
       let confidence = 0.8;
       
       // Adjust based on user's AI assistance preference
-      if (aiAssistanceLevel === 'low') {
+      if (aiAssistanceLevel === 'minimal') {
         message = 'You prefer minimal equipment - strength machines may be too complex for home use';
         recommendation = 'Stick with simple equipment like dumbbells and resistance bands';
         confidence = 0.9;
       }
       
-      return this.createInsight(
+      const insight = this.createInsight(
         'optimization',
         'info',
         message,
@@ -606,11 +616,11 @@ export class EquipmentAIService {
         ['customization_equipment'],
         {
           context: 'home_equipment_mismatch',
-          recommendation,
           location,
           aiAssistanceLevel
         }
       );
+      return { ...insight, recommendation };
     }
     
     // Time constraint recommendations with user profile consideration
@@ -624,13 +634,13 @@ export class EquipmentAIService {
         message = 'Short workout time - keep it simple with 1-2 pieces of equipment';
         recommendation = 'Choose body weight and one resistance option for quick, effective workouts';
         confidence = 0.8;
-      } else if (aiAssistanceLevel === 'low') {
+      } else if (aiAssistanceLevel === 'minimal') {
         message = 'Quick workout with minimal equipment complexity';
         recommendation = 'Focus on 2-3 simple, versatile pieces of equipment';
         confidence = 0.6;
       }
       
-      return this.createInsight(
+      const insight = this.createInsight(
         'optimization',
         'warning',
         message,
@@ -639,12 +649,12 @@ export class EquipmentAIService {
         ['customization_equipment'],
         {
           context: 'time_constraint',
-          recommendation,
           availableTime,
           fitnessLevel,
           aiAssistanceLevel
         }
       );
+      return { ...insight, recommendation };
     }
     
     return null;

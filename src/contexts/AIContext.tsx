@@ -1,17 +1,26 @@
 // AI Context Provider - Manages AI service across the application
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { AIService } from '../services/ai/core/AIService';
-import { UserProfile, PerWorkoutOptions } from '../types';
+import { UserProfile, PerWorkoutOptions, AIAssistanceLevel } from '../types';
 import { featureFlagService, useFeatureFlags, FeatureFlag, ABTestResults, AnalyticsEvent } from '../services/ai/featureFlags/FeatureFlagService';
 import { openAIStrategy } from '../services/ai/external/OpenAIStrategy';
 import { openAIWorkoutGenerator } from '../services/ai/external/OpenAIWorkoutGenerator';
-import { openAIConfig, isFeatureEnabled } from '../services/ai/external/config/openai.config';
+import { openAIConfig, isFeatureEnabled, checkEnvironmentConfiguration } from '../services/ai/external/config/openai.config';
 
 // Enhanced AI Context with Feature Flag Support
 interface AIContextValue {
   // Core AI Service
   aiService: AIService;
   serviceStatus: 'initializing' | 'ready' | 'error';
+  
+  // Environment Validation
+  environmentStatus: {
+    isConfigured: boolean;
+    hasApiKey: boolean;
+    isDevelopment: boolean;
+    issues: string[];
+    recommendations: string[];
+  };
   
   // Feature Flag Support
   featureFlags: Record<string, boolean>;
@@ -44,6 +53,15 @@ interface AIContextValue {
     increaseRollout: (flagId: string, percentage: number) => void;
     getAnalytics: (flagId: string) => ABTestResults | null;
     exportFlags: () => Record<string, FeatureFlag>;
+    checkEnvironment: () => void;
+    validateState: () => any;
+    getInitializationInfo: () => {
+      attempts: number;
+      lastError: string | null;
+      startTime: Date | null;
+      endTime: Date | null;
+      duration: number | null;
+    };
   };
 }
 
@@ -64,12 +82,67 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
   const [abTestResults, setABTestResults] = useState<Record<string, ABTestResults>>({});
   const [enableValidation, setEnableValidation] = useState(false);
+  
+  // Enhanced debugging and state tracking
+  const [initializationAttempts, setInitializationAttempts] = useState(0);
+  const [lastInitializationError, setLastInitializationError] = useState<string | null>(null);
+  const [initializationStartTime, setInitializationStartTime] = useState<Date | null>(null);
+  const [initializationEndTime, setInitializationEndTime] = useState<Date | null>(null);
+  
+  // Environment validation state
+  const [environmentStatus, setEnvironmentStatus] = useState(() => checkEnvironmentConfiguration());
+
+  // Enhanced state validation function
+  const validateAIContextState = useCallback(() => {
+    const state = {
+      serviceStatus,
+      hasUserProfile: !!currentUserProfile,
+      hasFeatureFlags: Object.keys(featureFlags).length > 0,
+      hasEnvironmentStatus: !!environmentStatus,
+      initializationAttempts,
+      lastError: lastInitializationError,
+      initializationDuration: initializationStartTime && initializationEndTime 
+        ? initializationEndTime.getTime() - initializationStartTime.getTime() 
+        : null
+    };
+
+    console.log('🔍 AI Context State Validation:', state);
+    return state;
+  }, [serviceStatus, currentUserProfile, featureFlags, environmentStatus, initializationAttempts, lastInitializationError, initializationStartTime, initializationEndTime]);
+
+  // Check environment configuration on mount
+  useEffect(() => {
+    console.log('🔄 AIProvider: Initializing environment configuration...');
+    const status = checkEnvironmentConfiguration();
+    setEnvironmentStatus(status);
+    
+    console.log('✅ AIProvider: Environment status set:', {
+      isConfigured: status.isConfigured,
+      hasApiKey: status.hasApiKey,
+      isDevelopment: status.isDevelopment,
+      issuesCount: status.issues.length,
+      recommendationsCount: status.recommendations.length
+    });
+    
+    if (status.isDevelopment && !status.isConfigured) {
+      console.warn('⚠️  AI Environment Configuration Issues Detected');
+      console.warn('   Issues:', status.issues);
+      console.warn('   Recommendations:', status.recommendations);
+    }
+  }, []);
 
   // Initialize feature flags when user profile is available
   useEffect(() => {
     if (currentUserProfile) {
+      console.log('🔄 AIProvider: Loading feature flags for user profile...');
       const flags = featureFlagService.getAIFlags(currentUserProfile);
       setFeatureFlags(flags);
+      
+      console.log('✅ AIProvider: Feature flags loaded:', {
+        totalFlags: Object.keys(flags).length,
+        enabledFlags: Object.keys(flags).filter(key => flags[key]),
+        userFitnessLevel: currentUserProfile.fitnessLevel
+      });
       
       // Set up analytics callback
       featureFlagService.setAnalyticsCallback((event: AnalyticsEvent) => {
@@ -78,21 +151,72 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         // In a real implementation, this would send to an analytics service
         // trackEvent('feature_flag', event);
       });
+    } else {
+      console.log('ℹ️ AIProvider: No user profile available for feature flags');
     }
   }, [currentUserProfile]);
 
-  // Initialize AI service with user profile and feature flag context
+  // Enhanced initialization with comprehensive debugging
   const initialize = useCallback(async (userProfile: UserProfile) => {
+    const attemptNumber = initializationAttempts + 1;
+    const startTime = new Date();
+    
+    console.log(`🔄 AIProvider: Starting AI service initialization (attempt ${attemptNumber})...`, { 
+      userProfile: { 
+        fitnessLevel: userProfile.fitnessLevel, 
+        goals: userProfile.goals,
+        hasPreferences: !!userProfile.preferences,
+        hasLimitations: !!userProfile.basicLimitations
+      },
+      startTime: startTime.toISOString()
+    });
+    
+    setInitializationAttempts(attemptNumber);
+    setInitializationStartTime(startTime);
+    setLastInitializationError(null);
+    
     try {
+      // Validate user profile before initialization
+      console.log('🔍 AIProvider: Validating user profile...');
+      
+      if (!userProfile) {
+        throw new Error('User profile is required for AI service initialization');
+      }
+      
+      if (!userProfile.fitnessLevel) {
+        throw new Error('User profile must include fitness level');
+      }
+      
+      if (!userProfile.goals || userProfile.goals.length === 0) {
+        throw new Error('User profile must include at least one goal');
+      }
+      
+      if (!userProfile.preferences) {
+        throw new Error('User profile must include preferences');
+      }
+      
+      if (!userProfile.basicLimitations) {
+        throw new Error('User profile must include basic limitations');
+      }
+      
+      console.log('✅ AIProvider: User profile validation passed');
+      
       setServiceStatus('initializing');
       setCurrentUserProfile(userProfile);
+      
+      console.log('✅ AIProvider: User profile set, loading feature flags...');
       
       // Get feature flags for this user
       const flags = featureFlagService.getAIFlags(userProfile);
       setFeatureFlags(flags);
       
-      // Set up AI service context
-      aiService.setContext({
+      console.log('✅ AIProvider: Feature flags loaded:', {
+        enabledFlags: Object.keys(flags).filter(key => flags[key]),
+        totalFlags: Object.keys(flags).length
+      });
+      
+      // Set up AI service context with proper error handling
+      const context = {
         userProfile,
         currentSelections: {},
         sessionHistory: [],
@@ -101,23 +225,78 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
           location: 'home'
         },
         preferences: {
-          aiAssistanceLevel: 'moderate',
+          aiAssistanceLevel: 'moderate' as AIAssistanceLevel,
           showLearningInsights: true,
           autoApplyLowRiskRecommendations: false
         }
-      });
+      };
+      
+      console.log('🔄 AIProvider: Setting AI service context...');
+      await aiService.setContext(context);
+      console.log('✅ AIProvider: AI service context set successfully');
       
       // Initialize external AI strategy if enabled
       if (isFeatureEnabled('openai_workout_generation') || isFeatureEnabled('openai_enhanced_recommendations')) {
+        console.log('🔄 AIProvider: Initializing external AI strategy...');
         aiService.setExternalStrategy(openAIStrategy);
+        console.log('✅ AIProvider: External AI strategy initialized');
+      } else {
+        console.log('ℹ️ AIProvider: External AI strategy not enabled, using internal services');
       }
       
+      // Verify service is ready
+      console.log('🔍 AIProvider: Verifying service health...');
+      const healthStatus = aiService.getHealthStatus();
+      console.log('🔍 AIProvider: AI service health status:', healthStatus);
+      
+      if (healthStatus.status === 'unhealthy') {
+        throw new Error(`AI service health check failed: ${JSON.stringify(healthStatus.details)}`);
+      }
+      
+      const endTime = new Date();
+      setInitializationEndTime(endTime);
       setServiceStatus('ready');
+      
+      console.log('✅ AIProvider: AI service initialization completed successfully', {
+        attemptNumber,
+        duration: endTime.getTime() - startTime.getTime(),
+        healthStatus: healthStatus.status,
+        userProfile: {
+          fitnessLevel: userProfile.fitnessLevel,
+          goals: userProfile.goals
+        }
+      });
+      
+      // Log final state validation
+      validateAIContextState();
+      
     } catch (error) {
-      console.error('Failed to initialize AI service:', error);
+      const endTime = new Date();
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      console.error('❌ AIProvider: Failed to initialize AI service:', error);
+      console.error('AIProvider: Error details:', {
+        attemptNumber,
+        duration: endTime.getTime() - startTime.getTime(),
+        message: errorMessage,
+        stack: error instanceof Error ? error.stack : undefined,
+        userProfile: userProfile ? { 
+          fitnessLevel: userProfile.fitnessLevel, 
+          goals: userProfile.goals 
+        } : 'null'
+      });
+      
       setServiceStatus('error');
+      setLastInitializationError(errorMessage);
+      setInitializationEndTime(endTime);
+      
+      // Log error state validation
+      validateAIContextState();
+      
+      // Re-throw the error to allow calling code to handle it
+      throw error;
     }
-  }, [aiService, enableValidation]);
+  }, [aiService, enableValidation, initializationAttempts, validateAIContextState]);
 
   // Update workout selections with feature flag awareness
   const updateSelections = useCallback((selections: Partial<PerWorkoutOptions>) => {
@@ -265,8 +444,11 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
   // Feature flag utility methods
   const isFeatureEnabled = useCallback((flagId: string) => {
-    return currentUserProfile ? featureFlagService.isEnabled(flagId, currentUserProfile) : false;
-  }, [currentUserProfile]);
+    // Use cached feature flags if available, otherwise fall back to direct service call
+    const result = featureFlags[flagId] ?? (currentUserProfile ? featureFlagService.isEnabled(flagId, currentUserProfile) : false);
+    
+    return result;
+  }, [currentUserProfile, featureFlags]);
 
   // Development tools for testing and flag management
   const developmentTools = {
@@ -290,7 +472,28 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     
     exportFlags: () => {
       return featureFlagService.exportConfiguration();
-    }
+    },
+    
+    checkEnvironment: () => {
+      const status = checkEnvironmentConfiguration();
+      setEnvironmentStatus(status);
+      console.group('🔧 Environment Configuration Check');
+      console.log('Status:', status);
+      console.groupEnd();
+      return status;
+    },
+    validateState: () => {
+      return validateAIContextState();
+    },
+         getInitializationInfo: () => {
+       return {
+         attempts: initializationAttempts,
+         lastError: lastInitializationError,
+         startTime: initializationStartTime,
+         endTime: initializationEndTime,
+         duration: initializationStartTime && initializationEndTime ? initializationEndTime.getTime() - initializationStartTime.getTime() : null
+       };
+     }
   };
 
   // External AI methods
@@ -316,6 +519,7 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const contextValue: AIContextValue = {
     aiService,
     serviceStatus,
+    environmentStatus,
     featureFlags,
     isFeatureEnabled,
     abTestResults,
@@ -350,6 +554,50 @@ export const useAI = (): AIContextValue => {
   return context;
 };
 
+// Debugging hook for initialization issues
+export const useAIDebug = () => {
+  const { developmentTools, serviceStatus, environmentStatus } = useAI();
+  
+  return {
+    // Get current state validation
+    getStateValidation: () => developmentTools.validateState(),
+    
+    // Get initialization information
+    getInitializationInfo: () => developmentTools.getInitializationInfo(),
+    
+    // Check environment status
+    getEnvironmentStatus: () => environmentStatus,
+    
+    // Get service status
+    getServiceStatus: () => serviceStatus,
+    
+    // Comprehensive debug report
+    getDebugReport: () => {
+      const stateValidation = developmentTools.validateState();
+      const initInfo = developmentTools.getInitializationInfo();
+      
+      return {
+        serviceStatus,
+        environmentStatus,
+        stateValidation,
+        initializationInfo: initInfo,
+        timestamp: new Date().toISOString(),
+        recommendations: []
+      };
+    },
+    
+    // Log debug information to console
+    logDebugInfo: () => {
+      console.group('🔍 AI Service Debug Information');
+      console.log('Service Status:', serviceStatus);
+      console.log('Environment Status:', environmentStatus);
+      console.log('State Validation:', developmentTools.validateState());
+      console.log('Initialization Info:', developmentTools.getInitializationInfo());
+      console.groupEnd();
+    }
+  };
+};
+
 // Specialized hooks for different AI use cases
 export const useAIRecommendations = () => {
   const { analyze, trackAIInteraction } = useAI();
@@ -366,7 +614,7 @@ export const useAIRecommendations = () => {
         data: { recommendationId }
       });
     },
-    rejectRecommendation: (recommendationId: string) => {
+    dismissRecommendation: (recommendationId: string) => {
       trackAIInteraction({
         type: 'recommendation_rejected',
         component: 'recommendations',
@@ -380,47 +628,63 @@ export const useAIInsights = (component: string) => {
   const { getEnergyInsights, getSorenessInsights, trackAIInteraction } = useAI();
   
   return {
-    getInsights: (value: any) => {
-      switch (component) {
-        case 'energy':
-          return getEnergyInsights(value);
-        case 'soreness':
-          return getSorenessInsights(value);
-        default:
-          return [];
-      }
-    },
-    trackInsightShown: (insightId: string) => {
+    getEnergyInsights: (value: number) => {
+      const insights = getEnergyInsights(value);
       trackAIInteraction({
         type: 'insight_shown',
         component,
-        data: { insightId }
+        data: { value, insightsCount: insights.length }
       });
+      return insights;
     },
-    trackInsightApplied: (insightId: string) => {
+    getSorenessInsights: (value: number) => {
+      const insights = getSorenessInsights(value);
       trackAIInteraction({
-        type: 'insight_applied',
+        type: 'insight_shown',
         component,
-        data: { insightId }
+        data: { value, insightsCount: insights.length }
       });
+      return insights;
     }
   };
 };
 
 export const useAIHealth = () => {
-  const { serviceStatus, abTestResults, featureFlags } = useAI();
+  const { aiService, serviceStatus, environmentStatus } = useAI();
+  
+  const getHealthStatus = () => {
+    try {
+      const healthStatus = aiService.getHealthStatus();
+      return {
+        ...healthStatus,
+        serviceStatus,
+        environmentStatus,
+        isHealthy: healthStatus.status === 'healthy' && serviceStatus === 'ready',
+        hasEnvironmentIssues: environmentStatus.issues.length > 0
+      };
+    } catch (error) {
+      return {
+        status: 'unhealthy',
+        details: {
+          error: error instanceof Error ? error.message : String(error),
+          serviceStatus,
+          hasEnvironmentIssues: environmentStatus.issues.length > 0
+        },
+        isHealthy: false,
+        hasEnvironmentIssues: environmentStatus.issues.length > 0
+      };
+    }
+  };
   
   return {
-    isHealthy: serviceStatus === 'ready',
-    serviceStatus,
-    featureFlags,
-    abTestResults,
-    performanceMetrics: {
-      // In a real implementation, these would come from monitoring
-      responseTime: 85,
-      cacheHitRate: 0.78,
-      errorRate: 0.001
-    }
+    isHealthy: () => {
+      const health = getHealthStatus();
+      return health.isHealthy;
+    },
+    getHealthStatus,
+    getPerformanceMetrics: () => aiService.getPerformanceMetrics(),
+    getEnvironmentIssues: () => environmentStatus.issues,
+    getEnvironmentRecommendations: () => environmentStatus.recommendations
   };
 };
 

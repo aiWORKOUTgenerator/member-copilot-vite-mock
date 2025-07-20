@@ -197,6 +197,20 @@ export class AIPerformanceMonitor {
   getAlerts(): PerformanceAlert[] {
     return [...this.alerts];
   }
+
+  /**
+   * Get cache eviction rate
+   */
+  getCacheEvictionRate(): number {
+    // For now, return a simple calculation based on cache misses
+    // In a real implementation, this would track actual evictions
+    const totalCacheOperations = this.cacheHits + this.cacheMisses;
+    if (totalCacheOperations === 0) return 0;
+    
+    // Estimate eviction rate as a percentage of cache misses
+    // This is a simplified approach - in practice, you'd track actual evictions
+    return this.cacheMisses / totalCacheOperations * 0.1; // Assume 10% of misses are due to evictions
+  }
   
   /**
    * Clear old alerts

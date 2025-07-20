@@ -288,7 +288,7 @@ export const migrationUtils: MigrationUtils = {
     }
 
     // AI assistance level
-    if (userProfile.preferences.aiAssistanceLevel === 'high' && !migrationUtils.isComplexObject(currentValue)) {
+    if (userProfile.preferences.aiAssistanceLevel === 'comprehensive' && !migrationUtils.isComplexObject(currentValue)) {
       analysis.shouldEnhance = true;
       analysis.confidence += 0.2;
       analysis.reasons.push('High AI assistance works best with detailed data');

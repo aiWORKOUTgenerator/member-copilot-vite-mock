@@ -3,6 +3,7 @@ import { Zap, ChevronLeft, AlertTriangle, RefreshCw, Clock, Target, TrendingUp }
 import { GeneratedWorkout } from '../services/ai/external/types/external-ai.types';
 import { UseWorkoutGenerationReturn } from '../hooks/useWorkoutGeneration';
 import { WorkoutDisplay } from './WorkoutDisplay';
+import { ErrorBoundary } from './shared/ErrorBoundary';
 
 export interface WorkoutResultsPageProps {
   onNavigate: (page: 'profile' | 'waiver' | 'focus' | 'review' | 'results') => void;
@@ -278,13 +279,38 @@ Generated on: ${generatedWorkout.generatedAt.toLocaleDateString()}
       </div>
 
       {/* Workout Display */}
-      <WorkoutDisplay
-        workout={generatedWorkout}
-        onRegenerate={handleRegenerate}
-        onDownload={handleDownload}
-        onShare={handleShare}
-        isRegenerating={isRegenerating}
-      />
+      <ErrorBoundary
+        onError={(error, errorInfo) => {
+          console.error('WorkoutDisplay error:', error, errorInfo);
+        }}
+        fallback={
+          <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-8 h-8 text-red-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-red-900 mb-2">Workout Display Error</h3>
+            <p className="text-red-700 mb-4">
+              There was an issue displaying your workout. Please try regenerating it.
+            </p>
+            <button
+              onClick={handleRegenerate}
+              disabled={isRegenerating}
+              className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+              {isRegenerating ? 'Regenerating...' : 'Regenerate Workout'}
+            </button>
+          </div>
+        }
+      >
+        <WorkoutDisplay
+          workout={generatedWorkout}
+          onRegenerate={handleRegenerate}
+          onDownload={handleDownload}
+          onShare={handleShare}
+          isRegenerating={isRegenerating}
+        />
+      </ErrorBoundary>
 
       {/* Additional Actions */}
       <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-gray-200/50">

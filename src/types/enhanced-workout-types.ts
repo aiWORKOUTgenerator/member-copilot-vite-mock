@@ -362,10 +362,5 @@ export interface MigrationUtils {
 // Literal type for workout types
 export type WorkoutType = 'quick' | 'detailed';
 
-export interface WorkoutGenerationRequest {
-  workoutType: WorkoutType;
-  profileData: ProfileData;
-  waiverData?: LiabilityWaiverData;
-  workoutFocusData: PerWorkoutOptions;
-  userProfile: UserProfile;
-} 
+// WorkoutGenerationRequest interface moved to workout-generation.types.ts
+// Use the unified interface from './workout-generation.types' 

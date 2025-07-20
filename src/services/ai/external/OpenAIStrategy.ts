@@ -1,24 +1,34 @@
 // OpenAI Strategy - Implements AIStrategy interface for OpenAI integration
 import { 
   AIStrategy, 
-  WorkoutGenerationRequest, 
   GeneratedWorkout, 
   EnhancedRecommendation, 
-  UserPreferenceAnalysis,
-  ExternalAIError 
+  UserPreferenceAnalysis
 } from './types/external-ai.types';
-import { AIInsight, PrioritizedRecommendation, GlobalAIContext } from '../core/AIService';
+import { WorkoutGenerationRequest } from '../../../types/workout-generation.types';
+import { PrioritizedRecommendation, GlobalAIContext } from '../core/AIService';
+import { AIInsight } from '../../../types/insights';
 import { OpenAIService } from './OpenAIService';
 import { 
-  workoutGenerationPrompts, 
   selectWorkoutPrompt 
 } from './prompts/workout-generation.prompts';
 import { 
-  recommendationPrompts, 
   selectRecommendationPrompt 
 } from './prompts/recommendation.prompts';
-import { openAIConfig, isFeatureEnabled } from './config/openai.config';
+import { isFeatureEnabled } from './config/openai.config';
 import { logger } from '../../../utils/logger';
+import { WorkoutVariableBuilder } from './helpers/WorkoutVariableBuilder';
+import { ErrorHandler } from './helpers/ErrorHandler';
+import { OPENAI_STRATEGY_CONSTANTS } from './constants/openai-constants';
+import { 
+  createInsightEnhancementPrompt,
+  createUserAnalysisPrompt,
+  parseEnhancedInsights,
+  parseUserAnalysis,
+  createBasicUserAnalysis
+} from './helpers/AIAnalysisHelpers';
+import { enhanceGeneratedWorkout } from './helpers/WorkoutEnhancementHelpers';
+
 
 export class OpenAIStrategy implements AIStrategy {
   private openAIService: OpenAIService;
@@ -28,7 +38,7 @@ export class OpenAIStrategy implements AIStrategy {
     openAIService?: OpenAIService,
     fallbackStrategy?: AIStrategy
   ) {
-    this.openAIService = openAIService || new OpenAIService();
+    this.openAIService = openAIService ?? new OpenAIService();
     this.fallbackStrategy = fallbackStrategy;
   }
 
@@ -46,18 +56,9 @@ export class OpenAIStrategy implements AIStrategy {
         'detailed'
       );
 
-      // Prepare prompt variables
+      // Prepare prompt variables using helper
       const variables = {
-        fitnessLevel: context.userProfile.fitnessLevel,
-        goals: context.userProfile.goals || [],
-        energyLevel: context.currentSelections.customization_energy || 5,
-        sorenessAreas: context.currentSelections.customization_soreness || [],
-        availableTime: context.currentSelections.customization_duration || 30,
-        equipment: context.currentSelections.customization_equipment || [],
-        location: context.environmentalFactors?.location || 'home',
-        workoutFocus: context.currentSelections.customization_focus || 'general',
-        duration: context.currentSelections.customization_duration || 30,
-        selectedEquipment: context.currentSelections.customization_equipment || [],
+        ...WorkoutVariableBuilder.buildRecommendationVariables(context),
         detectedIssues: this.analyzeCurrentIssues(context),
         optimizationOpportunities: this.findOptimizationOpportunities(context)
       };
@@ -68,79 +69,37 @@ export class OpenAIStrategy implements AIStrategy {
         variables,
         {
           cacheKey: `recommendations_${context.userProfile.fitnessLevel}_${Date.now()}`,
-          timeout: 15000
+          timeout: OPENAI_STRATEGY_CONSTANTS.RECOMMENDATION_TIMEOUT
         }
       );
 
       // Validate and convert to PrioritizedRecommendation format
-      return this.convertToStandardRecommendations(recommendations, context);
+      return this.convertToStandardRecommendations(recommendations as EnhancedRecommendation[], context);
 
     } catch (error) {
       logger.error('OpenAI recommendations failed:', error);
-      return this.handleRecommendationError(error, context);
+      return ErrorHandler.handleRecommendationError(error, context, this.fallbackStrategy);
     }
   }
 
   // Generate AI-powered workout
   async generateWorkout(request: WorkoutGenerationRequest): Promise<GeneratedWorkout> {
     try {
-      if (!isFeatureEnabled('openai_workout_generation')) {
-        throw new Error('OpenAI workout generation is disabled');
-      }
-
-      // Select appropriate workout prompt
-      const prompt = selectWorkoutPrompt(
-        request.userProfile.fitnessLevel,
-        request.preferences.duration,
-        request.constraints?.sorenessAreas || [],
-        request.preferences.focus
-      );
-
-      // Prepare comprehensive variables
-      const variables = {
-        // User profile
-        fitnessLevel: request.userProfile.fitnessLevel,
-        goals: request.userProfile.goals || [],
-        preferredIntensity: request.preferences.intensity,
-
-        // Current state
-        energyLevel: request.constraints?.energyLevel || 5,
-        sorenessAreas: request.constraints?.sorenessAreas || [],
-        duration: request.preferences.duration,
-        focus: request.preferences.focus,
-
-        // Preferences & constraints
-        equipment: request.preferences.equipment,
-        location: request.preferences.location,
-        timeOfDay: request.constraints?.timeOfDay || 'morning',
-        noiseLevel: request.constraints?.noiselevel || 'moderate',
-        spaceLimitations: request.constraints?.spaceLimitations || [],
-
-        // Environmental factors
-        weather: request.environmentalFactors?.weather || 'indoor',
-        temperature: request.environmentalFactors?.temperature || 'comfortable',
-
-        // Special considerations
-        injuries: request.constraints?.injuries || [],
-        previousWorkout: 'None provided'
-      };
-
-      // Generate workout using OpenAI
-      const workout = await this.openAIService.generateFromTemplate(
-        prompt,
-        variables,
-        {
-          cacheKey: `workout_${request.userProfile.fitnessLevel}_${JSON.stringify(variables)}`,
-          timeout: 30000
-        }
-      );
-
-      // Validate and enhance workout
-      return this.validateAndEnhanceWorkout(workout, request);
+      // Validate request and configuration
+      this.validateWorkoutRequest(request);
+      
+      // Prepare variables using helper
+      const variables = WorkoutVariableBuilder.buildWorkoutVariables(request);
+      
+      // Execute workout generation
+      const workout = await this.executeWorkoutGeneration(request, variables);
+      
+      // Enhance and validate the generated workout
+      return this.enhanceGeneratedWorkout(workout, request);
 
     } catch (error) {
       logger.error('OpenAI workout generation failed:', error);
-      throw this.createWorkoutError(error, request);
+      throw ErrorHandler.createWorkoutError(error, request);
     }
   }
 
@@ -151,47 +110,22 @@ export class OpenAIStrategy implements AIStrategy {
         return insights;
       }
 
-      // Create enhancement prompt
-      const enhancementPrompt = `
-        You are an expert fitness coach. Enhance these existing fitness insights with personalized explanations and scientific context.
-        
-        Current insights: ${JSON.stringify(insights)}
-        
-        User context:
-        - Fitness level: ${context.userProfile.fitnessLevel}
-        - Goals: ${context.userProfile.goals?.join(', ')}
-        - Energy level: ${context.currentSelections.customization_energy || 5}/10
-        
-        For each insight, provide:
-        1. Enhanced explanation with scientific backing
-        2. Personalized context for this specific user
-        3. Actionable next steps
-        
-        Return the enhanced insights in the same format with additional detail.
-      `;
+      // Create enhancement prompt using helper
+      const enhancementPrompt = createInsightEnhancementPrompt(context, insights);
 
       const enhanced = await this.openAIService.makeRequest([
         { role: 'system', content: enhancementPrompt }
       ], {
-        maxTokens: 1000,
-        temperature: 0.7,
+        maxTokens: OPENAI_STRATEGY_CONSTANTS.INSIGHT_ENHANCEMENT_MAX_TOKENS,
+        temperature: OPENAI_STRATEGY_CONSTANTS.RECOMMENDATION_TEMPERATURE,
         cacheKey: `enhanced_insights_${context.userProfile.fitnessLevel}_${JSON.stringify(insights)}`
       });
 
       const enhancedContent = enhanced.choices[0]?.message?.content;
-      if (enhancedContent) {
-        try {
-          const parsedInsights = JSON.parse(enhancedContent);
-          return Array.isArray(parsedInsights) ? parsedInsights : insights;
-        } catch {
-          return insights;
-        }
-      }
-
-      return insights;
+      return parseEnhancedInsights(enhancedContent, insights);
 
     } catch (error) {
-      logger.error('Insight enhancement failed:', error);
+      ErrorHandler.logError(error, 'enhanceInsights', { insights, context });
       return insights; // Return original insights on failure
     }
   }
@@ -200,57 +134,25 @@ export class OpenAIStrategy implements AIStrategy {
   async analyzeUserPreferences(context: GlobalAIContext): Promise<UserPreferenceAnalysis> {
     try {
       if (!isFeatureEnabled('openai_user_analysis')) {
-        return this.createBasicUserAnalysis(context);
+        return createBasicUserAnalysis(context);
       }
 
-      const analysisPrompt = `
-        Analyze this user's fitness preferences and patterns to provide personalized insights:
-        
-        User Profile:
-        - Fitness Level: ${context.userProfile.fitnessLevel}
-        - Goals: ${context.userProfile.goals?.join(', ')}
-        - Preferences: ${JSON.stringify(context.userProfile.preferences)}
-        
-        Session History:
-        ${context.sessionHistory.map(s => `${s.component}: ${s.action}`).join('\n')}
-        
-        Current Selections:
-        ${JSON.stringify(context.currentSelections)}
-        
-        Provide a comprehensive analysis including:
-        1. Preferred workout styles
-        2. Optimal workout times
-        3. Motivation factors
-        4. Challenge areas
-        5. Strength areas
-        6. Recommended progression plan
-        7. Personality insights
-        
-        Return as a UserPreferenceAnalysis JSON object.
-      `;
+      const analysisPrompt = createUserAnalysisPrompt(context);
 
       const analysis = await this.openAIService.makeRequest([
         { role: 'system', content: analysisPrompt }
       ], {
-        maxTokens: 1500,
-        temperature: 0.8,
+        maxTokens: OPENAI_STRATEGY_CONSTANTS.USER_ANALYSIS_MAX_TOKENS,
+        temperature: OPENAI_STRATEGY_CONSTANTS.USER_ANALYSIS_TEMPERATURE,
         cacheKey: `user_analysis_${context.userProfile.fitnessLevel}_${JSON.stringify(context.sessionHistory)}`
       });
 
       const analysisContent = analysis.choices[0]?.message?.content;
-      if (analysisContent) {
-        try {
-          return JSON.parse(analysisContent) as UserPreferenceAnalysis;
-        } catch {
-          return this.createBasicUserAnalysis(context);
-        }
-      }
-
-      return this.createBasicUserAnalysis(context);
+      return parseUserAnalysis(analysisContent, context);
 
     } catch (error) {
-      logger.error('User preference analysis failed:', error);
-      return this.createBasicUserAnalysis(context);
+      ErrorHandler.logError(error, 'analyzeUserPreferences', { context });
+      return createBasicUserAnalysis(context);
     }
   }
 
@@ -258,21 +160,18 @@ export class OpenAIStrategy implements AIStrategy {
   private analyzeCurrentIssues(context: GlobalAIContext): string {
     const issues: string[] = [];
     
-    const energyLevel = context.currentSelections.customization_energy || 5;
-    const duration = context.currentSelections.customization_duration || 30;
-    const focus = context.currentSelections.customization_focus || '';
+    const energyLevel = context.currentSelections.customization_energy ?? OPENAI_STRATEGY_CONSTANTS.DEFAULT_ENERGY_LEVEL;
+    const duration = context.currentSelections.customization_duration ?? OPENAI_STRATEGY_CONSTANTS.DEFAULT_WORKOUT_DURATION;
+    const focus = context.currentSelections.customization_focus ?? '';
 
-    if (energyLevel <= 3 && duration > 30) {
+    if (energyLevel <= OPENAI_STRATEGY_CONSTANTS.ENERGY_THRESHOLD_LOW && 
+        (typeof duration === 'number' && duration > OPENAI_STRATEGY_CONSTANTS.DEFAULT_WORKOUT_DURATION)) {
       issues.push('Low energy level with long workout duration');
     }
 
-    if (energyLevel <= 3 && (focus === 'Quick Sweat' || focus === 'Core & Abs Focus')) {
+    if (energyLevel <= OPENAI_STRATEGY_CONSTANTS.ENERGY_THRESHOLD_LOW && 
+        (focus === 'Quick Sweat' || focus === 'Core & Abs Focus')) {
       issues.push('Low energy level with high-intensity focus');
-    }
-
-    const sorenessAreas = context.currentSelections.customization_soreness || [];
-    if (sorenessAreas.length > 0 && focus === 'Quick Sweat') {
-      issues.push('High soreness with high-intensity workout');
     }
 
     return issues.join('; ') || 'No significant issues detected';
@@ -281,19 +180,17 @@ export class OpenAIStrategy implements AIStrategy {
   private findOptimizationOpportunities(context: GlobalAIContext): string {
     const opportunities: string[] = [];
     
-    const energyLevel = context.currentSelections.customization_energy || 5;
-    const equipment = context.currentSelections.customization_equipment || [];
+    const energyLevel = context.currentSelections.customization_energy ?? OPENAI_STRATEGY_CONSTANTS.DEFAULT_ENERGY_LEVEL;
+    const equipment = context.currentSelections.customization_equipment ?? '';
     
-    if (energyLevel >= 7 && equipment.length > 2) {
+    if (energyLevel >= OPENAI_STRATEGY_CONSTANTS.ENERGY_THRESHOLD_FOR_COMPLEX_CIRCUITS && 
+        (Array.isArray(equipment) && equipment.length > 0)) {
       opportunities.push('High energy with diverse equipment - opportunity for complex circuits');
     }
 
-    if (context.userProfile.goals?.includes('weight_loss') && energyLevel >= 6) {
+    if (context.userProfile.goals?.includes('weight_loss') && 
+        energyLevel >= OPENAI_STRATEGY_CONSTANTS.ENERGY_THRESHOLD_FOR_WEIGHT_LOSS) {
       opportunities.push('Good energy level for effective weight loss workout');
-    }
-
-    if (context.userProfile.fitnessLevel === 'new to exercise' && energyLevel >= 5) {
-      opportunities.push('Good energy for skill-building and technique focus');
     }
 
     return opportunities.join('; ') || 'Consider matching intensity to energy level';
@@ -301,7 +198,7 @@ export class OpenAIStrategy implements AIStrategy {
 
   private convertToStandardRecommendations(
     aiRecommendations: EnhancedRecommendation[],
-    context: GlobalAIContext
+    _context: GlobalAIContext
   ): PrioritizedRecommendation[] {
     if (!Array.isArray(aiRecommendations)) {
       return [];
@@ -314,139 +211,73 @@ export class OpenAIStrategy implements AIStrategy {
       targetComponent: rec.targetComponent,
       title: rec.title,
       description: rec.description,
-      reasoning: rec.personalizedReasoning || rec.reasoning,
+      reasoning: rec.personalizedReasoning ?? rec.reasoning,
       confidence: rec.confidence,
-      action: rec.action
+      action: rec.action,
+      risk: rec.risk
     }));
   }
 
-  private async handleRecommendationError(
-    error: any,
-    context: GlobalAIContext
-  ): Promise<PrioritizedRecommendation[]> {
-    // Log error details
-    logger.error('OpenAI recommendation error:', error);
+  // Validate workout generation request
+  private validateWorkoutRequest(request: WorkoutGenerationRequest): void {
+    if (!isFeatureEnabled('openai_workout_generation')) {
+      throw new Error(OPENAI_STRATEGY_CONSTANTS.ERROR_MESSAGES.WORKOUT_GENERATION_DISABLED);
+    }
+    
+    if (!request.userProfile) {
+      throw new Error(OPENAI_STRATEGY_CONSTANTS.ERROR_MESSAGES.MISSING_USER_PROFILE);
+    }
+    
+    if (!request.preferences) {
+      throw new Error(OPENAI_STRATEGY_CONSTANTS.ERROR_MESSAGES.MISSING_PREFERENCES);
+    }
+  }
 
-    // Try fallback strategy if available
-    if (this.fallbackStrategy) {
-      try {
-        return await this.fallbackStrategy.generateRecommendations(context);
-      } catch (fallbackError) {
-        logger.error('Fallback strategy also failed:', fallbackError);
+  // Execute workout generation with OpenAI
+  private async executeWorkoutGeneration(
+    request: WorkoutGenerationRequest, 
+    variables: Record<string, string | number | string[] | boolean>
+  ): Promise<GeneratedWorkout> {
+    // Ensure request has preferences, use defaults if missing
+    const preferences = request.preferences ?? {
+      duration: 30,
+      focus: 'general',
+      intensity: 'moderate' as const,
+      equipment: [],
+      location: 'home' as const
+    };
+
+    // Select appropriate workout prompt
+    const prompt = selectWorkoutPrompt(
+      request.userProfile.fitnessLevel,
+      preferences.duration,
+      request.constraints?.sorenessAreas ?? [],
+      preferences.focus
+    );
+
+    // Generate workout using OpenAI
+    const result = await this.openAIService.generateFromTemplate(
+      prompt,
+      variables,
+      {
+        cacheKey: `workout_${request.userProfile.fitnessLevel}_${JSON.stringify(variables)}`,
+        timeout: OPENAI_STRATEGY_CONSTANTS.WORKOUT_GENERATION_TIMEOUT
       }
-    }
-
-    // Return basic safety recommendations
-    return this.generateEmergencyRecommendations(context);
+    );
+    
+    return result as GeneratedWorkout;
   }
 
-  private generateEmergencyRecommendations(context: GlobalAIContext): PrioritizedRecommendation[] {
-    const recommendations: PrioritizedRecommendation[] = [];
-    
-    const energyLevel = context.currentSelections.customization_energy || 5;
-    const duration = context.currentSelections.customization_duration || 30;
-    
-    if (energyLevel <= 3 && duration > 30) {
-      recommendations.push({
-        id: 'emergency_energy_warning',
-        priority: 'high',
-        category: 'safety',
-        targetComponent: 'duration',
-        title: 'Consider shorter workout with low energy',
-        description: 'Low energy levels may lead to poor performance and increased injury risk',
-        reasoning: 'AI service unavailable - basic safety recommendation',
-        confidence: 0.8
-      });
-    }
-
-    return recommendations;
-  }
-
-  private validateAndEnhanceWorkout(
-    workout: GeneratedWorkout,
+  // Enhance and validate generated workout
+  private enhanceGeneratedWorkout(
+    workout: GeneratedWorkout, 
     request: WorkoutGenerationRequest
   ): GeneratedWorkout {
-    // Ensure workout has required structure
-    if (!workout.warmup || !workout.mainWorkout || !workout.cooldown) {
-      throw new Error('Invalid workout structure from AI');
-    }
-
-    // Validate duration matches request
-    if (Math.abs(workout.totalDuration - request.preferences.duration) > 5) {
-      workout.totalDuration = request.preferences.duration;
-    }
-
-    // Add AI-specific metadata
-    workout.aiModel = openAIConfig.openai.model;
-    workout.generatedAt = new Date();
-    workout.confidence = Math.max(0.7, workout.confidence || 0.8);
-
-    // Ensure safety reminders are present
-    if (!workout.safetyReminders || workout.safetyReminders.length === 0) {
-      workout.safetyReminders = [
-        'Stop immediately if you feel pain',
-        'Maintain proper form throughout',
-        'Stay hydrated during your workout',
-        'Listen to your body and rest when needed'
-      ];
-    }
-
-    return workout;
-  }
-
-  private createWorkoutError(error: any, request: WorkoutGenerationRequest): Error {
-    const userFriendlyMessage = this.getUserFriendlyErrorMessage(error);
-    
-    return new Error(`Workout generation failed: ${userFriendlyMessage}`);
-  }
-
-  private getUserFriendlyErrorMessage(error: any): string {
-    if (error.type === 'rate_limit') {
-      return 'AI service is temporarily busy. Please try again in a moment.';
-    }
-    
-    if (error.type === 'authentication') {
-      return 'AI service configuration issue. Please contact support.';
-    }
-    
-    if (error.type === 'network') {
-      return 'Network connection issue. Please check your internet connection.';
-    }
-    
-    return 'AI service temporarily unavailable. Please try again later.';
-  }
-
-  private createBasicUserAnalysis(context: GlobalAIContext): UserPreferenceAnalysis {
-    return {
-      preferredWorkoutStyles: [context.userProfile.fitnessLevel],
-      optimalWorkoutTimes: ['morning'],
-      motivationFactors: ['goal_achievement'],
-      challengeAreas: ['consistency'],
-      strengthAreas: ['enthusiasm'],
-      recommendedProgression: {
-        currentLevel: context.userProfile.fitnessLevel,
-        nextMilestones: [{
-          title: 'Consistency Building',
-          description: 'Complete 3 workouts per week',
-          estimatedWeeks: 4,
-          successMetrics: ['workout_frequency', 'completion_rate']
-        }],
-        timeframe: '4-6 weeks',
-        keyFocusAreas: ['habit_building'],
-        potentialChallenges: ['time_management']
-      },
-      personalityInsights: {
-        workoutStyle: 'structured',
-        motivationType: 'intrinsic',
-        preferredChallengeLevel: 'gradual',
-        socialPreference: 'solo',
-        feedbackStyle: 'encouraging'
-      }
-    };
+    return enhanceGeneratedWorkout(workout, request);
   }
 
   private async fallbackToRuleBased(
-    operation: string,
+    _operation: string,
     context: GlobalAIContext
   ): Promise<PrioritizedRecommendation[]> {
     if (this.fallbackStrategy) {

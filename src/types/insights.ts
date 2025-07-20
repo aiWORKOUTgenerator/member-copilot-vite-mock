@@ -20,10 +20,12 @@ export type AIInsightCategory =
 export type AIInsightPriority = 'low' | 'medium' | 'high';
 
 export interface AIInsight {
+  id: string;                    // Unique identifier for the insight
   type: AIInsightType;
   title?: string;
   content?: string;
   message?: string;
+  recommendation?: string;       // Specific recommendation text
   priority?: AIInsightPriority;
   category?: AIInsightCategory;
   confidence?: number;

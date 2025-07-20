@@ -21,7 +21,7 @@ interface EnhancedQuickWorkoutFormProps extends QuickWorkoutFormProps {
   userProfile?: UserProfile;
   aiContext?: AIRecommendationContext;
   initialData?: PerWorkoutOptions;
-  onDataUpdate?: (data: PerWorkoutOptions) => void;
+  onDataUpdate?: (data: PerWorkoutOptions, workoutType: 'quick') => void;
 }
 
 // Helper function to convert WorkoutFocusData to PerWorkoutOptions
@@ -157,7 +157,7 @@ export const QuickWorkoutForm: React.FC<EnhancedQuickWorkoutFormProps> = ({
         ...focusData,
         [field]: convertedValue
       };
-      onDataUpdate(mapToPerWorkoutOptions(updatedFocusData));
+      onDataUpdate(mapToPerWorkoutOptions(updatedFocusData), 'quick');
     }
   };
 
@@ -165,7 +165,7 @@ export const QuickWorkoutForm: React.FC<EnhancedQuickWorkoutFormProps> = ({
     if (isFormValid) {
       // Save final data before navigating
       if (onDataUpdate) {
-        onDataUpdate(mapToPerWorkoutOptions(focusData));
+        onDataUpdate(mapToPerWorkoutOptions(focusData), 'quick');
       }
       onNavigate('review');
     }

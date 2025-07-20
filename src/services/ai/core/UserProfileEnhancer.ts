@@ -13,6 +13,7 @@ import {
   AIAssistanceLevel
 } from '../../../types/user';
 import { ProfileData } from '../../../components/Profile/types/profile.types';
+import { profileTransformers } from '../../../utils/dataTransformers';
 
 /**
  * Service responsible for enhancing user profile data with AI-generated insights
@@ -24,18 +25,7 @@ export class UserProfileEnhancer {
    * Enhances basic profile data with AI-generated insights
    */
   static enhanceProfile(profileData: ProfileData): UserProfile {
-    return {
-      // User-provided core data
-      fitnessLevel: this.mapExperienceToFitnessLevel(profileData.experienceLevel),
-      goals: [profileData.primaryGoal.toLowerCase().replace(/\s+/g, '_')],
-      preferences: this.buildUserPreferences(profileData),
-      basicLimitations: this.buildBasicLimitations(profileData),
-      
-      // AI-generated enhanced data
-      enhancedLimitations: this.generateEnhancedLimitations(profileData),
-      workoutHistory: this.generateWorkoutHistory(profileData),
-      learningProfile: this.generateLearningProfile(profileData)
-    };
+    return profileTransformers.convertProfileToUserProfile(profileData);
   }
 
   private static mapExperienceToFitnessLevel(experienceLevel: ProfileData['experienceLevel']): FitnessLevel {

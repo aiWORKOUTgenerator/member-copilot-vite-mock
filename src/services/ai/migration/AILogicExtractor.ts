@@ -99,18 +99,18 @@ class AILogicExtractor {
     
     // Mock implementations for removed legacy engine
     const mockRecommendationEngine = {
-      generateRecommendations: (options: PerWorkoutOptions, userProfile: UserProfile) => ({
+      generateRecommendations: (options: PerWorkoutOptions, _userProfile: UserProfile) => ({
         immediate: [],
         contextual: [],
         learning: [],
         optimization: []
       }),
-      analyzeCrossComponentConflicts: (options: PerWorkoutOptions, userProfile: UserProfile) => ({
+      analyzeCrossComponentConflicts: (options: PerWorkoutOptions, _userProfile: UserProfile) => ({
         conflicts: [],
         optimizations: [],
         missingComplements: []
       }),
-      parseAIRecommendation: (configKey: string, recommendation: string, options: PerWorkoutOptions, userProfile: UserProfile) => null
+      parseAIRecommendation: (configKey: string, recommendation: string, options: PerWorkoutOptions, _userProfile: UserProfile) => null
     };
     
     return {

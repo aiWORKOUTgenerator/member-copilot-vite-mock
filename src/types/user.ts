@@ -3,7 +3,7 @@
 export type FitnessLevel = 'new to exercise' | 'some experience' | 'advanced athlete';
 export type TimePreference = 'morning' | 'afternoon' | 'evening';
 export type IntensityLevel = 'low' | 'moderate' | 'high';
-export type AIAssistanceLevel = 'low' | 'moderate' | 'high';
+export type AIAssistanceLevel = 'minimal' | 'moderate' | 'comprehensive';
 export type RecoveryStatus = 'minimal' | 'partial' | 'full';
 export type ExplorationTendency = 'low' | 'moderate' | 'high';
 export type FeedbackPreference = 'simple' | 'detailed';

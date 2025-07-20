@@ -10,6 +10,7 @@ import type { ReviewPageProps } from './components/ReviewPage';
 import WorkoutResultsPage from './components/WorkoutResultsPage';
 import type { WorkoutResultsPageProps } from './components/WorkoutResultsPage';
 import { AIProvider, AIDevTools, useAI } from './contexts/AIContext';
+import { EnvironmentValidationBanner } from './components/shared';
 import { useWorkoutGeneration } from './hooks/useWorkoutGeneration';
 import type { UseWorkoutGenerationReturn } from './hooks/useWorkoutGeneration';
 import { GeneratedWorkout } from './services/ai/external/types/external-ai.types';
@@ -26,6 +27,7 @@ interface AppState {
   profileData: ProfileData | null;
   waiverData: LiabilityWaiverData | null;
   workoutFocusData: PerWorkoutOptions | null;
+  workoutType: WorkoutType | null;
   generatedWorkout: GeneratedWorkout | null;
 }
 
@@ -38,6 +40,7 @@ type PageComponents = {
     profileData?: ProfileData | null;
     waiverData?: LiabilityWaiverData | null;
     workoutFocusData?: PerWorkoutOptions | null;
+    workoutType?: WorkoutType | null;
     workoutGeneration?: UseWorkoutGenerationReturn;
     onWorkoutGenerated?: (workout: GeneratedWorkout) => void;
     generatedWorkout?: GeneratedWorkout | null;
@@ -48,17 +51,29 @@ type PageComponents = {
 // Separate component for content that needs AI context
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<PageType>('profile');
+  const [showEnvironmentBanner, setShowEnvironmentBanner] = useState(true);
   const [appState, setAppState] = useState<AppState>(() => {
     // Load initial state from localStorage
     try {
       const profileData = localStorage.getItem('profileData');
+      const workoutType = localStorage.getItem('workoutType') as WorkoutType | null;
+      
       if (profileData) {
         const parsed = JSON.parse(profileData);
         if (parsed.data) { // Check for enhanced persisted state format
+          // Migrate legacy 'Beginner' experience level to 'New to Exercise'
+          if (parsed.data.experienceLevel === 'Beginner') {
+            console.warn('⚠️ Migrating legacy experience level from "Beginner" to "New to Exercise"');
+            parsed.data.experienceLevel = 'New to Exercise';
+            // Update localStorage with migrated data
+            localStorage.setItem('profileData', JSON.stringify(parsed));
+          }
+          
           return {
             profileData: parsed.data,
             waiverData: null,
             workoutFocusData: null,
+            workoutType: workoutType,
             generatedWorkout: null
           };
         }
@@ -70,6 +85,7 @@ function AppContent() {
       profileData: null,
       waiverData: null,
       workoutFocusData: null,
+      workoutType: null,
       generatedWorkout: null
     };
   });
@@ -84,6 +100,14 @@ function AppContent() {
       if (profileData) {
         const parsed = JSON.parse(profileData);
         if (parsed.data) {
+          // Migrate legacy 'Beginner' experience level to 'New to Exercise'
+          if (parsed.data.experienceLevel === 'Beginner') {
+            console.warn('⚠️ Migrating legacy experience level from "Beginner" to "New to Exercise"');
+            parsed.data.experienceLevel = 'New to Exercise';
+            // Update localStorage with migrated data
+            localStorage.setItem('profileData', JSON.stringify(parsed));
+          }
+          
           setAppState(prev => ({
             ...prev,
             profileData: parsed.data
@@ -97,75 +121,137 @@ function AppContent() {
 
   // Initialize AI service when profile data is available
   useEffect(() => {
-    if (appState.profileData?.experienceLevel && serviceStatus === 'initializing') {
-      // Convert experience level to fitness level using proper mapping
-      const fitnessLevel = mapExperienceLevelToFitnessLevel(appState.profileData.experienceLevel);
+    const initializeAIService = async () => {
+      try {
+        console.log('🔄 App.tsx: Checking AI service initialization conditions...', {
+          hasProfileData: !!appState.profileData,
+          experienceLevel: appState.profileData?.experienceLevel,
+          serviceStatus,
+          hasRequiredFields: !!(appState.profileData?.experienceLevel && appState.profileData?.primaryGoal)
+        });
 
-      // Convert primary goal
-      const primaryGoal = appState.profileData.primaryGoal?.toLowerCase().replace(/\s+/g, '_') || 'general_fitness';
-
-      // Convert preferred activities
-      const workoutStyle = (appState.profileData.preferredActivities || []).map(activity => 
-        activity.toLowerCase().replace(/[^a-z0-9]/g, '_')
-      );
-
-      // Convert intensity level
-      const intensityLevel = (appState.profileData.intensityLevel || 'moderate').toLowerCase();
-      if (!['low', 'moderate', 'high'].includes(intensityLevel)) {
-        console.warn('Invalid intensity level:', intensityLevel);
-        return;
-      }
-
-      const userProfile: UserProfile = {
-        fitnessLevel,
-        goals: [primaryGoal],
-        preferences: {
-          workoutStyle,
-          timePreference: 'morning',
-          intensityPreference: intensityLevel as IntensityLevel,
-          advancedFeatures: appState.profileData.experienceLevel === 'Advanced Athlete',
-          aiAssistanceLevel: 'moderate'
-        },
-        basicLimitations: {
-          injuries: (appState.profileData.injuries || []).filter(injury => injury !== 'No Injuries'),
-          availableEquipment: appState.profileData.availableEquipment || [],
-          availableLocations: appState.profileData.availableLocations || []
-        },
-        enhancedLimitations: {
-          timeConstraints: appState.profileData.preferredDuration ? 
-            parseInt(appState.profileData.preferredDuration.split('-')[1]) || 60 : 60,
-          equipmentConstraints: [],
-          locationConstraints: [],
-          recoveryNeeds: {
-            restDays: 2,
-            sleepHours: 7,
-            hydrationLevel: 'moderate'
-          },
-          mobilityLimitations: [],
-          progressionRate: 'moderate'
-        },
-        workoutHistory: {
-          estimatedCompletedWorkouts: 0,
-          averageDuration: appState.profileData.preferredDuration ? 
-            parseInt(appState.profileData.preferredDuration.split('-')[0]) || 30 : 30,
-          preferredFocusAreas: [],
-          progressiveEnhancementUsage: {},
-          aiRecommendationAcceptance: 0.7,
-          consistencyScore: 0.5,
-          plateauRisk: 'low'
-        },
-        learningProfile: {
-          prefersSimplicity: appState.profileData.experienceLevel === 'New to Exercise',
-          explorationTendency: 'moderate',
-          feedbackPreference: 'simple',
-          learningStyle: 'visual',
-          motivationType: 'intrinsic',
-          adaptationSpeed: 'moderate'
+        if (!appState.profileData?.experienceLevel) {
+          console.log('ℹ️ App.tsx: No profile data or experience level, skipping AI initialization');
+          return;
         }
-      };
 
-      initialize(userProfile);
-    }
+        if (serviceStatus === 'ready') {
+          console.log('ℹ️ App.tsx: AI service already ready, skipping initialization');
+          return;
+        }
+
+        if (serviceStatus === 'error') {
+          console.log('⚠️ App.tsx: AI service in error state, attempting re-initialization');
+        }
+
+        // Validate required profile fields
+        if (!appState.profileData.primaryGoal) {
+          console.error('❌ App.tsx: Missing primary goal in profile data');
+          return;
+        }
+
+        if (!appState.profileData.preferredActivities || appState.profileData.preferredActivities.length === 0) {
+          console.error('❌ App.tsx: Missing preferred activities in profile data');
+          return;
+        }
+
+        console.log('✅ App.tsx: Profile data validation passed, converting to UserProfile...');
+
+        // Convert experience level to fitness level using proper mapping
+        const fitnessLevel = mapExperienceLevelToFitnessLevel(appState.profileData.experienceLevel);
+        console.log('✅ App.tsx: Fitness level mapped:', fitnessLevel);
+
+        // Convert primary goal
+        const primaryGoal = appState.profileData.primaryGoal?.toLowerCase().replace(/\s+/g, '_') || 'general_fitness';
+        console.log('✅ App.tsx: Primary goal converted:', primaryGoal);
+
+        // Convert preferred activities
+        const workoutStyle = (appState.profileData.preferredActivities || []).map(activity => 
+          activity.toLowerCase().replace(/[^a-z0-9]/g, '_')
+        );
+        console.log('✅ App.tsx: Workout style converted:', workoutStyle);
+
+        // Convert intensity level
+        let intensityLevel = (appState.profileData.intensityLevel || 'moderate').toLowerCase();
+        if (!['low', 'moderate', 'high'].includes(intensityLevel)) {
+          console.warn('⚠️ App.tsx: Invalid intensity level:', intensityLevel, 'using moderate as fallback');
+          intensityLevel = 'moderate';
+        }
+        console.log('✅ App.tsx: Intensity level converted:', intensityLevel);
+
+        const userProfile: UserProfile = {
+          fitnessLevel,
+          goals: [primaryGoal],
+          preferences: {
+            workoutStyle,
+            timePreference: 'morning',
+            intensityPreference: intensityLevel as IntensityLevel,
+            advancedFeatures: appState.profileData.experienceLevel === 'Advanced Athlete',
+            aiAssistanceLevel: 'moderate'
+          },
+          basicLimitations: {
+            injuries: (appState.profileData.injuries || []).filter(injury => injury !== 'No Injuries'),
+            availableEquipment: appState.profileData.availableEquipment || [],
+            availableLocations: appState.profileData.availableLocations || []
+          },
+          enhancedLimitations: {
+            timeConstraints: appState.profileData.preferredDuration ? 
+              parseInt(appState.profileData.preferredDuration.split('-')[1]) || 60 : 60,
+            equipmentConstraints: [],
+            locationConstraints: [],
+            recoveryNeeds: {
+              restDays: 2,
+              sleepHours: 7,
+              hydrationLevel: 'moderate'
+            },
+            mobilityLimitations: [],
+            progressionRate: 'moderate'
+          },
+          workoutHistory: {
+            estimatedCompletedWorkouts: 0,
+            averageDuration: appState.profileData.preferredDuration ? 
+              parseInt(appState.profileData.preferredDuration.split('-')[0]) || 30 : 30,
+            preferredFocusAreas: [],
+            progressiveEnhancementUsage: {},
+            aiRecommendationAcceptance: 0.7,
+            consistencyScore: 0.5,
+            plateauRisk: 'low'
+          },
+          learningProfile: {
+            prefersSimplicity: appState.profileData.experienceLevel === 'New to Exercise',
+            explorationTendency: 'moderate',
+            feedbackPreference: 'simple',
+            learningStyle: 'visual',
+            motivationType: 'intrinsic',
+            adaptationSpeed: 'moderate'
+          }
+        };
+
+        console.log('✅ App.tsx: UserProfile created successfully:', {
+          fitnessLevel: userProfile.fitnessLevel,
+          goals: userProfile.goals,
+          workoutStyle: userProfile.preferences.workoutStyle
+        });
+
+        console.log('🔄 App.tsx: Calling AI service initialize...');
+        await initialize(userProfile);
+        console.log('✅ App.tsx: AI service initialization completed successfully');
+
+      } catch (error) {
+        console.error('❌ App.tsx: Failed to initialize AI service:', error);
+        console.error('App.tsx: Error details:', {
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          profileData: appState.profileData ? {
+            experienceLevel: appState.profileData.experienceLevel,
+            primaryGoal: appState.profileData.primaryGoal,
+            preferredActivities: appState.profileData.preferredActivities?.length
+          } : 'null'
+        });
+      }
+    };
+
+    initializeAIService();
   }, [appState.profileData, initialize, serviceStatus]);
 
   // Workout generation hook - now inside AIProvider context
@@ -212,8 +298,16 @@ function AppContent() {
     setAppState(prev => ({ ...prev, waiverData }));
   }, []);
 
-  const updateWorkoutFocusData = useCallback((workoutFocusData: PerWorkoutOptions) => {
-    setAppState(prev => ({ ...prev, workoutFocusData }));
+  const updateWorkoutFocusData = useCallback((workoutFocusData: PerWorkoutOptions, workoutType: WorkoutType) => {
+    setAppState(prev => ({ ...prev, workoutFocusData, workoutType }));
+    
+    // Persist workoutType to localStorage
+    try {
+      localStorage.setItem('workoutType', workoutType);
+      console.log('Saving workoutType to localStorage:', workoutType);
+    } catch (error) {
+      console.warn('Failed to save workoutType to localStorage:', error);
+    }
   }, []);
 
   const updateGeneratedWorkout = useCallback((generatedWorkout: GeneratedWorkout) => {
@@ -255,6 +349,7 @@ function AppContent() {
           profileData: appState.profileData,
           waiverData: appState.waiverData,
           workoutFocusData: appState.workoutFocusData,
+          workoutType: appState.workoutType,
           workoutGeneration,
           onWorkoutGenerated: updateGeneratedWorkout
         } as ReviewPageProps;
@@ -275,8 +370,22 @@ function AppContent() {
   // Type assertion for CurrentPageComponent
   const TypedCurrentPageComponent = CurrentPageComponent as React.ComponentType<ReturnType<typeof getPageProps>>;
 
+  // Get AI context for environment validation
+  const { environmentStatus } = useAI();
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Environment Validation Banner */}
+      {showEnvironmentBanner && environmentStatus.issues.length > 0 && (
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+          <EnvironmentValidationBanner
+            environmentStatus={environmentStatus}
+            onDismiss={() => setShowEnvironmentBanner(false)}
+            showInDevelopment={true}
+          />
+        </div>
+      )}
+      
       {/* Navigation */}
       <div className="bg-white/60 backdrop-blur-sm border-b border-gray-200/50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">

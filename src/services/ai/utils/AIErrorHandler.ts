@@ -188,6 +188,26 @@ export class AIErrorHandler {
   }
   
   /**
+   * Get the last error that occurred
+   */
+  getLastError(): {
+    message: string;
+    timestamp: Date;
+    component: string;
+  } | undefined {
+    if (this.errorLog.length === 0) {
+      return undefined;
+    }
+    
+    const lastError = this.errorLog[this.errorLog.length - 1];
+    return {
+      message: lastError.message,
+      timestamp: lastError.timestamp,
+      component: lastError.component || 'unknown'
+    };
+  }
+
+  /**
    * Get error recommendations
    */
   getRecommendations(): string[] {

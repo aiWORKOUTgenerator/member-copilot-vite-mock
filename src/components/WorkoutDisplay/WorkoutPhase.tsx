@@ -13,6 +13,7 @@ export const WorkoutPhase: React.FC<WorkoutPhaseDisplayProps> = ({
   const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set());
 
   const getDurationDisplay = () => {
+    if (!phase?.duration) return '0s';
     const minutes = Math.floor(phase.duration / 60);
     const seconds = phase.duration % 60;
     return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
@@ -69,7 +70,7 @@ export const WorkoutPhase: React.FC<WorkoutPhaseDisplayProps> = ({
   };
 
   const getCompletionPercentage = () => {
-    if (phase.exercises.length === 0) return 0;
+    if (!phase?.exercises?.length) return 0;
     return Math.round((completedExercises.size / phase.exercises.length) * 100);
   };
 
@@ -92,7 +93,7 @@ export const WorkoutPhase: React.FC<WorkoutPhaseDisplayProps> = ({
                 {getDurationDisplay()}
               </span>
               <span className={`px-3 py-1 rounded-full font-medium ${colors.bg} ${colors.text}`}>
-                {phase.exercises.length} exercise{phase.exercises.length !== 1 ? 's' : ''}
+                {phase?.exercises?.length || 0} exercise{(phase?.exercises?.length || 0) !== 1 ? 's' : ''}
               </span>
               {completedExercises.size > 0 && (
                 <span className="px-3 py-1 rounded-full font-medium bg-green-100 text-green-800">
@@ -116,7 +117,7 @@ export const WorkoutPhase: React.FC<WorkoutPhaseDisplayProps> = ({
         </div>
 
         {/* Phase Instructions */}
-        {phase.instructions && (
+        {phase?.instructions && (
           <div className="mt-4">
             <p className={`text-sm ${colors.text} opacity-90`}>{phase.instructions}</p>
           </div>
@@ -143,7 +144,7 @@ export const WorkoutPhase: React.FC<WorkoutPhaseDisplayProps> = ({
       {isExpanded && (
         <div className="px-6 pb-6">
           {/* Phase Tips */}
-          {phase.tips && phase.tips.length > 0 && (
+          {phase?.tips && phase.tips.length > 0 && (
             <div className="mb-6 p-4 bg-white/50 rounded-lg">
               <div className="flex items-center gap-2 mb-3">
                 <Lightbulb className="w-4 h-4 text-amber-500" />
@@ -162,7 +163,7 @@ export const WorkoutPhase: React.FC<WorkoutPhaseDisplayProps> = ({
 
           {/* Exercises */}
           <div className="space-y-4">
-            {phase.exercises.map((exercise, index) => (
+            {phase?.exercises?.map((exercise, index) => (
               <div key={exercise.id} className="relative">
                 {/* Exercise Number and Completion */}
                 <div className="flex items-start gap-4">
@@ -177,7 +178,7 @@ export const WorkoutPhase: React.FC<WorkoutPhaseDisplayProps> = ({
                     >
                       {completedExercises.has(exercise.id) ? '✓' : index + 1}
                     </button>
-                    {index < phase.exercises.length - 1 && (
+                    {index < (phase?.exercises?.length || 0) - 1 && (
                       <div className="w-0.5 h-8 bg-gray-200 mt-2"></div>
                     )}
                   </div>
@@ -220,7 +221,7 @@ export const WorkoutPhase: React.FC<WorkoutPhaseDisplayProps> = ({
               <button
                 onClick={() => {
                   // Mark all exercises as complete
-                  setCompletedExercises(new Set(phase.exercises.map(e => e.id)));
+                  setCompletedExercises(new Set(phase?.exercises?.map(e => e.id) || []));
                 }}
                 className="text-sm text-green-600 hover:text-green-700 font-medium"
               >
@@ -238,7 +239,7 @@ export const WorkoutPhase: React.FC<WorkoutPhaseDisplayProps> = ({
             </div>
             
             <div className="text-xs text-gray-500">
-              {completedExercises.size} of {phase.exercises.length} exercises completed
+              {completedExercises.size} of {phase?.exercises?.length || 0} exercises completed
             </div>
           </div>
         </div>

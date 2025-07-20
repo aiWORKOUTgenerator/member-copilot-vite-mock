@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAI, useAIRecommendations, useAIInsights, useAIHealth, useMigrationStatus } from '../../contexts/AIContext';
 import { UserProfile, PerWorkoutOptions } from '../../types';
 import { migrationUtils } from '../../services/ai/migration/MigrationUtils';
+import { dataTransformers } from '../../utils/dataTransformers';
 
 /**
  * Example component showing migration from legacy AI to new service
@@ -165,7 +166,7 @@ export const AIIntegrationExample: React.FC = () => {
         <div>
           <label className="block text-sm font-medium mb-2">Duration (minutes)</label>
           <select 
-            value={workoutOptions.customization_duration || 45}
+            value={dataTransformers.extractDurationValue(workoutOptions.customization_duration) || 45}
             onChange={(e) => handleDurationChange(Number(e.target.value))}
             className="w-full p-2 border rounded"
           >
@@ -180,7 +181,7 @@ export const AIIntegrationExample: React.FC = () => {
         <div>
           <label className="block text-sm font-medium mb-2">Focus</label>
           <select 
-            value={workoutOptions.customization_focus || 'strength'}
+            value={dataTransformers.extractFocusValue(workoutOptions.customization_focus) || 'strength'}
             onChange={(e) => handleFocusChange(e.target.value)}
             className="w-full p-2 border rounded"
           >

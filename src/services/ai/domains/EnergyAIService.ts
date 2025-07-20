@@ -2,6 +2,40 @@
 import { AIInsight } from '../../../types/insights';
 import { GlobalAIContext } from '../core/AIService';
 
+// Configuration Constants - Extracted from magic numbers
+export const ENERGY_CONSTANTS = {
+  // Energy thresholds
+  CRITICAL_LOW: 1,
+  LOW: 2,
+  MODERATE: 3,
+  HIGH: 4,
+  MAXIMUM: 5,
+  
+  // Duration recommendations by energy level
+  CRITICAL_LOW_DURATION: 15,
+  LOW_DURATION: 25,
+  MODERATE_DURATION: 35,
+  HIGH_DURATION: 50,
+  MAXIMUM_DURATION: 60,
+  
+  // Fitness level multipliers
+  NEW_TO_EXERCISE_MULTIPLIER: 0.8,
+  ADVANCED_ATHLETE_MULTIPLIER: 1.2,
+  DEFAULT_MULTIPLIER: 1.0,
+  
+  // Analysis thresholds
+  DISMISSAL_RATE_THRESHOLD: 0.7,
+  TIME_PATTERN_MIN_INTERACTIONS: 3,
+  
+  // Confidence levels
+  HIGH_CONFIDENCE: 0.95,
+  MEDIUM_HIGH_CONFIDENCE: 0.9,
+  MEDIUM_CONFIDENCE: 0.85,
+  MEDIUM_LOW_CONFIDENCE: 0.8,
+  LOW_CONFIDENCE: 0.75,
+  VERY_LOW_CONFIDENCE: 0.7
+} as const;
+
 interface EnergyThresholds {
   CRITICAL_LOW: number;
   LOW: number;
@@ -17,91 +51,91 @@ interface EnergyInsightRule {
 
 export class EnergyAIService {
   private readonly THRESHOLDS: EnergyThresholds = {
-    CRITICAL_LOW: 1,
-    LOW: 2,
-    MODERATE: 3,
-    HIGH: 4,
-    MAXIMUM: 5
+    CRITICAL_LOW: ENERGY_CONSTANTS.CRITICAL_LOW,
+    LOW: ENERGY_CONSTANTS.LOW,
+    MODERATE: ENERGY_CONSTANTS.MODERATE,
+    HIGH: ENERGY_CONSTANTS.HIGH,
+    MAXIMUM: ENERGY_CONSTANTS.MAXIMUM
   };
   
   private readonly BASE_INSIGHTS: EnergyInsightRule[] = [
     {
       condition: (value) => value <= this.THRESHOLDS.CRITICAL_LOW,
-      generateInsight: (value, context) => ({
+      generateInsight: (value, _context) => ({
         id: this.generateInsightId('critical_low_energy'),
         type: 'warning',
         message: 'Very low energy level detected',
-        confidence: 0.95,
+        recommendation: 'Consider resting or limiting to light mobility work today',
+        confidence: ENERGY_CONSTANTS.HIGH_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_energy', 'customization_duration'],
         metadata: {
           severity: 'critical',
-          energyLevel: value,
-          recommendation: 'Consider resting or limiting to light mobility work today'
+          energyLevel: value
         }
       })
     },
     {
       condition: (value) => value === this.THRESHOLDS.LOW,
-      generateInsight: (value, context) => ({
+      generateInsight: (value, _context) => ({
         id: this.generateInsightId('low_energy'),
         type: 'warning',
         message: 'Low energy level - consider lighter workout',
-        confidence: 0.85,
+        recommendation: 'Consider gentle movements or recovery focus',
+        confidence: ENERGY_CONSTANTS.MEDIUM_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_energy', 'customization_focus'],
         metadata: {
           severity: 'medium',
-          energyLevel: value,
-          recommendation: 'Consider gentle movements or recovery focus'
+          energyLevel: value
         }
       })
     },
     {
       condition: (value) => value === this.THRESHOLDS.MODERATE,
-      generateInsight: (value, context) => ({
+      generateInsight: (value, _context) => ({
         id: this.generateInsightId('moderate_energy'),
         type: 'optimization',
         message: 'Moderate energy level',
-        confidence: 0.75,
+        recommendation: 'Consider a balanced, moderate-intensity workout',
+        confidence: ENERGY_CONSTANTS.LOW_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_energy'],
         metadata: {
           severity: 'low',
-          energyLevel: value,
-          recommendation: 'Consider a balanced, moderate-intensity workout'
+          energyLevel: value
         }
       })
     },
     {
       condition: (value) => value === this.THRESHOLDS.HIGH,
-      generateInsight: (value, context) => ({
+      generateInsight: (value, _context) => ({
         id: this.generateInsightId('high_energy'),
         type: 'encouragement',
         message: 'Good energy level',
-        confidence: 0.85,
+        recommendation: 'Ready for a moderate to high-intensity workout',
+        confidence: ENERGY_CONSTANTS.MEDIUM_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_energy'],
         metadata: {
           severity: 'positive',
-          energyLevel: value,
-          recommendation: 'Ready for a moderate to high-intensity workout'
+          energyLevel: value
         }
       })
     },
     {
       condition: (value) => value >= this.THRESHOLDS.MAXIMUM,
-      generateInsight: (value, context) => ({
+      generateInsight: (value, _context) => ({
         id: this.generateInsightId('maximum_energy'),
         type: 'encouragement',
         message: 'High energy level detected',
-        confidence: 0.9,
+        recommendation: 'Great opportunity for an intense, challenging workout',
+        confidence: ENERGY_CONSTANTS.MEDIUM_HIGH_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_energy'],
         metadata: {
           severity: 'positive',
-          energyLevel: value,
-          recommendation: 'Great opportunity for an intense, challenging workout'
+          energyLevel: value
         }
       })
     }
@@ -116,13 +150,13 @@ export class EnergyAIService {
         id: this.generateInsightId('morning_low_energy'),
         type: 'education',
         message: 'Low morning energy is common',
-        confidence: 0.8,
+        recommendation: 'Consider light movement to wake up your body',
+        confidence: ENERGY_CONSTANTS.MEDIUM_LOW_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_energy'],
         metadata: {
           timeOfDay: context.environmentalFactors?.timeOfDay,
-          energyLevel: value,
-          recommendation: 'Consider light movement to wake up your body'
+          energyLevel: value
         }
       })
     },
@@ -134,13 +168,13 @@ export class EnergyAIService {
         id: this.generateInsightId('evening_low_energy'),
         type: 'education',
         message: 'Evening fatigue detected',
-        confidence: 0.8,
+        recommendation: 'Consider gentle stretching or recovery work',
+        confidence: ENERGY_CONSTANTS.MEDIUM_LOW_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_energy'],
         metadata: {
           timeOfDay: context.environmentalFactors?.timeOfDay,
-          energyLevel: value,
-          recommendation: 'Consider gentle stretching or recovery work'
+          energyLevel: value
         }
       })
     },
@@ -152,13 +186,13 @@ export class EnergyAIService {
         id: this.generateInsightId('new_to_exercise_low_energy'),
         type: 'education',
         message: 'Low energy is normal when starting fitness',
-        confidence: 0.9,
+        recommendation: 'Start with short, gentle movements and build gradually',
+        confidence: ENERGY_CONSTANTS.MEDIUM_HIGH_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_energy'],
         metadata: {
           fitnessLevel: context.userProfile.fitnessLevel,
-          energyLevel: value,
-          recommendation: 'Start with short, gentle movements and build gradually'
+          energyLevel: value
         }
       })
     },
@@ -170,13 +204,13 @@ export class EnergyAIService {
         id: this.generateInsightId('advanced_high_energy'),
         type: 'encouragement',
         message: 'High energy matches your fitness level',
-        confidence: 0.85,
+        recommendation: 'Perfect opportunity for advanced training techniques',
+        confidence: ENERGY_CONSTANTS.MEDIUM_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_energy'],
         metadata: {
           fitnessLevel: context.userProfile.fitnessLevel,
-          energyLevel: value,
-          recommendation: 'Perfect opportunity for advanced training techniques'
+          energyLevel: value
         }
       })
     }
@@ -191,13 +225,13 @@ export class EnergyAIService {
         id: this.generateInsightId('energy_duration_conflict'),
         type: 'warning',
         message: 'Low energy conflicts with long workout duration',
-        confidence: 0.9,
+        recommendation: 'Consider reducing workout duration to 20-30 minutes',
+        confidence: ENERGY_CONSTANTS.MEDIUM_HIGH_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_energy', 'customization_duration'],
         metadata: {
           energyLevel: value,
-          duration: this.getDurationFromContext(context),
-          recommendation: 'Consider reducing workout duration to 20-30 minutes'
+          duration: this.getDurationFromContext(context)
         }
       })
     },
@@ -209,7 +243,7 @@ export class EnergyAIService {
         id: this.generateInsightId('energy_power_conflict'),
         type: 'warning',
         message: 'Low energy not ideal for power training',
-        confidence: 0.85,
+        confidence: ENERGY_CONSTANTS.MEDIUM_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_energy', 'customization_focus'],
         metadata: {
@@ -227,7 +261,7 @@ export class EnergyAIService {
         id: this.generateInsightId('energy_recovery_mismatch'),
         type: 'optimization',
         message: 'High energy with recovery focus',
-        confidence: 0.7,
+        confidence: ENERGY_CONSTANTS.VERY_LOW_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_energy', 'customization_focus'],
         metadata: {
@@ -300,7 +334,7 @@ export class EnergyAIService {
     return insights.sort((a, b) => {
       if (a.actionable && !b.actionable) return -1;
       if (!a.actionable && b.actionable) return 1;
-      return b.confidence - a.confidence;
+      return (b.confidence ?? 0) - (a.confidence ?? 0);
     });
   }
   
@@ -309,10 +343,63 @@ export class EnergyAIService {
    */
   generateInsights(energyLevel: number, context: GlobalAIContext): AIInsight[] {
     // Convert to legacy format for compatibility
-    const insights = this.analyze(energyLevel, context);
+    // Since analyze is async, we need to handle this differently
+    // For now, return a synchronous version
+    if (energyLevel === undefined || energyLevel === null) {
+      return [];
+    }
     
-    // Wait for the promise to resolve
-    return insights instanceof Promise ? [] : insights;
+    // Validate energy level
+    if (energyLevel < 1 || energyLevel > 5) {
+      return [{
+        id: this.generateInsightId('invalid_energy'),
+        type: 'warning',
+        message: 'Invalid energy level provided',
+        confidence: 1.0,
+        actionable: false,
+        metadata: {
+          providedValue: energyLevel,
+          expectedRange: '1-5'
+        }
+      }];
+    }
+    
+    const insights: AIInsight[] = [];
+    
+    // Apply base insights synchronously
+    for (const rule of this.BASE_INSIGHTS) {
+      if (rule.condition(energyLevel, context)) {
+        insights.push(rule.generateInsight(energyLevel, context));
+      }
+    }
+    
+    // Apply contextual insights
+    for (const rule of this.CONTEXTUAL_RULES) {
+      if (rule.condition(energyLevel, context)) {
+        const insight = rule.generateInsight(energyLevel, context);
+        // Avoid duplicates
+        if (!insights.some(existing => existing.id === insight.id)) {
+          insights.push(insight);
+        }
+      }
+    }
+    
+    // Apply cross-component insights
+    for (const rule of this.CROSS_COMPONENT_RULES) {
+      if (rule.condition(energyLevel, context)) {
+        const insight = rule.generateInsight(energyLevel, context);
+        if (!insights.some(existing => existing.id === insight.id)) {
+          insights.push(insight);
+        }
+      }
+    }
+    
+    // Sort by confidence and actionability
+    return insights.sort((a, b) => {
+      if (a.actionable && !b.actionable) return -1;
+      if (!a.actionable && b.actionable) return 1;
+      return (b.confidence ?? 0) - (a.confidence ?? 0);
+    });
   }
   
   /**
@@ -333,17 +420,17 @@ export class EnergyAIService {
       i.action === 'recommendation_dismissed'
     ).length / Math.max(energyInteractions.length, 1);
     
-    if (dismissalRate > 0.7 && energyLevel <= this.THRESHOLDS.LOW) {
+    if (dismissalRate > ENERGY_CONSTANTS.DISMISSAL_RATE_THRESHOLD && energyLevel <= this.THRESHOLDS.LOW) {
       insights.push({
         id: this.generateInsightId('energy_dismissal_pattern'),
         type: 'education',
         message: 'Noticed you often continue with low energy',
-        confidence: 0.8,
+        recommendation: 'Consider if this pattern affects your workout quality',
+        confidence: ENERGY_CONSTANTS.MEDIUM_LOW_CONFIDENCE,
         actionable: true,
         metadata: {
           pattern: 'dismissal',
-          dismissalRate,
-          recommendation: 'Consider if this pattern affects your workout quality'
+          dismissalRate
         }
       });
     }
@@ -356,17 +443,17 @@ export class EnergyAIService {
         interaction.timestamp.getHours() === new Date().getHours()
       );
       
-      if (sameTimeHighEnergy.length >= 3) {
+      if (sameTimeHighEnergy.length >= ENERGY_CONSTANTS.TIME_PATTERN_MIN_INTERACTIONS) {
         insights.push({
           id: this.generateInsightId('energy_time_pattern'),
           type: 'education',
           message: `You tend to have high energy during ${timeOfDay}`,
-          confidence: 0.75,
+          recommendation: 'Consider scheduling challenging workouts at this time',
+          confidence: ENERGY_CONSTANTS.LOW_CONFIDENCE,
           actionable: true,
           metadata: {
             pattern: 'time_consistency',
-            timeOfDay,
-            recommendation: 'Consider scheduling challenging workouts at this time'
+            timeOfDay
           }
         });
       }
@@ -430,22 +517,23 @@ export class EnergyAIService {
    * Get energy-based duration recommendation
    */
   getRecommendedDuration(energyLevel: number, userFitnessLevel: string): number {
-    const baseMultiplier = userFitnessLevel === 'new to exercise' ? 0.8 :
-                           userFitnessLevel === 'advanced athlete' ? 1.2 : 1.0;
+    const baseMultiplier = userFitnessLevel === 'new to exercise' ? ENERGY_CONSTANTS.NEW_TO_EXERCISE_MULTIPLIER :
+                           userFitnessLevel === 'advanced athlete' ? ENERGY_CONSTANTS.ADVANCED_ATHLETE_MULTIPLIER : 
+                           ENERGY_CONSTANTS.DEFAULT_MULTIPLIER;
     
     if (energyLevel <= this.THRESHOLDS.CRITICAL_LOW) {
-      return Math.round(15 * baseMultiplier);
+      return Math.round(ENERGY_CONSTANTS.CRITICAL_LOW_DURATION * baseMultiplier);
     }
     if (energyLevel <= this.THRESHOLDS.LOW) {
-      return Math.round(25 * baseMultiplier);
+      return Math.round(ENERGY_CONSTANTS.LOW_DURATION * baseMultiplier);
     }
     if (energyLevel <= this.THRESHOLDS.MODERATE) {
-      return Math.round(35 * baseMultiplier);
+      return Math.round(ENERGY_CONSTANTS.MODERATE_DURATION * baseMultiplier);
     }
     if (energyLevel <= this.THRESHOLDS.HIGH) {
-      return Math.round(50 * baseMultiplier);
+      return Math.round(ENERGY_CONSTANTS.HIGH_DURATION * baseMultiplier);
     }
-    return Math.round(60 * baseMultiplier);
+    return Math.round(ENERGY_CONSTANTS.MAXIMUM_DURATION * baseMultiplier);
   }
   
   /**
@@ -453,7 +541,6 @@ export class EnergyAIService {
    */
   isEnergyCompatibleWithFocus(energyLevel: number, focus: string): boolean {
     const highEnergyRequired = ['power', 'hiit', 'intense_cardio'];
-    const moderateEnergyRequired = ['strength', 'cardio', 'endurance'];
     const lowEnergyOkay = ['recovery', 'flexibility', 'mobility'];
     
     if (energyLevel <= this.THRESHOLDS.LOW) {

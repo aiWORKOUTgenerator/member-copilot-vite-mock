@@ -80,13 +80,13 @@ GENERATE A QUICK WORKOUT with the following structure:
   "generatedAt": "timestamp"
 }`,
   variables: [
-    { name: 'experienceLevel', type: 'string', required: true },
-    { name: 'primaryGoal', type: 'string', required: true },
-    { name: 'availableEquipment', type: 'array', required: true },
-    { name: 'energyLevel', type: 'number', required: true },
-    { name: 'sorenessAreas', type: 'array', required: true },
-    { name: 'duration', type: 'number', required: true },
-    { name: 'focus', type: 'string', required: true }
+    { name: 'experienceLevel', type: 'string', description: 'User experience level (New to Exercise/Some Experience/Advanced Athlete)', required: true },
+    { name: 'primaryGoal', type: 'string', description: 'Primary fitness goal (Strength/Weight Loss/Endurance/etc.)', required: true },
+    { name: 'availableEquipment', type: 'array', description: 'List of available workout equipment', required: true },
+    { name: 'energyLevel', type: 'number', description: 'Current energy level 1-10', required: true },
+    { name: 'sorenessAreas', type: 'array', description: 'Areas of muscle soreness', required: true },
+    { name: 'duration', type: 'number', description: 'Available workout time in minutes', required: true },
+    { name: 'focus', type: 'string', description: 'Workout focus area (Strength/Cardio/Flexibility/etc.)', required: true }
   ],
   examples: []
 }; 

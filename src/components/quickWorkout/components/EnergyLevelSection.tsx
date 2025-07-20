@@ -6,7 +6,7 @@ import { AIInsight } from '../../../types/insights';
 import { logger } from '../../../utils/logger';
 import { useAI } from '../../../contexts/AIContext';
 
-const DEFAULT_ENERGY_LEVEL = 5;
+// Removed unused constant
 
 export const EnergyLevelSection: React.FC<SectionProps> = ({
   focusData,
@@ -30,6 +30,7 @@ export const EnergyLevelSection: React.FC<SectionProps> = ({
     if (serviceStatus !== 'ready') {
       // Fallback to basic insights if service isn't ready
       return [{
+        id: `energy_fallback_${Date.now()}`,
         type: 'optimization',
         title: 'Energy Level',
         content: `Current energy level: ${value}/10`,
@@ -48,6 +49,7 @@ export const EnergyLevelSection: React.FC<SectionProps> = ({
     } catch (error) {
       logger.error('Failed to generate energy insights:', error);
       return [{
+        id: `energy_error_${Date.now()}`,
         type: 'warning',
         title: 'Service Error',
         content: 'Unable to generate energy insights at this time',

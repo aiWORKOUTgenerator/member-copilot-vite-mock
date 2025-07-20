@@ -29,6 +29,25 @@ export const WorkoutDisplay: React.FC<WorkoutDisplayProps> = ({
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [showAllExercises, setShowAllExercises] = useState(false);
 
+  // Safety check for undefined workout
+  if (!workout) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="text-gray-500 text-lg mb-4">No workout data available</div>
+          <button
+            onClick={onRegenerate}
+            disabled={isRegenerating}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+            {isRegenerating ? 'Generating...' : 'Generate Workout'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const handleExerciseClick = useCallback((exercise: Exercise) => {
     setSelectedExercise(exercise);
   }, []);
@@ -54,11 +73,26 @@ export const WorkoutDisplay: React.FC<WorkoutDisplayProps> = ({
   };
 
   const getAllExercises = () => {
-    return [
-      ...workout.warmup.exercises,
-      ...workout.mainWorkout.exercises,
-      ...workout.cooldown.exercises
-    ];
+    if (!workout) return [];
+    
+    const exercises = [];
+    
+    // Safely access warmup exercises
+    if (workout.warmup?.exercises) {
+      exercises.push(...workout.warmup.exercises);
+    }
+    
+    // Safely access main workout exercises
+    if (workout.mainWorkout?.exercises) {
+      exercises.push(...workout.mainWorkout.exercises);
+    }
+    
+    // Safely access cooldown exercises
+    if (workout.cooldown?.exercises) {
+      exercises.push(...workout.cooldown.exercises);
+    }
+    
+    return exercises;
   };
 
   const getUniqueEquipment = () => {
@@ -84,8 +118,8 @@ export const WorkoutDisplay: React.FC<WorkoutDisplayProps> = ({
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 text-white">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <h1 className="text-3xl font-bold mb-2">{workout.title}</h1>
-            <p className="text-indigo-100 text-lg mb-4">{workout.description}</p>
+            <h1 className="text-3xl font-bold mb-2">{workout.title || 'Workout'}</h1>
+            <p className="text-indigo-100 text-lg mb-4">{workout.description || 'Your personalized workout plan'}</p>
             
             {/* Workout Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -94,7 +128,7 @@ export const WorkoutDisplay: React.FC<WorkoutDisplayProps> = ({
                   <Clock className="w-5 h-5" />
                   <span className="text-sm font-medium">Duration</span>
                 </div>
-                <div className="text-2xl font-bold">{workout.totalDuration} min</div>
+                <div className="text-2xl font-bold">{workout.totalDuration || 0} min</div>
               </div>
               
               <div className="bg-white/10 rounded-lg p-4">
@@ -110,7 +144,7 @@ export const WorkoutDisplay: React.FC<WorkoutDisplayProps> = ({
                   <TrendingUp className="w-5 h-5" />
                   <span className="text-sm font-medium">Difficulty</span>
                 </div>
-                <div className="text-lg font-bold capitalize">{workout.difficulty}</div>
+                <div className="text-lg font-bold capitalize">{workout.difficulty || 'Moderate'}</div>
               </div>
               
               <div className="bg-white/10 rounded-lg p-4">
@@ -118,18 +152,18 @@ export const WorkoutDisplay: React.FC<WorkoutDisplayProps> = ({
                   <Zap className="w-5 h-5" />
                   <span className="text-sm font-medium">Est. Calories</span>
                 </div>
-                <div className="text-2xl font-bold">{workout.estimatedCalories}</div>
+                <div className="text-2xl font-bold">{workout.estimatedCalories || 0}</div>
               </div>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
-            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getDifficultyColor(workout.difficulty)}`}>
-              {workout.difficulty}
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getDifficultyColor(workout.difficulty || 'moderate')}`}>
+              {workout.difficulty || 'Moderate'}
             </span>
             <div className="flex items-center gap-1 text-sm">
               <Award className="w-4 h-4" />
-              <span>{Math.round(workout.confidence * 100)}% match</span>
+              <span>{Math.round((workout.confidence || 0.8) * 100)}% match</span>
             </div>
           </div>
         </div>
@@ -234,7 +268,7 @@ export const WorkoutDisplay: React.FC<WorkoutDisplayProps> = ({
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              {label} ({phase.exercises.length})
+              {label} ({phase?.exercises?.length || 0})
             </button>
           ))}
         </div>
@@ -334,19 +368,19 @@ export const WorkoutDisplay: React.FC<WorkoutDisplayProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div>
             <span className="font-medium text-gray-700">Generated:</span>
-            <span className="text-gray-600 ml-2">{formatDate(workout.generatedAt)}</span>
+            <span className="text-gray-600 ml-2">{workout.generatedAt ? formatDate(workout.generatedAt) : 'Unknown'}</span>
           </div>
           <div>
             <span className="font-medium text-gray-700">AI Model:</span>
-            <span className="text-gray-600 ml-2">{workout.aiModel}</span>
+            <span className="text-gray-600 ml-2">{workout.aiModel || 'Unknown'}</span>
           </div>
           <div>
             <span className="font-medium text-gray-700">Confidence:</span>
-            <span className="text-gray-600 ml-2">{Math.round(workout.confidence * 100)}%</span>
+            <span className="text-gray-600 ml-2">{Math.round((workout.confidence || 0.8) * 100)}%</span>
           </div>
           <div>
             <span className="font-medium text-gray-700">Workout ID:</span>
-            <span className="text-gray-600 ml-2 font-mono text-xs">{workout.id}</span>
+            <span className="text-gray-600 ml-2 font-mono text-xs">{workout.id || 'Unknown'}</span>
           </div>
         </div>
         

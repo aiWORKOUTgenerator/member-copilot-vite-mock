@@ -1,5 +1,3 @@
 // Prompt Templates for OpenAI Integration
 export * from './workout-generation.prompts';
-export * from './recommendation.prompts';
-export * from './analysis.prompts';
-export * from './base.prompts'; 
+export * from './recommendation.prompts'; 

@@ -4,24 +4,24 @@ import { ProfileData, ProfileFormHookReturn } from '../types/profile.types';
 import { calculateCompletionPercentage } from '../utils/profileHelpers';
 import { migrateProfileData } from '../../../utils/migrationUtils';
 
-// Default profile data with empty values
+// Default profile data with proper default values
 const defaultProfileData: ProfileData = {
-  experienceLevel: '' as ProfileData['experienceLevel'],
-  physicalActivity: '' as ProfileData['physicalActivity'],
-  preferredDuration: '' as ProfileData['preferredDuration'],
-  timeCommitment: '' as ProfileData['timeCommitment'],
-  intensityLevel: '' as ProfileData['intensityLevel'],
+  experienceLevel: 'New to Exercise',
+  physicalActivity: 'sedentary',
+  preferredDuration: '30-45 min',
+  timeCommitment: '2-3',
+  intensityLevel: 'lightly',
   preferredActivities: [],
   availableLocations: [],
   availableEquipment: [],
-  primaryGoal: '' as ProfileData['primaryGoal'],
-  goalTimeline: '' as ProfileData['goalTimeline'],
-  age: '' as ProfileData['age'],
+  primaryGoal: 'General Health',
+  goalTimeline: '3 months',
+  age: '26-35',
   height: '',
   weight: '',
-  gender: '' as ProfileData['gender'],
-  hasCardiovascularConditions: '' as ProfileData['hasCardiovascularConditions'],
-  injuries: []
+  gender: 'prefer-not-to-say',
+  hasCardiovascularConditions: 'No',
+  injuries: ['No Injuries']
 };
 
 export const useProfileForm = (): ProfileFormHookReturn => {

@@ -1,24 +1,26 @@
 // OpenAI Workout Generator - Specialized service for generating AI-powered workouts
 import { 
   WorkoutGenerationRequest, 
-  GeneratedWorkout, 
-  WorkoutPreferences, 
-  WorkoutConstraints,
-  Exercise,
-  WorkoutPhase
-} from './types/external-ai.types';
+  GeneratedWorkout
+} from '../../../types/workout-generation.types';
 import { OpenAIService } from './OpenAIService';
 import { selectWorkoutPrompt } from './prompts/workout-generation.prompts';
-import { openAIConfig, isFeatureEnabled } from './config/openai.config';
+import { isFeatureEnabled } from './config/openai.config';
 import { logger } from '../../../utils/logger';
 import { PerWorkoutOptions, UserProfile } from '../../../types';
+import { WorkoutRequestAdapter } from '../../../types/workout-generation.types';
+import { WorkoutRequestConverter } from './helpers/WorkoutRequestConverter';
+import { WorkoutValidator } from './helpers/WorkoutValidator';
+import { WorkoutEnhancer } from './helpers/WorkoutEnhancer';
+import { WorkoutVariationGenerator } from './helpers/WorkoutVariationGenerator';
+import { WORKOUT_GENERATOR_CONSTANTS } from './constants/workout-generator-constants';
 
 export class OpenAIWorkoutGenerator {
   private openAIService: OpenAIService;
   private generatedWorkouts = new Map<string, GeneratedWorkout>();
 
   constructor(openAIService?: OpenAIService) {
-    this.openAIService = openAIService || new OpenAIService();
+    this.openAIService = openAIService ?? new OpenAIService();
   }
 
   // Generate workout from Quick Workout form data
@@ -27,15 +29,15 @@ export class OpenAIWorkoutGenerator {
     userProfile: UserProfile
   ): Promise<GeneratedWorkout> {
     try {
-      // Convert Quick Workout data to WorkoutGenerationRequest
-      const request = this.convertQuickWorkoutToRequest(quickWorkoutData, userProfile);
+      // Convert Quick Workout data to WorkoutGenerationRequest using helper
+      const request = WorkoutRequestConverter.convertQuickWorkoutToRequest(quickWorkoutData, userProfile);
       
       // Generate workout using OpenAI
       return await this.generateWorkout(request);
       
     } catch (error) {
       logger.error('Quick Workout generation failed:', error);
-      throw new Error(`Failed to generate workout: ${error.message}`);
+      throw new Error(`Failed to generate workout: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -54,37 +56,19 @@ export class OpenAIWorkoutGenerator {
         return cached;
       }
 
-      // Select appropriate prompt based on request
-      const prompt = selectWorkoutPrompt(
-        request.userProfile.fitnessLevel,
-        request.preferences.duration,
-        request.constraints?.sorenessAreas || [],
-        request.preferences.focus
-      );
-
-      // Prepare variables for prompt
-      const variables = this.preparePromptVariables(request);
-
-      // Generate workout using OpenAI
-      const generatedWorkout = await this.openAIService.generateFromTemplate(
-        prompt,
-        variables,
-        {
-          cacheKey: `workout_${cacheKey}`,
-          timeout: 30000
-        }
-      );
-
+      // Execute workout generation
+      const generatedWorkout = await this.executeWorkoutGeneration(request);
+      
       // Validate and enhance the generated workout
-      const validatedWorkout = this.validateWorkout(generatedWorkout, request);
-      const enhancedWorkout = this.enhanceWorkout(validatedWorkout, request);
+      const validatedWorkout = WorkoutValidator.validateWorkout(generatedWorkout, request);
+      const enhancedWorkout = WorkoutEnhancer.enhanceWorkout(validatedWorkout, request);
 
       // Cache the result
       this.generatedWorkouts.set(cacheKey, enhancedWorkout);
 
       logger.info('Workout generated successfully', {
         duration: enhancedWorkout.totalDuration,
-        exerciseCount: this.countExercises(enhancedWorkout),
+        exerciseCount: WorkoutValidator.countExercises(enhancedWorkout),
         difficulty: enhancedWorkout.difficulty
       });
 
@@ -96,6 +80,37 @@ export class OpenAIWorkoutGenerator {
     }
   }
 
+  // Execute workout generation with OpenAI
+  private async executeWorkoutGeneration(request: WorkoutGenerationRequest): Promise<GeneratedWorkout> {
+    // Ensure request has AI enhancements, create defaults if missing
+    const enhancedRequest = request.preferences 
+      ? request 
+      : WorkoutRequestAdapter.enhanceRequest(request, WorkoutRequestAdapter.createDefaultEnhancements(request.userProfile, request.workoutFocusData));
+
+    // Select appropriate prompt based on request
+    const prompt = selectWorkoutPrompt(
+      request.userProfile.fitnessLevel,
+      enhancedRequest.preferences!.duration,
+      enhancedRequest.constraints?.sorenessAreas ?? [],
+      enhancedRequest.preferences!.focus
+    );
+
+    // Prepare variables for prompt using helper
+    const variables = WorkoutRequestConverter.preparePromptVariables(enhancedRequest);
+
+    // Generate workout using OpenAI
+    const result = await this.openAIService.generateFromTemplate(
+      prompt,
+      variables,
+      {
+        cacheKey: `workout_${this.generateCacheKey(enhancedRequest)}`,
+        timeout: 30000
+      }
+    );
+    
+    return result as GeneratedWorkout;
+  }
+
   // Generate workout variations
   async generateWorkoutVariations(
     originalRequest: WorkoutGenerationRequest,
@@ -105,8 +120,8 @@ export class OpenAIWorkoutGenerator {
       const variations: GeneratedWorkout[] = [];
       
       for (let i = 0; i < variationCount; i++) {
-        // Create slight variations in the request
-        const modifiedRequest = this.createVariation(originalRequest, i);
+        // Create slight variations in the request using helper
+        const modifiedRequest = WorkoutVariationGenerator.createVariation(originalRequest, i);
         
         // Generate workout with modified request
         const variation = await this.generateWorkout(modifiedRequest);
@@ -132,17 +147,8 @@ export class OpenAIWorkoutGenerator {
     }
   ): Promise<GeneratedWorkout> {
     try {
-      // Create adapted request
-      const adaptedRequest: WorkoutGenerationRequest = {
-        ...baseRequest,
-        preferences: {
-          ...baseRequest.preferences,
-          duration: adaptations.newDuration || baseRequest.preferences.duration,
-          equipment: adaptations.newEquipment || baseRequest.preferences.equipment,
-          intensity: adaptations.newIntensity || baseRequest.preferences.intensity,
-          focus: adaptations.newFocus || baseRequest.preferences.focus
-        }
-      };
+      // Create adapted request using helper
+      const adaptedRequest = WorkoutVariationGenerator.createAdaptedRequest(baseRequest, adaptations);
 
       return await this.generateWorkout(adaptedRequest);
 
@@ -161,11 +167,11 @@ export class OpenAIWorkoutGenerator {
       const progressiveWorkouts: GeneratedWorkout[] = [];
       
       for (let week = 1; week <= weekCount; week++) {
-        const progressiveRequest = this.createProgressiveRequest(baseRequest, week);
+        const progressiveRequest = WorkoutVariationGenerator.createProgressiveRequest(baseRequest, week);
         const workout = await this.generateWorkout(progressiveRequest);
         
         // Add progression metadata
-        workout.tags = [...(workout.tags || []), `week_${week}`, 'progressive'];
+        workout.tags = [...(workout.tags ?? []), `week_${week}`, 'progressive'];
         progressiveWorkouts.push(workout);
       }
 
@@ -178,284 +184,58 @@ export class OpenAIWorkoutGenerator {
   }
 
   // Private helper methods
-  private convertQuickWorkoutToRequest(
-    quickWorkoutData: PerWorkoutOptions,
-    userProfile: UserProfile
-  ): WorkoutGenerationRequest {
-    // Extract preferences from Quick Workout data
-    const preferences: WorkoutPreferences = {
-      duration: quickWorkoutData.customization_duration || 30,
-      focus: quickWorkoutData.customization_focus || 'General Fitness',
-      intensity: this.mapEnergyToIntensity(quickWorkoutData.customization_energy || 5),
-      equipment: quickWorkoutData.customization_equipment || [],
-      location: 'home', // Default for Quick Workout
-      music: true,
-      voiceGuidance: false
-    };
-
-    // Extract constraints
-    const constraints: WorkoutConstraints = {
-      timeOfDay: 'morning', // Default
-      energyLevel: quickWorkoutData.customization_energy || 5,
-      sorenessAreas: quickWorkoutData.customization_soreness || [],
-      spaceLimitations: ['small_space'], // Common for Quick Workout
-      noiselevel: 'moderate'
-    };
-
-    return {
-      userProfile,
-      workoutOptions: quickWorkoutData,
-      preferences,
-      constraints,
-      environmentalFactors: {
-        weather: 'indoor',
-        temperature: 20,
-        airQuality: 'good'
-      }
-    };
-  }
-
-  private mapEnergyToIntensity(energyLevel: number): 'low' | 'moderate' | 'high' {
-    if (energyLevel <= 3) return 'low';
-    if (energyLevel <= 7) return 'moderate';
-    return 'high';
-  }
-
-  private preparePromptVariables(request: WorkoutGenerationRequest): Record<string, any> {
-    return {
-      // User profile
-      fitnessLevel: request.userProfile.fitnessLevel,
-      goals: request.userProfile.goals || [],
-      preferredIntensity: request.preferences.intensity,
-
-      // Current state
-      energyLevel: request.constraints?.energyLevel || 5,
-      sorenessAreas: request.constraints?.sorenessAreas || [],
-      duration: request.preferences.duration,
-      focus: request.preferences.focus,
-
-      // Preferences & constraints
-      equipment: request.preferences.equipment,
-      location: request.preferences.location,
-      timeOfDay: request.constraints?.timeOfDay || 'morning',
-      noiseLevel: request.constraints?.noiselevel || 'moderate',
-      spaceLimitations: request.constraints?.spaceLimitations || [],
-
-      // Environmental factors
-      weather: request.environmentalFactors?.weather || 'indoor',
-      temperature: request.environmentalFactors?.temperature || 'comfortable',
-
-      // Special considerations
-      injuries: request.constraints?.injuries || [],
-      previousWorkout: 'None provided'
-    };
-  }
-
-  private validateWorkout(workout: GeneratedWorkout, request: WorkoutGenerationRequest): GeneratedWorkout {
-    // Validate basic structure
-    if (!workout.warmup || !workout.mainWorkout || !workout.cooldown) {
-      throw new Error('Invalid workout structure: missing phases');
-    }
-
-    // Validate duration
-    if (Math.abs(workout.totalDuration - request.preferences.duration) > 5) {
-      logger.warn('Workout duration mismatch, adjusting...');
-      workout.totalDuration = request.preferences.duration;
-    }
-
-    // Validate exercises have required properties
-    const allExercises = [
-      ...workout.warmup.exercises,
-      ...workout.mainWorkout.exercises,
-      ...workout.cooldown.exercises
-    ];
-
-    for (const exercise of allExercises) {
-      if (!exercise.name || !exercise.description) {
-        throw new Error(`Invalid exercise: ${exercise.name || 'unnamed'}`);
-      }
-    }
-
-    // Validate equipment matches request
-    const workoutEquipment = workout.equipment || [];
-    const requestEquipment = request.preferences.equipment;
-    
-    if (requestEquipment.length > 0) {
-      const hasMatchingEquipment = workoutEquipment.some(eq => 
-        requestEquipment.includes(eq)
-      );
-      
-      if (!hasMatchingEquipment && requestEquipment.length > 0) {
-        logger.warn('Workout equipment mismatch with request');
-      }
-    }
-
-    return workout;
-  }
-
-  private enhanceWorkout(workout: GeneratedWorkout, request: WorkoutGenerationRequest): GeneratedWorkout {
-    // Add AI-specific metadata
-    workout.aiModel = openAIConfig.openai.model;
-    workout.generatedAt = new Date();
-    workout.confidence = Math.max(0.7, workout.confidence || 0.8);
-
-    // Enhance with user-specific notes
-    if (!workout.personalizedNotes) {
-      workout.personalizedNotes = [];
-    }
-    
-    // Add fitness level appropriate notes
-    if (request.userProfile.fitnessLevel === 'new to exercise') {
-      workout.personalizedNotes.push(
-        'Focus on proper form rather than speed',
-        'Take breaks whenever needed',
-        'Build consistency before increasing intensity'
-      );
-    } else if (request.userProfile.fitnessLevel === 'advanced athlete') {
-      workout.personalizedNotes.push(
-        'Challenge yourself with perfect form',
-        'Consider adding resistance or complexity',
-        'Track your progress for continuous improvement'
-      );
-    }
-
-    // Add goal-specific notes
-    if (request.userProfile.goals?.includes('weight_loss')) {
-      workout.personalizedNotes.push(
-        'Maintain elevated heart rate for calorie burn',
-        'Focus on compound movements for maximum efficiency'
-      );
-    }
-
-    // Add energy level appropriate notes
-    if (request.constraints?.energyLevel && request.constraints.energyLevel <= 3) {
-      workout.personalizedNotes.push(
-        'Listen to your body and modify intensity as needed',
-        'Even light movement is beneficial on low energy days'
-      );
-    }
-
-    // Ensure safety reminders
-    if (!workout.safetyReminders || workout.safetyReminders.length === 0) {
-      workout.safetyReminders = [
-        'Stop immediately if you feel pain',
-        'Maintain proper form throughout',
-        'Stay hydrated during your workout',
-        'Listen to your body and rest when needed'
-      ];
-    }
-
-    // Add progression tips if missing
-    if (!workout.progressionTips || workout.progressionTips.length === 0) {
-      workout.progressionTips = [
-        'Gradually increase workout frequency',
-        'Add 5-10% intensity each week',
-        'Track your improvements over time',
-        'Challenge yourself with new exercises'
-      ];
-    }
-
-    // Add appropriate tags
-    if (!workout.tags) {
-      workout.tags = [];
-    }
-    
-    workout.tags.push(
-      `${request.preferences.duration}min`,
-      request.preferences.intensity,
-      request.userProfile.fitnessLevel,
-      request.preferences.focus.toLowerCase().replace(/\s+/g, '_')
-    );
-
-    return workout;
-  }
-
-  private createVariation(
-    originalRequest: WorkoutGenerationRequest,
-    variationIndex: number
-  ): WorkoutGenerationRequest {
-    const variations = ['circuit', 'intervals', 'strength_focus', 'cardio_focus'];
-    const variationType = variations[variationIndex % variations.length];
-    
-    return {
-      ...originalRequest,
-      preferences: {
-        ...originalRequest.preferences,
-        focus: `${originalRequest.preferences.focus} - ${variationType}`
-      }
-    };
-  }
-
-  private createProgressiveRequest(
-    baseRequest: WorkoutGenerationRequest,
-    week: number
-  ): WorkoutGenerationRequest {
-    // Gradually increase intensity and complexity
-    const intensityProgression = ['low', 'moderate', 'moderate', 'high'];
-    const durationProgression = [0.9, 1.0, 1.1, 1.2]; // 90%, 100%, 110%, 120%
-    
-    return {
-      ...baseRequest,
-      preferences: {
-        ...baseRequest.preferences,
-        intensity: intensityProgression[Math.min(week - 1, 3)] as 'low' | 'moderate' | 'high',
-        duration: Math.round(baseRequest.preferences.duration * durationProgression[Math.min(week - 1, 3)])
-      }
-    };
-  }
-
   private generateCacheKey(request: WorkoutGenerationRequest): string {
+    // Ensure request has AI enhancements, create defaults if missing
+    const enhancedRequest = request.preferences 
+      ? request 
+      : WorkoutRequestAdapter.enhanceRequest(request, WorkoutRequestAdapter.createDefaultEnhancements(request.userProfile, request.workoutFocusData));
+
     const keyData = {
       fitnessLevel: request.userProfile.fitnessLevel,
-      duration: request.preferences.duration,
-      focus: request.preferences.focus,
-      intensity: request.preferences.intensity,
-      equipment: request.preferences.equipment.sort(),
-      energyLevel: request.constraints?.energyLevel || 5,
-      sorenessAreas: request.constraints?.sorenessAreas?.sort() || []
+      duration: enhancedRequest.preferences!.duration,
+      focus: enhancedRequest.preferences!.focus,
+      intensity: enhancedRequest.preferences!.intensity,
+      equipment: enhancedRequest.preferences!.equipment.sort(),
+      energyLevel: enhancedRequest.constraints?.energyLevel ?? 5,
+      sorenessAreas: enhancedRequest.constraints?.sorenessAreas?.sort() ?? []
     };
     
     return JSON.stringify(keyData);
   }
 
   private isCacheValid(workout: GeneratedWorkout): boolean {
-    const cacheTimeout = 30 * 60 * 1000; // 30 minutes
-    return Date.now() - workout.generatedAt.getTime() < cacheTimeout;
+    return Date.now() - workout.generatedAt.getTime() < WORKOUT_GENERATOR_CONSTANTS.CACHE_TIMEOUT_MS;
   }
 
-  private countExercises(workout: GeneratedWorkout): number {
-    return workout.warmup.exercises.length + 
-           workout.mainWorkout.exercises.length + 
-           workout.cooldown.exercises.length;
-  }
-
-  private createWorkoutGenerationError(error: any, request: WorkoutGenerationRequest): Error {
+  private createWorkoutGenerationError(error: Error | unknown, request: WorkoutGenerationRequest): Error {
     const userFriendlyMessage = this.getUserFriendlyErrorMessage(error);
     const context = {
       fitnessLevel: request.userProfile.fitnessLevel,
-      duration: request.preferences.duration,
-      focus: request.preferences.focus
+      duration: request.preferences?.duration ?? 'unknown',
+      focus: request.preferences?.focus ?? 'unknown'
     };
     
-    logger.error('Workout generation error', { error: error.message, context });
+    logger.error('Workout generation error', { error: error instanceof Error ? error.message : String(error), context });
     
     return new Error(`Workout generation failed: ${userFriendlyMessage}`);
   }
 
-  private getUserFriendlyErrorMessage(error: any): string {
-    if (error.message?.includes('rate limit')) {
+  private getUserFriendlyErrorMessage(error: Error | unknown): string {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    if (errorMessage.includes('rate limit')) {
       return 'AI service is busy. Please try again in a moment.';
     }
     
-    if (error.message?.includes('authentication')) {
+    if (errorMessage.includes('authentication')) {
       return 'AI service configuration issue. Please contact support.';
     }
     
-    if (error.message?.includes('timeout')) {
+    if (errorMessage.includes('timeout')) {
       return 'Request took too long. Please try again.';
     }
     
-    if (error.message?.includes('Invalid workout structure')) {
+    if (errorMessage.includes('Invalid workout structure')) {
       return 'Generated workout was invalid. Please try again.';
     }
     
@@ -478,7 +258,4 @@ export class OpenAIWorkoutGenerator {
 }
 
 // Export singleton instance
-export const openAIWorkoutGenerator = new OpenAIWorkoutGenerator();
-
-// Export class for custom instances
-export { OpenAIWorkoutGenerator }; 
+export const openAIWorkoutGenerator = new OpenAIWorkoutGenerator(); 

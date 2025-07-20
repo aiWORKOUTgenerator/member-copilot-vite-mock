@@ -6,7 +6,7 @@ import { AIInsight } from '../../../types/insights';
 import { logger } from '../../../utils/logger';
 import { useAI } from '../../../contexts/AIContext';
 
-const DEFAULT_SORENESS_LEVEL = 1;
+// Removed unused constant
 
 export const MuscleSorenessSection: React.FC<SectionProps> = ({
   focusData,
@@ -30,6 +30,7 @@ export const MuscleSorenessSection: React.FC<SectionProps> = ({
     if (serviceStatus !== 'ready') {
       // Fallback to basic insights if service isn't ready
       return [{
+        id: `soreness_fallback_${Date.now()}`,
         type: 'optimization',
         title: 'Soreness Level',
         content: `Current soreness level: ${value}/10`,
@@ -51,6 +52,7 @@ export const MuscleSorenessSection: React.FC<SectionProps> = ({
     } catch (error) {
       logger.error('Failed to generate soreness insights:', error);
       return [{
+        id: `soreness_error_${Date.now()}`,
         type: 'warning',
         title: 'Service Error',
         content: 'Unable to generate soreness insights at this time',

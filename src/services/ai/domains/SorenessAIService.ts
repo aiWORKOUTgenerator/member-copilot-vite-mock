@@ -2,13 +2,34 @@
 import { AIInsight } from '../../../types/insights';
 import { GlobalAIContext } from '../core/AIService';
 
-interface SorenessThresholds {
-  NONE: number;
-  MILD: number;
-  MODERATE: number;
-  SEVERE: number;
-  EXTREME: number;
-}
+// Configuration Constants - Extracted from magic numbers
+export const SORENESS_CONSTANTS = {
+  // Soreness thresholds
+  NONE: 0,
+  MILD: 1,
+  MODERATE: 2,
+  SEVERE: 3,
+  EXTREME: 4,
+  
+  // Analysis thresholds
+  HIGH_SORENESS_THRESHOLD: 4,
+  MILD_SORENESS_MAX: 2,
+  DURATION_CONFLICT_THRESHOLD: 3,
+  LONG_DURATION_THRESHOLD: 45,
+  
+  // History analysis
+  RECENT_INTERACTIONS_COUNT: 5,
+  PATTERN_MIN_INTERACTIONS: 3,
+  
+  // Confidence levels
+  HIGH_CONFIDENCE: 0.95,
+  MEDIUM_HIGH_CONFIDENCE: 0.9,
+  MEDIUM_CONFIDENCE: 0.85,
+  MEDIUM_LOW_CONFIDENCE: 0.8,
+  LOW_CONFIDENCE: 0.75
+} as const;
+
+
 
 interface SorenessInsightRule {
   condition: (value: string[], context: GlobalAIContext) => boolean;
@@ -16,79 +37,68 @@ interface SorenessInsightRule {
 }
 
 export class SorenessAIService {
-  private readonly THRESHOLDS: SorenessThresholds = {
-    NONE: 0,
-    MILD: 1,
-    MODERATE: 2,
-    SEVERE: 3,
-    EXTREME: 4
-  };
-  
-  private readonly SORENESS_AREAS = [
-    'Upper Body', 'Lower Body', 'Core', 'Back', 'Legs', 'Arms', 'Shoulders', 'Chest'
-  ];
   
   private readonly BASE_INSIGHTS: SorenessInsightRule[] = [
     {
-      condition: (value) => value.length === 0,
-      generateInsight: (value, context) => ({
+      condition: (_value) => _value.length === 0,
+      generateInsight: (_value, _context) => ({
         id: this.generateInsightId('no_soreness'),
         type: 'encouragement',
         message: 'No soreness reported - good recovery status',
-        confidence: 0.9,
+        recommendation: 'You can maintain or increase workout intensity',
+        confidence: SORENESS_CONSTANTS.MEDIUM_HIGH_CONFIDENCE,
         actionable: false,
         relatedFields: ['customization_soreness'],
         metadata: {
-          sorenessLevel: 'none',
-          recommendation: 'You can maintain or increase workout intensity'
+          sorenessLevel: 'none'
         }
       })
     },
     {
-      condition: (value) => value.length >= 4,
-      generateInsight: (value, context) => ({
+      condition: (_value) => _value.length >= SORENESS_CONSTANTS.HIGH_SORENESS_THRESHOLD,
+      generateInsight: (_value, _context) => ({
         id: this.generateInsightId('high_soreness'),
         type: 'warning',
         message: 'Multiple areas of soreness detected - consider recovery focus',
-        confidence: 0.95,
+        recommendation: 'Focus on mobility, stretching, and recovery',
+        confidence: SORENESS_CONSTANTS.HIGH_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_soreness', 'customization_focus', 'customization_duration'],
         metadata: {
           sorenessLevel: 'high',
-          affectedAreas: value.length,
-          recommendation: 'Focus on mobility, stretching, and recovery'
+          affectedAreas: _value.length
         }
       })
     },
     {
       condition: (value) => value.includes('Back') || value.includes('Lower Body'),
-      generateInsight: (value, context) => ({
+      generateInsight: (value, _context) => ({
         id: this.generateInsightId('back_soreness'),
         type: 'warning',
         message: 'Back/lower body soreness - prioritize proper form and movement quality',
-        confidence: 0.9,
+        recommendation: 'Avoid heavy lifting, focus on gentle movement',
+        confidence: SORENESS_CONSTANTS.MEDIUM_HIGH_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_soreness', 'customization_focus'],
         metadata: {
           sorenessLevel: 'targeted',
-          criticalAreas: value.filter(area => ['Back', 'Lower Body'].includes(area)),
-          recommendation: 'Avoid heavy lifting, focus on gentle movement'
+          criticalAreas: value.filter(area => ['Back', 'Lower Body'].includes(area))
         }
       })
     },
     {
-      condition: (value) => value.length === 1 || value.length === 2,
-      generateInsight: (value, context) => ({
+      condition: (value) => value.length === 1 || value.length === SORENESS_CONSTANTS.MILD_SORENESS_MAX,
+      generateInsight: (value, _context) => ({
         id: this.generateInsightId('mild_soreness'),
         type: 'optimization',
         message: 'Mild soreness detected - adjust intensity accordingly',
-        confidence: 0.8,
+        recommendation: 'Work around sore areas or use lighter intensity',
+        confidence: SORENESS_CONSTANTS.MEDIUM_LOW_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_soreness', 'customization_focus'],
         metadata: {
           sorenessLevel: 'mild',
-          affectedAreas: value.length,
-          recommendation: 'Work around sore areas or use lighter intensity'
+          affectedAreas: value.length
         }
       })
     }
@@ -98,18 +108,18 @@ export class SorenessAIService {
     {
       condition: (value, context) => {
         const energyLevel = context.currentSelections.customization_energy;
-        return value.length > 0 && energyLevel && energyLevel <= 2;
+        return value.length > 0 && typeof energyLevel === 'number' && energyLevel <= 2;
       },
-      generateInsight: (value, context) => ({
+      generateInsight: (_value, _context) => ({
         id: this.generateInsightId('soreness_low_energy'),
         type: 'warning',
         message: 'Combined soreness and low energy - strong recovery focus recommended',
-        confidence: 0.95,
+        recommendation: 'Consider rest day or very light mobility work',
+        confidence: SORENESS_CONSTANTS.HIGH_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_soreness', 'customization_energy', 'customization_focus'],
         metadata: {
-          context: 'energy_soreness_combination',
-          recommendation: 'Consider rest day or very light mobility work'
+          context: 'energy_soreness_combination'
         }
       })
     },
@@ -118,16 +128,16 @@ export class SorenessAIService {
         const focus = context.currentSelections.customization_focus;
         return value.includes('Upper Body') && focus === 'strength';
       },
-      generateInsight: (value, context) => ({
+      generateInsight: (_value, _context) => ({
         id: this.generateInsightId('upper_body_strength_conflict'),
         type: 'warning',
         message: 'Upper body soreness with strength focus - consider lower body emphasis',
-        confidence: 0.85,
+        recommendation: 'Switch to lower body or cardio focus',
+        confidence: SORENESS_CONSTANTS.MEDIUM_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_soreness', 'customization_focus'],
         metadata: {
-          context: 'focus_soreness_conflict',
-          recommendation: 'Switch to lower body or cardio focus'
+          context: 'focus_soreness_conflict'
         }
       })
     },
@@ -136,16 +146,16 @@ export class SorenessAIService {
         const timeOfDay = context.environmentalFactors?.timeOfDay;
         return value.length > 0 && timeOfDay === 'morning';
       },
-      generateInsight: (value, context) => ({
+      generateInsight: (_value, _context) => ({
         id: this.generateInsightId('morning_soreness'),
         type: 'optimization',
         message: 'Morning soreness - include extended warm-up',
-        confidence: 0.8,
+        recommendation: 'Add 5-10 minutes of gentle movement before workout',
+        confidence: SORENESS_CONSTANTS.MEDIUM_LOW_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_soreness', 'customization_duration'],
         metadata: {
-          context: 'morning_stiffness',
-          recommendation: 'Add 5-10 minutes of gentle movement before workout'
+          context: 'morning_stiffness'
         }
       })
     }
@@ -155,39 +165,42 @@ export class SorenessAIService {
     {
       condition: (value, context) => {
         const areas = context.currentSelections.customization_areas;
-        return value.length > 0 && areas?.some(area => value.includes(area));
+        return value.length > 0 && Array.isArray(areas) && areas.some((area: string) => value.includes(area));
       },
       generateInsight: (value, context) => ({
         id: this.generateInsightId('area_soreness_overlap'),
         type: 'warning',
         message: 'Selected workout areas overlap with soreness - consider alternatives',
-        confidence: 0.9,
+        recommendation: 'Select unaffected areas or reduce intensity',
+        confidence: SORENESS_CONSTANTS.MEDIUM_HIGH_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_soreness', 'customization_areas'],
         metadata: {
           context: 'area_overlap',
-          conflictingAreas: value.filter(area => 
-            context.currentSelections.customization_areas?.includes(area)
-          ),
-          recommendation: 'Select unaffected areas or reduce intensity'
+          conflictingAreas: value.filter((area: string) => 
+            Array.isArray(context.currentSelections.customization_areas) && 
+            context.currentSelections.customization_areas.includes(area)
+          )
         }
       })
     },
     {
       condition: (value, context) => {
         const duration = context.currentSelections.customization_duration;
-        return value.length >= 3 && duration && duration > 45;
+        const durationValue = typeof duration === 'number' ? duration : 
+          (typeof duration === 'object' && duration?.totalDuration ? duration.totalDuration : 0);
+        return value.length >= SORENESS_CONSTANTS.DURATION_CONFLICT_THRESHOLD && durationValue > SORENESS_CONSTANTS.LONG_DURATION_THRESHOLD;
       },
-      generateInsight: (value, context) => ({
+      generateInsight: (_value, _context) => ({
         id: this.generateInsightId('soreness_duration_conflict'),
         type: 'warning',
         message: 'High soreness with long duration - consider shorter session',
-        confidence: 0.85,
+        recommendation: 'Reduce session to 30-45 minutes max',
+        confidence: SORENESS_CONSTANTS.MEDIUM_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_soreness', 'customization_duration'],
         metadata: {
-          context: 'duration_conflict',
-          recommendation: 'Reduce session to 30-45 minutes max'
+          context: 'duration_conflict'
         }
       })
     }
@@ -209,22 +222,22 @@ export class SorenessAIService {
     // Check for patterns in user's soreness history
     const recentSoreness = context.sessionHistory
       .filter(interaction => interaction.component === 'soreness')
-      .slice(-5); // Last 5 interactions
+      .slice(-SORENESS_CONSTANTS.RECENT_INTERACTIONS_COUNT); // Last 5 interactions
     
-    if (recentSoreness.length >= 3) {
+    if (recentSoreness.length >= SORENESS_CONSTANTS.PATTERN_MIN_INTERACTIONS) {
       const commonAreas = this.findCommonSorenessAreas(recentSoreness);
       if (commonAreas.length > 0) {
         insights.push({
           id: this.generateInsightId('pattern_soreness'),
           type: 'education',
           message: `Pattern detected: ${commonAreas.join(', ')} frequently sore`,
-          confidence: 0.75,
+          recommendation: 'Consider mobility work or form check for these areas',
+          confidence: SORENESS_CONSTANTS.LOW_CONFIDENCE,
           actionable: true,
           relatedFields: ['customization_soreness', 'customization_focus'],
           metadata: {
             context: 'pattern_learning',
-            commonAreas,
-            recommendation: 'Consider mobility work or form check for these areas'
+            commonAreas
           }
         });
       }
@@ -236,12 +249,12 @@ export class SorenessAIService {
         id: this.generateInsightId('new_to_exercise_soreness'),
         type: 'education',
         message: 'As someone new to exercise, some soreness is normal - focus on recovery',
-        confidence: 0.8,
+        recommendation: 'Ensure adequate rest between sessions',
+        confidence: SORENESS_CONSTANTS.MEDIUM_LOW_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_soreness'],
         metadata: {
-          context: 'new_to_exercise_education',
-          recommendation: 'Ensure adequate rest between sessions'
+          context: 'new_to_exercise_education'
         }
       });
     }
@@ -252,9 +265,7 @@ export class SorenessAIService {
   /**
    * Find common soreness areas from session history
    */
-  private findCommonSorenessAreas(history: any[]): string[] {
-    const areaFrequency = new Map<string, number>();
-    
+  private findCommonSorenessAreas(_history: unknown[]): string[] {
     // This would need to be implemented based on how soreness data is stored
     // For now, return empty array
     return [];
@@ -270,12 +281,12 @@ export class SorenessAIService {
         id: this.generateInsightId('no_soreness'),
         type: 'encouragement',
         message: 'No soreness reported - good recovery status',
-        confidence: 0.9,
+        recommendation: 'You can maintain or increase workout intensity',
+        confidence: SORENESS_CONSTANTS.MEDIUM_HIGH_CONFIDENCE,
         actionable: false,
         relatedFields: ['customization_soreness'],
         metadata: {
-          sorenessLevel: 'none',
-          recommendation: 'You can maintain or increase workout intensity'
+          sorenessLevel: 'none'
         }
       }];
     }
@@ -318,10 +329,56 @@ export class SorenessAIService {
     return insights.sort((a, b) => {
       if (a.actionable && !b.actionable) return -1;
       if (!a.actionable && b.actionable) return 1;
-      return b.confidence - a.confidence;
+      return (b.confidence ?? 0) - (a.confidence ?? 0);
     });
   }
   
-  // Backward compatibility method removed
-  // Use analyze() method instead for soreness insights
+  /**
+   * Generate insights (backward compatibility method)
+   * Provides a simplified interface for components that need basic soreness insights
+   */
+  generateInsights(sorenessAreas: string[], context: GlobalAIContext): AIInsight[] {
+    // Use the analyze method but handle the async nature
+    // For backward compatibility, we'll run a simplified version synchronously
+    const insights: AIInsight[] = [];
+    
+    if (!sorenessAreas || sorenessAreas.length === 0) {
+      return [{
+        id: this.generateInsightId('no_soreness'),
+        type: 'encouragement',
+        message: 'No soreness reported - good recovery status',
+        recommendation: 'You can maintain or increase workout intensity',
+        confidence: SORENESS_CONSTANTS.MEDIUM_HIGH_CONFIDENCE,
+        actionable: false,
+        relatedFields: ['customization_soreness'],
+        metadata: {
+          sorenessLevel: 'none'
+        }
+      }];
+    }
+    
+    // Apply base insights (synchronous version)
+    for (const rule of this.BASE_INSIGHTS) {
+      if (rule.condition(sorenessAreas, context)) {
+        insights.push(rule.generateInsight(sorenessAreas, context));
+      }
+    }
+    
+    // Apply contextual insights (synchronous version)
+    for (const rule of this.CONTEXTUAL_RULES) {
+      if (rule.condition(sorenessAreas, context)) {
+        const insight = rule.generateInsight(sorenessAreas, context);
+        if (!insights.some(existing => existing.id === insight.id)) {
+          insights.push(insight);
+        }
+      }
+    }
+    
+    // Sort by confidence and actionability
+    return insights.sort((a, b) => {
+      if (a.actionable && !b.actionable) return -1;
+      if (!a.actionable && b.actionable) return 1;
+      return (b.confidence ?? 0) - (a.confidence ?? 0);
+    });
+  }
 } 

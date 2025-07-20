@@ -235,9 +235,24 @@ export const createExerciseSelectionConfig = (
 /**
  * Maps UI experience level values to AI service fitness levels by converting to lowercase
  * This preserves the meaning while making them compatible with AI services
+ * Also handles legacy 'Beginner' value migration
  */
 export const mapExperienceLevelToFitnessLevel = (experienceLevel: string): FitnessLevel => {
-  return experienceLevel.toLowerCase() as FitnessLevel;
+  // Handle legacy 'Beginner' value migration
+  if (experienceLevel === 'Beginner') {
+    console.warn('⚠️ Legacy experience level "Beginner" detected, migrating to "New to Exercise"');
+    return 'new to exercise';
+  }
+  
+  // Handle valid experience levels
+  const normalized = experienceLevel.toLowerCase();
+  if (['new to exercise', 'some experience', 'advanced athlete'].includes(normalized)) {
+    return normalized as FitnessLevel;
+  }
+  
+  // Fallback for unknown values
+  console.warn(`⚠️ Unknown experience level: ${experienceLevel}, defaulting to "some experience"`);
+  return 'some experience';
 };
 
 /**
@@ -246,14 +261,19 @@ export const mapExperienceLevelToFitnessLevel = (experienceLevel: string): Fitne
  */
 export const mapFitnessLevelToExperienceLevel = (fitnessLevel: string): string => {
   // Convert back to proper case for UI display
-  switch (fitnessLevel) {
+  switch (fitnessLevel.toLowerCase()) {
     case 'new to exercise':
       return 'New to Exercise';
     case 'some experience':
       return 'Some Experience';
     case 'advanced athlete':
       return 'Advanced Athlete';
+    case 'beginner':
+      // Handle legacy 'beginner' value
+      console.warn('⚠️ Legacy fitness level "beginner" detected, mapping to "New to Exercise"');
+      return 'New to Exercise';
     default:
+      console.warn(`⚠️ Unknown fitness level: ${fitnessLevel}, defaulting to "Some Experience"`);
       return 'Some Experience';
   }
 }; 

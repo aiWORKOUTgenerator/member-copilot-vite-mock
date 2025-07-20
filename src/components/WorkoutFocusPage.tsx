@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PenLine, ChevronLeft, ClipboardList, Sparkles, ArrowRight } from 'lucide-react';
 import { PageHeader } from './shared';
 import { QuickWorkoutForm } from './quickWorkout/components';
@@ -7,106 +7,11 @@ import { PerWorkoutOptions, AIRecommendationContext, WorkoutType } from '../type
 import { UserProfile, TimePreference, AIAssistanceLevel, RecoveryStatus } from '../types/user';
 import { ProfileData } from './Profile/types/profile.types';
 import { mapExperienceLevelToFitnessLevel } from '../utils/configUtils';
+import { profileTransformers } from '../utils/dataTransformers';
 
 // Helper function to convert ProfileData to UserProfile
 const convertProfileDataToUserProfile = (profileData: ProfileData): UserProfile => {
-  return {
-    fitnessLevel: mapExperienceLevelToFitnessLevel(profileData.experienceLevel),
-    goals: [profileData.primaryGoal.toLowerCase().replace(' ', '_')],
-    preferences: {
-      workoutStyle: profileData.preferredActivities.map(activity => 
-        activity.toLowerCase().replace(/[^a-z0-9]/g, '_')
-      ),
-      timePreference: 'morning' as TimePreference,
-      intensityPreference: (() => {
-        // Map target activity level to progression rate (not immediate intensity)
-        let targetProgressionRate: 'conservative' | 'moderate' | 'aggressive';
-        switch (profileData.intensityLevel) {
-          case 'lightly':
-          case 'light-moderate':
-            targetProgressionRate = 'conservative';
-            break;
-          case 'moderately':
-          case 'active':
-            targetProgressionRate = 'moderate';
-            break;
-          case 'very':
-          case 'extremely':
-            targetProgressionRate = 'aggressive';
-            break;
-          default:
-            targetProgressionRate = 'moderate';
-        }
-
-        // Calculate appropriate starting intensity based on current activity level
-        // This ensures safety while working toward the target goal
-        switch (profileData.physicalActivity) {
-          case 'sedentary':
-            // Sedentary users start with low intensity regardless of target
-            return 'low';
-            
-          case 'light':
-            // Lightly active users start with low-to-moderate intensity
-            return targetProgressionRate === 'aggressive' ? 'moderate' : 'low';
-            
-          case 'moderate':
-            // Moderately active users can start with moderate intensity
-            return 'moderate';
-            
-          case 'very':
-            // Very active users can handle moderate-to-high intensity
-            return targetProgressionRate === 'conservative' ? 'moderate' : 'high';
-            
-          case 'extremely':
-            // Extremely active users can handle high intensity
-            return targetProgressionRate === 'conservative' ? 'moderate' : 'high';
-            
-          case 'varies':
-            // For users with varying activity, use moderate as default
-            return 'moderate';
-            
-          default:
-            return 'moderate';
-        }
-      })(),
-      advancedFeatures: profileData.experienceLevel === 'Advanced Athlete',
-      aiAssistanceLevel: 'moderate' as AIAssistanceLevel
-    },
-    basicLimitations: {
-      injuries: profileData.injuries.filter(injury => injury !== 'No Injuries'),
-      availableEquipment: profileData.availableEquipment,
-      availableLocations: profileData.availableLocations
-    },
-    enhancedLimitations: {
-      timeConstraints: 0, // Will be calculated by AI service
-      equipmentConstraints: [],
-      locationConstraints: [],
-      recoveryNeeds: {
-        restDays: 2,
-        sleepHours: 7,
-        hydrationLevel: 'moderate'
-      },
-      mobilityLimitations: [],
-      progressionRate: 'moderate'
-    },
-    workoutHistory: {
-      estimatedCompletedWorkouts: 0,
-      averageDuration: 45,
-      preferredFocusAreas: [],
-      progressiveEnhancementUsage: {},
-      aiRecommendationAcceptance: 0.7,
-      consistencyScore: 0.5,
-      plateauRisk: 'low'
-    },
-    learningProfile: {
-      prefersSimplicity: profileData.experienceLevel === 'New to Exercise',
-      explorationTendency: 'moderate',
-      feedbackPreference: 'simple',
-      learningStyle: 'visual',
-      motivationType: 'intrinsic',
-      adaptationSpeed: 'moderate'
-    }
-  };
+  return profileTransformers.convertProfileToUserProfile(profileData);
 };
 
 export interface WorkoutFocusPageProps {
@@ -127,10 +32,42 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({
   const [viewMode, setViewMode] = useState<ViewMode>('selection');
   const [options, setOptions] = useState<PerWorkoutOptions>(initialData || {});
 
+  // Initialize workoutType when component mounts or initialData changes
+  useEffect(() => {
+    if (initialData && Object.keys(initialData).length > 0) {
+      // If we have initial data, determine the workout type based on the data structure
+      // This helps restore the correct workout type when navigating back
+      const hasDetailedOptions = initialData.customization_areas || 
+                                initialData.customization_equipment || 
+                                initialData.customization_soreness;
+      
+      const workoutType: WorkoutType = hasDetailedOptions ? 'detailed' : 'quick';
+      
+      // Update parent with the determined workout type
+      if (onDataUpdate) {
+        onDataUpdate(initialData, workoutType);
+        console.log('WorkoutFocusPage: Initialized with workout type', workoutType);
+      }
+    }
+  }, [initialData, onDataUpdate]);
+
   const handleOptionsChange = (key: keyof PerWorkoutOptions, value: PerWorkoutOptions[keyof PerWorkoutOptions]) => {
     const newOptions = { ...options, [key]: value };
     setOptions(newOptions);
-    onDataUpdate?.(newOptions, viewMode === 'quick' ? 'quick' : 'detailed');
+    
+    // Determine workout type based on current view mode
+    const currentWorkoutType: WorkoutType = viewMode === 'quick' ? 'quick' : 'detailed';
+    
+    // Update parent component with both data and workout type
+    onDataUpdate?.(newOptions, currentWorkoutType);
+    
+    // Log for debugging
+    console.log('WorkoutFocusPage: Updated options and workout type', {
+      key,
+      value,
+      workoutType: currentWorkoutType,
+      totalOptions: Object.keys(newOptions).length
+    });
   };
 
   // Create AI context with real data
@@ -210,7 +147,13 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Quick Workout Card */}
             <div
-              onClick={() => setViewMode('quick')}
+              onClick={() => {
+                setViewMode('quick');
+                // Initialize with quick workout type
+                if (onDataUpdate) {
+                  onDataUpdate(options, 'quick');
+                }
+              }}
               className="relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 p-8 cursor-pointer group"
             >
               <div className="relative z-10">
@@ -249,7 +192,13 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({
 
             {/* Detailed Workout Card */}
             <div
-              onClick={() => setViewMode('detailed')}
+              onClick={() => {
+                setViewMode('detailed');
+                // Initialize with detailed workout type
+                if (onDataUpdate) {
+                  onDataUpdate(options, 'detailed');
+                }
+              }}
               className="relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 p-8 cursor-pointer group"
             >
               <div className="relative z-10">

@@ -21,4 +21,6 @@ module.exports = {
       isolatedModules: true,
     },
   },
+  // Add fetch polyfill for Node.js environment
+  setupFiles: ['<rootDir>/src/setupJest.ts'],
 }; 

@@ -20,6 +20,9 @@ export type {
   RatingScaleConfig
 } from './core';
 
+// Re-export type guards and utilities
+export * from './guards';
+
 export type {
   UserProfile,
   FitnessLevel,
