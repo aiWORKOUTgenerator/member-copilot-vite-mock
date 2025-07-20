@@ -61,14 +61,6 @@ function AppContent() {
       if (profileData) {
         const parsed = JSON.parse(profileData);
         if (parsed.data) { // Check for enhanced persisted state format
-          // Migrate legacy 'Beginner' experience level to 'New to Exercise'
-          if (parsed.data.experienceLevel === 'Beginner') {
-            console.warn('⚠️ Migrating legacy experience level from "Beginner" to "New to Exercise"');
-            parsed.data.experienceLevel = 'New to Exercise';
-            // Update localStorage with migrated data
-            localStorage.setItem('profileData', JSON.stringify(parsed));
-          }
-          
           return {
             profileData: parsed.data,
             waiverData: null,
@@ -100,14 +92,6 @@ function AppContent() {
       if (profileData) {
         const parsed = JSON.parse(profileData);
         if (parsed.data) {
-          // Migrate legacy 'Beginner' experience level to 'New to Exercise'
-          if (parsed.data.experienceLevel === 'Beginner') {
-            console.warn('⚠️ Migrating legacy experience level from "Beginner" to "New to Exercise"');
-            parsed.data.experienceLevel = 'New to Exercise';
-            // Update localStorage with migrated data
-            localStorage.setItem('profileData', JSON.stringify(parsed));
-          }
-          
           setAppState(prev => ({
             ...prev,
             profileData: parsed.data
@@ -157,9 +141,9 @@ function AppContent() {
 
         console.log('✅ App.tsx: Profile data validation passed, converting to UserProfile...');
 
-        // Convert experience level to fitness level using proper mapping
-        const fitnessLevel = mapExperienceLevelToFitnessLevel(appState.profileData.experienceLevel);
-        console.log('✅ App.tsx: Fitness level mapped:', fitnessLevel);
+        // Use calculated fitness level if available, otherwise fall back to mapping
+        const fitnessLevel = appState.profileData.calculatedFitnessLevel || mapExperienceLevelToFitnessLevel(appState.profileData.experienceLevel);
+        console.log('✅ App.tsx: Fitness level (calculated/fallback):', fitnessLevel);
 
         // Convert primary goal
         const primaryGoal = appState.profileData.primaryGoal?.toLowerCase().replace(/\s+/g, '_') || 'general_fitness';
@@ -178,6 +162,59 @@ function AppContent() {
           intensityLevel = 'moderate';
         }
         console.log('✅ App.tsx: Intensity level converted:', intensityLevel);
+
+        // Convert age from string range to numeric (use middle of range)
+        let age: number | undefined;
+        if (appState.profileData.age) {
+          const ageRange = appState.profileData.age.split('-');
+          if (ageRange.length === 2) {
+            age = Math.floor((parseInt(ageRange[0]) + parseInt(ageRange[1])) / 2);
+          } else if (ageRange[0] === '65+') {
+            age = 70; // Default for 65+
+          }
+        }
+
+        // Convert height and weight to numbers if present
+        let height: number | undefined;
+        let weight: number | undefined;
+        
+        if (appState.profileData.height) {
+          // Handle both imperial and metric formats
+          const heightStr = appState.profileData.height.toLowerCase();
+          if (heightStr.includes("'") && heightStr.includes('"')) {
+            // Imperial format: 5'8" -> convert to cm
+            const match = heightStr.match(/(\d+)'(\d+)"/);
+            if (match) {
+              const feet = parseInt(match[1]);
+              const inches = parseInt(match[2]);
+              height = Math.round((feet * 12 + inches) * 2.54);
+            }
+          } else if (heightStr.includes('cm')) {
+            // Metric format: 173cm
+            const match = heightStr.match(/(\d+)cm/);
+            if (match) {
+              height = parseInt(match[1]);
+            }
+          }
+        }
+
+        if (appState.profileData.weight) {
+          // Handle both imperial and metric formats
+          const weightStr = appState.profileData.weight.toLowerCase();
+          if (weightStr.includes('lbs') || weightStr.includes('lb')) {
+            // Imperial format: 150 lbs -> convert to kg
+            const match = weightStr.match(/(\d+)\s*lbs?/);
+            if (match) {
+              weight = Math.round(parseInt(match[1]) * 0.453592);
+            }
+          } else if (weightStr.includes('kg')) {
+            // Metric format: 68 kg
+            const match = weightStr.match(/(\d+)\s*kg/);
+            if (match) {
+              weight = parseInt(match[1]);
+            }
+          }
+        }
 
         const userProfile: UserProfile = {
           fitnessLevel,
@@ -224,7 +261,12 @@ function AppContent() {
             learningStyle: 'visual',
             motivationType: 'intrinsic',
             adaptationSpeed: 'moderate'
-          }
+          },
+          // Add optional personal metrics
+          age,
+          height,
+          weight,
+          gender: appState.profileData.gender
         };
 
         console.log('✅ App.tsx: UserProfile created successfully:', {

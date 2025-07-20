@@ -15,7 +15,7 @@ export const EnergyLevelSection: React.FC<SectionProps> = ({
   _aiContext, // Prefix with _ to indicate intentionally unused
   userProfile
 }) => {
-  const { aiService, serviceStatus } = useAI();
+  const { getEnergyInsights, serviceStatus } = useAI();
 
   const handleEnergyChange = (value: number) => {
     onInputChange('energyLevel', value);
@@ -43,8 +43,8 @@ export const EnergyLevelSection: React.FC<SectionProps> = ({
     }
 
     try {
-      // Use the new AI service
-      const insights = aiService.getEnergyInsights(value);
+      // Use the AIContext method instead of calling aiService directly
+      const insights = getEnergyInsights(value);
       return insights;
     } catch (error) {
       logger.error('Failed to generate energy insights:', error);
@@ -129,7 +129,7 @@ export const EnergyLevelSection: React.FC<SectionProps> = ({
           customization_energy: currentEnergyLevel
         },
         userProfile: userProfile ?? {
-          fitnessLevel: 'some experience',
+          fitnessLevel: 'intermediate' as const,
           goals: ['general_fitness'],
           preferences: {
             workoutStyle: ['balanced'],

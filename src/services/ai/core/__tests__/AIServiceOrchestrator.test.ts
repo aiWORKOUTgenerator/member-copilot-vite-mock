@@ -212,8 +212,37 @@ describe('AIService Orchestrator', () => {
       await expect(aiService.analyze()).rejects.toThrow('Context not set');
     });
 
-    it('should handle external strategy calls without context', async () => {
-      await expect(aiService.generateWorkout({})).rejects.toThrow('Context not set');
+    it('should automatically set context for generateWorkout', async () => {
+      // generateWorkout should now automatically set context instead of throwing
+      const mockStrategy = {
+        generateWorkout: jest.fn().mockResolvedValue({ workout: 'mock' }),
+        generateRecommendations: jest.fn().mockResolvedValue([]),
+        enhanceInsights: jest.fn().mockResolvedValue({ enhanced: true }),
+        analyzeUserPreferences: jest.fn().mockResolvedValue({ preferences: 'mock' })
+      };
+
+      aiService.setExternalStrategy(mockStrategy);
+
+      // Pass complete workout data with all required fields
+      const completeWorkoutData = {
+        customization_energy: 7,
+        customization_soreness: ['Back'], // Array of strings, not object
+        customization_focus: 'strength',
+        customization_duration: 30,
+        customization_equipment: ['dumbbells']
+      };
+
+      // This should work now (auto-sets context)
+      const result = await aiService.generateWorkout(completeWorkoutData);
+      
+      expect(result).toEqual({ workout: 'mock' });
+      
+      // Verify context was set
+      const context = aiService.getContext();
+      expect(context).toBeDefined();
+      expect(context?.currentSelections).toBeDefined();
+      expect(context?.currentSelections.customization_energy).toBe(7);
+      expect(context?.currentSelections.customization_focus).toBe('strength');
     });
   });
 }); 

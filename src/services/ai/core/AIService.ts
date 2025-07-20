@@ -161,10 +161,82 @@ export class AIService {
    */
   async generateWorkout(workoutData: any): Promise<any> {
     try {
-      const context = this.context.getContext();
+      // Get current context or create default context
+      let context = this.context.getContext();
+      
       if (!context) {
-        throw new Error('Context not set');
+        // Create a default context if none exists
+        context = {
+          userProfile: {
+            fitnessLevel: 'intermediate' as const,
+            goals: ['general_fitness'],
+            preferences: {
+              workoutStyle: ['balanced'],
+              timePreference: 'morning',
+              intensityPreference: 'moderate',
+              advancedFeatures: false,
+              aiAssistanceLevel: 'moderate'
+            },
+            basicLimitations: {
+              injuries: [],
+              availableEquipment: ['Body Weight'],
+              availableLocations: ['Home']
+            },
+            enhancedLimitations: {
+              timeConstraints: 0,
+              equipmentConstraints: [],
+              locationConstraints: [],
+              recoveryNeeds: {
+                restDays: 2,
+                sleepHours: 7,
+                hydrationLevel: 'moderate'
+              },
+              mobilityLimitations: [],
+              progressionRate: 'moderate'
+            },
+            workoutHistory: {
+              estimatedCompletedWorkouts: 0,
+              averageDuration: 45,
+              preferredFocusAreas: [],
+              progressiveEnhancementUsage: {},
+              aiRecommendationAcceptance: 0.7,
+              consistencyScore: 0.5,
+              plateauRisk: 'low'
+            },
+            learningProfile: {
+              prefersSimplicity: true,
+              explorationTendency: 'moderate',
+              feedbackPreference: 'simple',
+              learningStyle: 'visual',
+              motivationType: 'intrinsic',
+              adaptationSpeed: 'moderate'
+            }
+          },
+          currentSelections: workoutData,
+          sessionHistory: [],
+          preferences: {
+            aiAssistanceLevel: 'moderate',
+            showLearningInsights: true,
+            autoApplyLowRiskRecommendations: false
+          },
+          environmentalFactors: {
+            timeOfDay: 'morning',
+            location: 'home',
+            availableTime: 60
+          }
+        };
+      } else {
+        // Update existing context with current workout selections
+        context = {
+          ...context,
+          currentSelections: workoutData
+        };
       }
+
+      // Set the updated context
+      await this.context.setContext(context);
+      
+      // Now proceed with workout generation using the updated context
       return await this.externalStrategy.generateWorkout(workoutData, context);
     } catch (error) {
       this.errorHandler.handleError(error as Error, 'generateWorkout', { workoutData });

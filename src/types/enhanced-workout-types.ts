@@ -339,22 +339,7 @@ export interface CustomizationConfig {
 }
 
 // Migration utility interfaces
-export interface MigrationUtils {
-  migrateToComplexStructure: (configKey: string, currentValue: any) => any;
-  migrateToSimpleStructure: (configKey: string, currentValue: any) => any;
-  isComplexObject: (value: any) => boolean;
-  shouldEnhanceComponent: (
-    configKey: string,
-    userProfile: UserProfile,
-    currentValue: any,
-    usageHistory: Record<string, number>
-  ) => {
-    shouldEnhance: boolean;
-    confidence: number;
-    reasons: string[];
-    benefits: string[];
-  };
-}
+
 
 // AI integration interfaces - Legacy AIRecommendationEngine interface removed
 // Use the new AIService architecture instead 

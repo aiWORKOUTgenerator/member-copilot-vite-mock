@@ -561,3 +561,335 @@ describe('AIServiceExternalStrategyValidator', () => {
     });
   });
 }); 
+
+import { AIServiceExternalStrategyValidator } from '../AIServiceExternalStrategyValidator';
+import { UserProfile } from '../../../../../types/user';
+
+describe('AIServiceExternalStrategyValidator', () => {
+  let validator: AIServiceExternalStrategyValidator;
+
+  beforeEach(() => {
+    validator = new AIServiceExternalStrategyValidator();
+  });
+
+  describe('validateUserProfile', () => {
+    it('should validate a complete UserProfile with optional fields', () => {
+      const userProfile: UserProfile = {
+        fitnessLevel: 'intermediate',
+        goals: ['strength', 'endurance'],
+        preferences: {
+          workoutStyle: ['strength_training', 'cardio'],
+          timePreference: 'morning',
+          intensityPreference: 'moderate',
+          advancedFeatures: false,
+          aiAssistanceLevel: 'moderate'
+        },
+        basicLimitations: {
+          injuries: [],
+          availableEquipment: ['dumbbells', 'bodyweight'],
+          availableLocations: ['home', 'gym']
+        },
+        enhancedLimitations: {
+          timeConstraints: 30,
+          equipmentConstraints: ['dumbbells', 'bodyweight'],
+          locationConstraints: ['home', 'gym'],
+          recoveryNeeds: {
+            restDays: 2,
+            sleepHours: 8,
+            hydrationLevel: 'moderate'
+          },
+          mobilityLimitations: [],
+          progressionRate: 'moderate'
+        },
+        workoutHistory: {
+          estimatedCompletedWorkouts: 50,
+          averageDuration: 30,
+          preferredFocusAreas: ['strength', 'cardio'],
+          progressiveEnhancementUsage: {},
+          aiRecommendationAcceptance: 0.7,
+          consistencyScore: 0.8,
+          plateauRisk: 'low'
+        },
+        learningProfile: {
+          prefersSimplicity: false,
+          explorationTendency: 'moderate',
+          feedbackPreference: 'detailed',
+          learningStyle: 'mixed',
+          motivationType: 'intrinsic',
+          adaptationSpeed: 'moderate'
+        },
+        // Optional personal metrics
+        age: 30,
+        height: 175,
+        weight: 70,
+        gender: 'male'
+      };
+
+      const result = (validator as any).validateUserProfile(userProfile);
+      expect(result).toBe(true);
+    });
+
+    it('should validate a UserProfile without optional fields', () => {
+      const userProfile: UserProfile = {
+        fitnessLevel: 'beginner',
+        goals: ['strength'],
+        preferences: {
+          workoutStyle: ['strength_training'],
+          timePreference: 'morning',
+          intensityPreference: 'moderate',
+          advancedFeatures: false,
+          aiAssistanceLevel: 'moderate'
+        },
+        basicLimitations: {
+          injuries: [],
+          availableEquipment: ['bodyweight'],
+          availableLocations: ['home']
+        },
+        enhancedLimitations: {
+          timeConstraints: 30,
+          equipmentConstraints: ['bodyweight'],
+          locationConstraints: ['home'],
+          recoveryNeeds: {
+            restDays: 2,
+            sleepHours: 8,
+            hydrationLevel: 'moderate'
+          },
+          mobilityLimitations: [],
+          progressionRate: 'moderate'
+        },
+        workoutHistory: {
+          estimatedCompletedWorkouts: 0,
+          averageDuration: 30,
+          preferredFocusAreas: [],
+          progressiveEnhancementUsage: {},
+          aiRecommendationAcceptance: 0.7,
+          consistencyScore: 0.5,
+          plateauRisk: 'low'
+        },
+        learningProfile: {
+          prefersSimplicity: true,
+          explorationTendency: 'moderate',
+          feedbackPreference: 'simple',
+          learningStyle: 'visual',
+          motivationType: 'intrinsic',
+          adaptationSpeed: 'moderate'
+        }
+        // No optional fields
+      };
+
+      const result = (validator as any).validateUserProfile(userProfile);
+      expect(result).toBe(true);
+    });
+
+    it('should validate a UserProfile with partial optional fields', () => {
+      const userProfile: UserProfile = {
+        fitnessLevel: 'advanced',
+        goals: ['strength'],
+        preferences: {
+          workoutStyle: ['strength_training'],
+          timePreference: 'morning',
+          intensityPreference: 'moderate',
+          advancedFeatures: false,
+          aiAssistanceLevel: 'moderate'
+        },
+        basicLimitations: {
+          injuries: [],
+          availableEquipment: ['dumbbells'],
+          availableLocations: ['home']
+        },
+        enhancedLimitations: {
+          timeConstraints: 30,
+          equipmentConstraints: ['dumbbells'],
+          locationConstraints: ['home'],
+          recoveryNeeds: {
+            restDays: 2,
+            sleepHours: 8,
+            hydrationLevel: 'moderate'
+          },
+          mobilityLimitations: [],
+          progressionRate: 'moderate'
+        },
+        workoutHistory: {
+          estimatedCompletedWorkouts: 50,
+          averageDuration: 30,
+          preferredFocusAreas: ['strength'],
+          progressiveEnhancementUsage: {},
+          aiRecommendationAcceptance: 0.7,
+          consistencyScore: 0.8,
+          plateauRisk: 'low'
+        },
+        learningProfile: {
+          prefersSimplicity: false,
+          explorationTendency: 'moderate',
+          feedbackPreference: 'detailed',
+          learningStyle: 'mixed',
+          motivationType: 'intrinsic',
+          adaptationSpeed: 'moderate'
+        },
+        // Only some optional fields
+        age: 25,
+        gender: 'female'
+        // height and weight are undefined
+      };
+
+      const result = (validator as any).validateUserProfile(userProfile);
+      expect(result).toBe(true);
+    });
+
+    it('should reject invalid age values', () => {
+      const userProfile: UserProfile = {
+        fitnessLevel: 'expert',
+        goals: ['strength'],
+        preferences: {
+          workoutStyle: ['strength_training'],
+          timePreference: 'morning',
+          intensityPreference: 'moderate',
+          advancedFeatures: false,
+          aiAssistanceLevel: 'moderate'
+        },
+        basicLimitations: {
+          injuries: [],
+          availableEquipment: ['dumbbells'],
+          availableLocations: ['home']
+        },
+        enhancedLimitations: {
+          timeConstraints: 30,
+          equipmentConstraints: ['dumbbells'],
+          locationConstraints: ['home'],
+          recoveryNeeds: {
+            restDays: 2,
+            sleepHours: 8,
+            hydrationLevel: 'moderate'
+          },
+          mobilityLimitations: [],
+          progressionRate: 'moderate'
+        },
+        workoutHistory: {
+          estimatedCompletedWorkouts: 50,
+          averageDuration: 30,
+          preferredFocusAreas: ['strength'],
+          progressiveEnhancementUsage: {},
+          aiRecommendationAcceptance: 0.7,
+          consistencyScore: 0.8,
+          plateauRisk: 'low'
+        },
+        learningProfile: {
+          prefersSimplicity: false,
+          explorationTendency: 'moderate',
+          feedbackPreference: 'detailed',
+          learningStyle: 'mixed',
+          motivationType: 'intrinsic',
+          adaptationSpeed: 'moderate'
+        },
+        age: -5 // Invalid age (negative)
+      };
+
+      const result = (validator as any).validateUserProfile(userProfile);
+      expect(result).toBe(false);
+    });
+
+    it('should reject invalid height values', () => {
+      const userProfile: UserProfile = {
+        fitnessLevel: 'intermediate',
+        goals: ['strength'],
+        preferences: {
+          workoutStyle: ['strength_training'],
+          timePreference: 'morning',
+          intensityPreference: 'moderate',
+          advancedFeatures: false,
+          aiAssistanceLevel: 'moderate'
+        },
+        basicLimitations: {
+          injuries: [],
+          availableEquipment: ['dumbbells'],
+          availableLocations: ['home']
+        },
+        enhancedLimitations: {
+          timeConstraints: 30,
+          equipmentConstraints: ['dumbbells'],
+          locationConstraints: ['home'],
+          recoveryNeeds: {
+            restDays: 2,
+            sleepHours: 8,
+            hydrationLevel: 'moderate'
+          },
+          mobilityLimitations: [],
+          progressionRate: 'moderate'
+        },
+        workoutHistory: {
+          estimatedCompletedWorkouts: 50,
+          averageDuration: 30,
+          preferredFocusAreas: ['strength'],
+          progressiveEnhancementUsage: {},
+          aiRecommendationAcceptance: 0.7,
+          consistencyScore: 0.8,
+          plateauRisk: 'low'
+        },
+        learningProfile: {
+          prefersSimplicity: false,
+          explorationTendency: 'moderate',
+          feedbackPreference: 'detailed',
+          learningStyle: 'mixed',
+          motivationType: 'intrinsic',
+          adaptationSpeed: 'moderate'
+        },
+        height: 50 // Invalid height (too short)
+      };
+
+      const result = (validator as any).validateUserProfile(userProfile);
+      expect(result).toBe(false);
+    });
+
+    it('should reject invalid weight values', () => {
+      const userProfile: UserProfile = {
+        fitnessLevel: 'intermediate',
+        goals: ['strength'],
+        preferences: {
+          workoutStyle: ['strength_training'],
+          timePreference: 'morning',
+          intensityPreference: 'moderate',
+          advancedFeatures: false,
+          aiAssistanceLevel: 'moderate'
+        },
+        basicLimitations: {
+          injuries: [],
+          availableEquipment: ['dumbbells'],
+          availableLocations: ['home']
+        },
+        enhancedLimitations: {
+          timeConstraints: 30,
+          equipmentConstraints: ['dumbbells'],
+          locationConstraints: ['home'],
+          recoveryNeeds: {
+            restDays: 2,
+            sleepHours: 8,
+            hydrationLevel: 'moderate'
+          },
+          mobilityLimitations: [],
+          progressionRate: 'moderate'
+        },
+        workoutHistory: {
+          estimatedCompletedWorkouts: 50,
+          averageDuration: 30,
+          preferredFocusAreas: ['strength'],
+          progressiveEnhancementUsage: {},
+          aiRecommendationAcceptance: 0.7,
+          consistencyScore: 0.8,
+          plateauRisk: 'low'
+        },
+        learningProfile: {
+          prefersSimplicity: false,
+          explorationTendency: 'moderate',
+          feedbackPreference: 'detailed',
+          learningStyle: 'mixed',
+          motivationType: 'intrinsic',
+          adaptationSpeed: 'moderate'
+        },
+        weight: 500 // Invalid weight (too heavy)
+      };
+
+      const result = (validator as any).validateUserProfile(userProfile);
+      expect(result).toBe(false);
+    });
+  });
+}); 

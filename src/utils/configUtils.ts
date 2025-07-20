@@ -233,26 +233,21 @@ export const createExerciseSelectionConfig = (
 }); 
 
 /**
- * Maps UI experience level values to AI service fitness levels by converting to lowercase
- * This preserves the meaning while making them compatible with AI services
- * Also handles legacy 'Beginner' value migration
+ * Maps UI experience level values to AI service fitness levels
+ * This converts the UI experience levels to the standardized FitnessLevel type
  */
 export const mapExperienceLevelToFitnessLevel = (experienceLevel: string): FitnessLevel => {
-  // Handle legacy 'Beginner' value migration
-  if (experienceLevel === 'Beginner') {
-    console.warn('⚠️ Legacy experience level "Beginner" detected, migrating to "New to Exercise"');
-    return 'new to exercise';
+  switch (experienceLevel.toLowerCase()) {
+    case 'new to exercise':
+      return 'beginner';
+    case 'some experience':
+      return 'intermediate';
+    case 'advanced athlete':
+      return 'advanced';
+    default:
+      console.warn(`⚠️ Unknown experience level: ${experienceLevel}, defaulting to "intermediate"`);
+      return 'intermediate';
   }
-  
-  // Handle valid experience levels
-  const normalized = experienceLevel.toLowerCase();
-  if (['new to exercise', 'some experience', 'advanced athlete'].includes(normalized)) {
-    return normalized as FitnessLevel;
-  }
-  
-  // Fallback for unknown values
-  console.warn(`⚠️ Unknown experience level: ${experienceLevel}, defaulting to "some experience"`);
-  return 'some experience';
 };
 
 /**
@@ -262,16 +257,16 @@ export const mapExperienceLevelToFitnessLevel = (experienceLevel: string): Fitne
 export const mapFitnessLevelToExperienceLevel = (fitnessLevel: string): string => {
   // Convert back to proper case for UI display
   switch (fitnessLevel.toLowerCase()) {
-    case 'new to exercise':
-      return 'New to Exercise';
-    case 'some experience':
-      return 'Some Experience';
-    case 'advanced athlete':
-      return 'Advanced Athlete';
     case 'beginner':
-      // Handle legacy 'beginner' value
-      console.warn('⚠️ Legacy fitness level "beginner" detected, mapping to "New to Exercise"');
       return 'New to Exercise';
+    case 'novice':
+      return 'Some Experience';
+    case 'intermediate':
+      return 'Some Experience';
+    case 'advanced':
+      return 'Advanced Athlete';
+    case 'adaptive':
+      return 'Some Experience'; // Adaptive maps to some experience for UI
     default:
       console.warn(`⚠️ Unknown fitness level: ${fitnessLevel}, defaulting to "Some Experience"`);
       return 'Some Experience';

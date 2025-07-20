@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAI, useAIRecommendations, useAIInsights, useAIHealth, useMigrationStatus } from '../../contexts/AIContext';
 import { UserProfile, PerWorkoutOptions } from '../../types';
-import { migrationUtils } from '../../services/ai/migration/MigrationUtils';
+
 import { dataTransformers } from '../../utils/dataTransformers';
 
 /**
@@ -405,7 +405,7 @@ export const MigrationControlPanel: React.FC = () => {
   
   const handleRolloutChange = (percentage: number) => {
     setRolloutPercentage(percentage);
-    migrationUtils.setRolloutPercentage(percentage);
+            // Rollout percentage setting removed - no longer needed
   };
   
   return (

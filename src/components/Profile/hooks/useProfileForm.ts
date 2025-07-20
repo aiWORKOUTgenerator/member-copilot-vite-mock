@@ -2,7 +2,6 @@ import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useEnhancedPersistedState } from '../../../hooks/usePersistedState';
 import { ProfileData, ProfileFormHookReturn } from '../types/profile.types';
 import { calculateCompletionPercentage } from '../utils/profileHelpers';
-import { migrateProfileData } from '../../../utils/migrationUtils';
 
 // Default profile data with proper default values
 const defaultProfileData: ProfileData = {
@@ -26,7 +25,7 @@ const defaultProfileData: ProfileData = {
 
 export const useProfileForm = (): ProfileFormHookReturn => {
   const {
-    state: rawProfileData,
+    state: profileData,
     setState: setProfileData,
     metadata,
     hasUnsavedChanges,
@@ -36,9 +35,6 @@ export const useProfileForm = (): ProfileFormHookReturn => {
     defaultProfileData,
     { debounceDelay: 500 } // Faster debounce for better responsiveness
   );
-
-  // Ensure profile data is properly migrated
-  const profileData = useMemo(() => migrateProfileData(rawProfileData), [rawProfileData]);
   
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [touchedFields, setTouchedFields] = useState<string[]>([]);

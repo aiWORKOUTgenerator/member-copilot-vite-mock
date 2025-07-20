@@ -1,8 +1,14 @@
 import React from 'react';
-import { Activity, AlertCircle } from 'lucide-react';
+import { Activity, AlertCircle, Calculator } from 'lucide-react';
 import { StepProps } from '../../types/profile.types';
 import { OptionGrid, OptionConfig } from '../../shared';
 import ProfileHeader from '../ProfileHeader';
+import { 
+  calculateFitnessLevel, 
+  getFitnessLevelDescription, 
+  getFitnessLevelIntensityRange,
+  type FitnessLevel 
+} from '../../../../utils/fitnessLevelCalculator';
 
 const ExperienceStep: React.FC<StepProps> = ({ 
   profileData, 
@@ -11,6 +17,22 @@ const ExperienceStep: React.FC<StepProps> = ({
 }) => {
   const [showExperienceInfo, setShowExperienceInfo] = React.useState(false);
   const [showActivityInfo, setShowActivityInfo] = React.useState(false);
+  const [showFitnessLevelInfo, setShowFitnessLevelInfo] = React.useState(false);
+
+  // Calculate fitness level when both experience and activity are selected
+  const calculatedFitnessLevel: FitnessLevel | null = React.useMemo(() => {
+    if (profileData.experienceLevel && profileData.physicalActivity) {
+      return calculateFitnessLevel(profileData.experienceLevel, profileData.physicalActivity);
+    }
+    return null;
+  }, [profileData.experienceLevel, profileData.physicalActivity]);
+
+  // Save calculated fitness level to profile data when it changes
+  React.useEffect(() => {
+    if (calculatedFitnessLevel && calculatedFitnessLevel !== profileData.calculatedFitnessLevel) {
+      onInputChange('calculatedFitnessLevel', calculatedFitnessLevel);
+    }
+  }, [calculatedFitnessLevel, profileData.calculatedFitnessLevel, onInputChange]);
 
   const experienceOptions: OptionConfig[] = [
     {
@@ -181,8 +203,74 @@ const ExperienceStep: React.FC<StepProps> = ({
           </div>
         </div>
 
+        {/* Calculated Fitness Level Display */}
+        {calculatedFitnessLevel && (
+          <div className="border-2 border-green-200 bg-green-50 rounded-lg p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Calculator className="w-5 h-5 text-green-600" />
+              <div className="inline-block px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-medium rounded-md shadow-sm">
+                Calculated Fitness Level
+              </div>
+              <button 
+                onClick={() => setShowFitnessLevelInfo(prev => !prev)}
+                className="p-1 rounded-full hover:bg-green-100 transition-colors"
+                aria-label="Toggle fitness level information"
+              >
+                <AlertCircle className="w-4 h-4 text-green-400 hover:text-green-600 transition-colors" />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <h3 className="text-xl font-bold text-green-800 mb-2 capitalize">
+                {calculatedFitnessLevel}
+              </h3>
+              <p className="text-green-700">
+                {getFitnessLevelDescription(calculatedFitnessLevel)}
+              </p>
+            </div>
+
+            {/* Fitness Level Information Panel */}
+            <div className={`mb-4 bg-white border border-green-200 rounded-lg p-4 ${showFitnessLevelInfo ? 'block' : 'hidden'}`}>
+              <div className="prose prose-sm max-w-none">
+                <h4 className="text-green-800 font-semibold mb-3">How We Calculated Your Fitness Level</h4>
+                <p className="text-gray-700 mb-4">
+                  Your fitness level is calculated by combining your experience level with your current activity level. This gives us a more accurate picture than either factor alone.
+                </p>
+                <div className="space-y-2">
+                  <p className="text-gray-700">Your inputs:</p>
+                  <ul className="list-none pl-4 space-y-1">
+                    <li className="flex items-start">
+                      <span className="text-green-600 mr-2">•</span>
+                      <strong>Experience:</strong> {profileData.experienceLevel}
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-green-600 mr-2">•</span>
+                      <strong>Activity:</strong> {profileData.physicalActivity}
+                    </li>
+                  </ul>
+                </div>
+                <div className="mt-4 p-3 bg-green-100 rounded-lg">
+                  <p className="text-green-800 text-sm">
+                    <strong>Recommended Intensity Range:</strong> {getFitnessLevelIntensityRange(calculatedFitnessLevel).min}-{getFitnessLevelIntensityRange(calculatedFitnessLevel).max}/10
+                  </p>
+                  <p className="text-green-700 text-sm mt-1">
+                    {getFitnessLevelIntensityRange(calculatedFitnessLevel).description}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center">
+              <Activity className="w-5 h-5 text-green-600 mr-3" />
+              <span className="text-green-800 font-medium">
+                Perfect! We'll tailor your workouts to match your calculated fitness level.
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Progress Indication */}
-        {profileData.experienceLevel && profileData.physicalActivity && (
+        {profileData.experienceLevel && profileData.physicalActivity && !calculatedFitnessLevel && (
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-center">
               <Activity className="w-5 h-5 text-blue-600 mr-3" />

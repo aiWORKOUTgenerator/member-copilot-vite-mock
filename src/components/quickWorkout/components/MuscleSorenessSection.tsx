@@ -15,7 +15,7 @@ export const MuscleSorenessSection: React.FC<SectionProps> = ({
   _aiContext, // Prefix with _ to indicate intentionally unused
   userProfile
 }) => {
-  const { aiService, serviceStatus } = useAI();
+  const { getSorenessInsights, serviceStatus } = useAI();
 
   const handleSorenessChange = (value: number) => {
     onInputChange('sorenessLevel', value);
@@ -43,11 +43,9 @@ export const MuscleSorenessSection: React.FC<SectionProps> = ({
     }
 
     try {
-      // Use the new AI service
-      // Note: The service expects an array of sore areas, but we're working with a numeric rating
-      // For now, we'll convert the numeric rating to a simple array format
-      const sorenessAreas = value > 3 ? ['General'] : [];
-      const insights = aiService.getSorenessInsights(sorenessAreas);
+      // Use the AIContext method instead of calling aiService directly
+      // The AIContext handles the conversion from number to array format internally
+      const insights = getSorenessInsights(value);
       return insights;
     } catch (error) {
       logger.error('Failed to generate soreness insights:', error);
@@ -75,7 +73,7 @@ export const MuscleSorenessSection: React.FC<SectionProps> = ({
           <div className="flex items-center gap-2">
             <h3 className="text-xl font-semibold text-gray-900">Muscle Soreness</h3>
             {typeof focusData.sorenessLevel === 'number' && focusData.sorenessLevel > 0 && (
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
                 Level {focusData.sorenessLevel}
               </span>
             )}
@@ -85,7 +83,7 @@ export const MuscleSorenessSection: React.FC<SectionProps> = ({
           </div>
           {viewMode === 'complex' && (
             <p className="text-sm text-gray-600 mt-1">
-              How sore or fatigued are your muscles today?
+              How sore are your muscles today?
             </p>
           )}
         </div>
@@ -95,7 +93,7 @@ export const MuscleSorenessSection: React.FC<SectionProps> = ({
 
   const currentSorenessLevel = typeof focusData.sorenessLevel === 'number' 
     ? focusData.sorenessLevel 
-    : 0; // Show 0 initially, not DEFAULT_SORENESS_LEVEL
+    : 0;
 
   const renderRatingScale = () => (
     <RatingScaleWrapper
@@ -106,18 +104,18 @@ export const MuscleSorenessSection: React.FC<SectionProps> = ({
         min: 1,
         max: 10,
         labels: {
-          low: 'No Soreness',
-          high: 'Very Sore',
+          low: 'Low Soreness',
+          high: 'High Soreness',
           scale: viewMode === 'simple' ? [] : [
-            'None',
+            'No Soreness',
             'Very Mild',
             'Mild',
-            'Mild-Moderate',
+            'Slight',
             'Moderate',
-            'Moderate-High',
+            'Noticeable',
+            'Significant',
             'High',
             'Very High',
-            'Severe',
             'Extreme'
           ]
         },
@@ -129,23 +127,10 @@ export const MuscleSorenessSection: React.FC<SectionProps> = ({
       userProfile={userProfile}
       aiContext={{
         currentSelections: {
-          customization_soreness: {
-            general: {
-              selected: true,
-              rating: currentSorenessLevel,
-              label: 'General Muscle Soreness',
-              description: 'Overall body muscle soreness level',
-              metadata: {
-                severity: currentSorenessLevel >= 8 ? 'severe' : 
-                         currentSorenessLevel >= 6 ? 'moderate' :
-                         'mild',
-                affectedActivities: ['strength_training', 'cardio', 'flexibility']
-              }
-            }
-          }
+          customization_soreness: currentSorenessLevel
         },
         userProfile: userProfile ?? {
-          fitnessLevel: 'some experience',
+          fitnessLevel: 'intermediate' as const,
           goals: ['general_fitness'],
           preferences: {
             workoutStyle: ['balanced'],

@@ -153,8 +153,8 @@ export class AIServiceExternalStrategyValidator extends AIServiceComponent {
       return false;
     }
 
-    // Check for required fields
-    const requiredFields = ['fitnessLevel', 'age', 'weight', 'height'];
+    // Check for required fields (age, weight, height are now optional)
+    const requiredFields = ['fitnessLevel'];
     const missingFields = requiredFields.filter(field => 
       !(field in profile) || profile[field as keyof UserProfile] === undefined
     );
@@ -176,11 +176,11 @@ export class AIServiceExternalStrategyValidator extends AIServiceComponent {
       return false;
     }
 
-    // Validate numeric fields
-    const numericFields = ['age', 'weight', 'height'];
-    const invalidNumericFields = numericFields.filter(field => {
+    // Validate optional numeric fields (only if present)
+    const optionalNumericFields = ['age', 'weight', 'height'];
+    const invalidNumericFields = optionalNumericFields.filter(field => {
       const value = profile[field as keyof UserProfile];
-      return typeof value !== 'number' || value <= 0;
+      return value !== undefined && (typeof value !== 'number' || value <= 0);
     });
 
     if (invalidNumericFields.length > 0) {

@@ -10,7 +10,7 @@ import {
 } from '../types/enhanced-workout-types';
 import { CustomizationWrapper } from './shared/DRYComponents';
 import { WORKOUT_CUSTOMIZATION_CONFIG, generateStepsFromConfig } from '../config/workoutCustomizationConfig';
-import { migrationUtils } from '../utils/migrationUtils';
+
 import { useAI } from '../contexts/AIContext';
 
 interface DetailedWorkoutContainerProps {
@@ -256,9 +256,7 @@ const DetailedWorkoutContainer = memo(function DetailedWorkoutContainer({
   // Progressive enhancement management
   const handleEnhancementToggle = useCallback((configKey: string, enhance: boolean) => {
     const currentValue = options[configKey as keyof PerWorkoutOptions];
-    const newValue = enhance 
-      ? migrationUtils.migrateToComplexStructure(configKey, currentValue)
-      : migrationUtils.migrateToSimpleStructure(configKey, currentValue);
+    const newValue = enhance ? currentValue : currentValue;
 
     setProgressiveEnhancements(prev => ({ ...prev, [configKey]: enhance }));
     handleChange(configKey as keyof PerWorkoutOptions, newValue);
@@ -551,7 +549,7 @@ const DetailedWorkoutContainer = memo(function DetailedWorkoutContainer({
             const CustomizationComponent = config.component;
             const value = options[config.key];
             const error = errors[config.key];
-            const isEnhanced = progressiveEnhancements[config.key] || migrationUtils.isComplexObject(value);
+            const isEnhanced = progressiveEnhancements[config.key] || (typeof value === 'object' && value !== null && !Array.isArray(value));
 
             return (
               <CustomizationWrapper

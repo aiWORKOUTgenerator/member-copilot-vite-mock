@@ -47,17 +47,23 @@ export class WorkoutEnhancer {
    * Add fitness level appropriate notes
    */
   private static addFitnessLevelNotes(workout: GeneratedWorkout, request: WorkoutGenerationRequest): void {
-    if (request.userProfile.fitnessLevel === 'new to exercise') {
+    if (request.userProfile.fitnessLevel === 'beginner' || request.userProfile.fitnessLevel === 'novice') {
       workout.personalizedNotes.push(
         'Focus on proper form rather than speed',
         'Take breaks whenever needed',
         'Build consistency before increasing intensity'
       );
-    } else if (request.userProfile.fitnessLevel === 'advanced athlete') {
+    } else if (request.userProfile.fitnessLevel === 'advanced') {
       workout.personalizedNotes.push(
         'Challenge yourself with perfect form',
         'Consider adding resistance or complexity',
         'Track your progress for continuous improvement'
+      );
+    } else if (request.userProfile.fitnessLevel === 'adaptive') {
+      workout.personalizedNotes.push(
+        'Adjust intensity based on your current energy and recovery',
+        'Listen to your body and modify as needed',
+        'Focus on consistency over intensity today'
       );
     }
   }

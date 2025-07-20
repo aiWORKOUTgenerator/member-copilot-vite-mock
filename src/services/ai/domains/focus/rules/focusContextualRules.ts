@@ -68,12 +68,12 @@ export const CONTEXTUAL_RULES: FocusInsightRule[] = [
   {
     condition: (value, context) => {
       const fitnessLevel = context.userProfile.fitnessLevel;
-      return !!value && value === 'power' && fitnessLevel === 'new to exercise';
+      return !!value && value === 'power' && (fitnessLevel === 'beginner' || fitnessLevel === 'novice');
     },
     generateInsight: (_value, _context) => ({
-      id: generateInsightId('power_new_to_exercise'),
+      id: generateInsightId('power_beginner'),
       type: 'warning',
-      message: 'Power focus as someone new to exercise - ensure proper form foundation first',
+      message: 'Power focus as a beginner - ensure proper form foundation first',
       confidence: 0.9,
       actionable: true,
       relatedFields: ['customization_focus'],

@@ -289,7 +289,7 @@ export const isValidProfileData = (data: any): data is ProfileData => {
  * Type guard for UserProfile fitness level
  */
 export const isValidFitnessLevel = (level: any): level is FitnessLevel => {
-  return ['new to exercise', 'some experience', 'advanced athlete'].includes(level);
+  return ['beginner', 'novice', 'intermediate', 'advanced', 'adaptive'].includes(level);
 };
 
 /**
@@ -337,7 +337,12 @@ export const isValidUserProfile = (profile: any): profile is UserProfile => {
     typeof profile.learningProfile.feedbackPreference === 'string' &&
     typeof profile.learningProfile.learningStyle === 'string' &&
     typeof profile.learningProfile.motivationType === 'string' &&
-    typeof profile.learningProfile.adaptationSpeed === 'string'
+    typeof profile.learningProfile.adaptationSpeed === 'string' &&
+    // Optional personal metrics validation
+    (profile.age === undefined || typeof profile.age === 'number') &&
+    (profile.weight === undefined || typeof profile.weight === 'number') &&
+    (profile.height === undefined || typeof profile.height === 'number') &&
+    (profile.gender === undefined || ['male', 'female', 'other', 'prefer-not-to-say'].includes(profile.gender))
   );
 };
 
@@ -351,13 +356,25 @@ export const isValidUserProfile = (profile: any): profile is UserProfile => {
 export const validateProfileConversion = (profileData: ProfileData, userProfile: UserProfile): boolean => {
   try {
     // Validate that fitness level was converted correctly
-    const expectedFitnessLevel = profileData.experienceLevel.toLowerCase() as FitnessLevel;
-    if (userProfile.fitnessLevel !== expectedFitnessLevel) {
-      console.warn('Fitness level conversion mismatch:', {
-        expected: expectedFitnessLevel,
-        actual: userProfile.fitnessLevel
-      });
-      return false;
+    // Use calculated fitness level if available, otherwise validate the conversion
+    if (profileData.calculatedFitnessLevel) {
+      if (userProfile.fitnessLevel !== profileData.calculatedFitnessLevel) {
+        console.warn('Fitness level mismatch with calculated value:', {
+          expected: profileData.calculatedFitnessLevel,
+          actual: userProfile.fitnessLevel
+        });
+        return false;
+      }
+    } else {
+      // Fallback validation for legacy conversion
+      const expectedFitnessLevel = profileData.experienceLevel.toLowerCase() as FitnessLevel;
+      if (userProfile.fitnessLevel !== expectedFitnessLevel) {
+        console.warn('Fitness level conversion mismatch:', {
+          expected: expectedFitnessLevel,
+          actual: userProfile.fitnessLevel
+        });
+        return false;
+      }
     }
 
     // Validate that goals were converted

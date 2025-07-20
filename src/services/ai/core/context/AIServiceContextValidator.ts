@@ -49,7 +49,6 @@ export class AIServiceContextValidator extends AIServiceComponent {
     // Validate required fields
     this.validateRequired(userProfile.fitnessLevel, 'fitnessLevel');
     this.validateRequired(userProfile.goals, 'goals');
-    this.validateRequired(userProfile.age, 'age');
 
     // Validate fitness level
     const validFitnessLevels = ['beginner', 'intermediate', 'advanced', 'expert'];
@@ -60,8 +59,10 @@ export class AIServiceContextValidator extends AIServiceComponent {
       throw new Error('User goals must be a non-empty array');
     }
 
-    // Validate age range
-    this.validateRange(userProfile.age, 13, 100, 'age');
+    // Validate age if present (now optional)
+    if (userProfile.age !== undefined) {
+      this.validateRange(userProfile.age, 13, 100, 'age');
+    }
 
     // Validate gender (optional but if present, must be valid)
     if (userProfile.gender) {
@@ -71,18 +72,20 @@ export class AIServiceContextValidator extends AIServiceComponent {
 
     // Validate height (optional but if present, must be reasonable)
     if (userProfile.height) {
-      this.validateRange(parseFloat(userProfile.height), 100, 250, 'height (cm)');
+      this.validateRange(userProfile.height, 100, 250, 'height (cm)');
     }
 
     // Validate weight (optional but if present, must be reasonable)
     if (userProfile.weight) {
-      this.validateRange(parseFloat(userProfile.weight), 30, 300, 'weight (kg)');
+      this.validateRange(userProfile.weight, 30, 300, 'weight (kg)');
     }
 
     this.log('debug', 'User profile validation passed', {
       fitnessLevel: userProfile.fitnessLevel,
       goalsCount: userProfile.goals.length,
-      age: userProfile.age
+      age: userProfile.age,
+      hasHeight: userProfile.height !== undefined,
+      hasWeight: userProfile.weight !== undefined
     });
 
     return true;

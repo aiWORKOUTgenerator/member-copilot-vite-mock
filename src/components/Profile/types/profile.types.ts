@@ -3,6 +3,7 @@ export type ProfileData = {
   // Experience & Activity
   experienceLevel: 'New to Exercise' | 'Some Experience' | 'Advanced Athlete';
   physicalActivity: 'sedentary' | 'light' | 'moderate' | 'very' | 'extremely' | 'varies';
+  calculatedFitnessLevel?: 'beginner' | 'novice' | 'intermediate' | 'advanced' | 'adaptive';
   
   // Time & Commitment
   preferredDuration: '15-30 min' | '30-45 min' | '45-60 min' | '60+ min';

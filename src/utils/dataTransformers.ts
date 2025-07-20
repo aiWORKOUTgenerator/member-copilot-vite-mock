@@ -419,7 +419,8 @@ export const profileTransformers = {
       // Skip the full ProfileData validation since we're only using a subset
 
       // Convert core data with defensive programming
-      const fitnessLevel = profileTransformers.convertExperienceToFitnessLevel(profileData.experienceLevel);
+      // Use calculated fitness level if available, otherwise fall back to conversion from experience level
+      const fitnessLevel = profileData.calculatedFitnessLevel || profileTransformers.convertExperienceToFitnessLevel(profileData.experienceLevel);
       const primaryGoal = profileTransformers.convertPrimaryGoal(profileData.primaryGoal);
       const workoutStyle = profileTransformers.convertGoalToWorkoutStyle(profileData.primaryGoal);
       const intensityPreference = profileTransformers.convertExperienceToIntensity(profileData.experienceLevel);
@@ -432,6 +433,59 @@ export const profileTransformers = {
       const durationParts = profileData.preferredDuration?.split('-') || ['30', '60'];
       const minDuration = parseInt(durationParts[0]) || 30;
       const maxDuration = parseInt(durationParts[1]) || 60;
+
+      // Convert optional personal metrics
+      let age: number | undefined;
+      if (profileData.age) {
+        const ageRange = profileData.age.split('-');
+        if (ageRange.length === 2) {
+          age = Math.floor((parseInt(ageRange[0]) + parseInt(ageRange[1])) / 2);
+        } else if (ageRange[0] === '65+') {
+          age = 70; // Default for 65+
+        }
+      }
+
+      // Convert height and weight to numbers if present
+      let height: number | undefined;
+      let weight: number | undefined;
+      
+      if (profileData.height) {
+        // Handle both imperial and metric formats
+        const heightStr = profileData.height.toLowerCase();
+        if (heightStr.includes("'") && heightStr.includes('"')) {
+          // Imperial format: 5'8" -> convert to cm
+          const match = heightStr.match(/(\d+)'(\d+)"/);
+          if (match) {
+            const feet = parseInt(match[1]);
+            const inches = parseInt(match[2]);
+            height = Math.round((feet * 12 + inches) * 2.54);
+          }
+        } else if (heightStr.includes('cm')) {
+          // Metric format: 173cm
+          const match = heightStr.match(/(\d+)cm/);
+          if (match) {
+            height = parseInt(match[1]);
+          }
+        }
+      }
+
+      if (profileData.weight) {
+        // Handle both imperial and metric formats
+        const weightStr = profileData.weight.toLowerCase();
+        if (weightStr.includes('lbs') || weightStr.includes('lb')) {
+          // Imperial format: 150 lbs -> convert to kg
+          const match = weightStr.match(/(\d+)\s*lbs?/);
+          if (match) {
+            weight = Math.round(parseInt(match[1]) * 0.453592);
+          }
+        } else if (weightStr.includes('kg')) {
+          // Metric format: 68 kg
+          const match = weightStr.match(/(\d+)\s*kg/);
+          if (match) {
+            weight = parseInt(match[1]);
+          }
+        }
+      }
 
       const userProfile: UserProfile = {
         fitnessLevel,
@@ -476,7 +530,12 @@ export const profileTransformers = {
           learningStyle: 'visual',
           motivationType: 'intrinsic',
           adaptationSpeed: 'moderate'
-        }
+        },
+        // Add optional personal metrics
+        age,
+        height,
+        weight,
+        gender: profileData.gender
       };
 
       // Validate the converted profile

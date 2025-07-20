@@ -1,6 +1,6 @@
 // User Profile Type System
 
-export type FitnessLevel = 'new to exercise' | 'some experience' | 'advanced athlete';
+export type FitnessLevel = 'beginner' | 'novice' | 'intermediate' | 'advanced' | 'adaptive';
 export type TimePreference = 'morning' | 'afternoon' | 'evening';
 export type IntensityLevel = 'low' | 'moderate' | 'high';
 export type AIAssistanceLevel = 'minimal' | 'moderate' | 'comprehensive';
@@ -66,6 +66,12 @@ export interface UserProfile {
   goals: string[];
   preferences: UserPreferences;
   basicLimitations: UserBasicLimitations;
+  
+  // Optional personal metrics (from ProfileData)
+  age?: number;
+  weight?: number;
+  height?: number;
+  gender?: 'male' | 'female' | 'other' | 'prefer-not-to-say';
   
   // AI-generated enhanced data
   enhancedLimitations: AIEnhancedLimitations;

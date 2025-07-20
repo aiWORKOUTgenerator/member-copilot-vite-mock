@@ -81,8 +81,12 @@ describe('Profile Data Flow', () => {
     );
 
     // Verify ExperienceStep renders with correct data
-    expect(screen.getByText('New to Exercise')).toBeInTheDocument();
-    expect(screen.getByText('Light Activity')).toBeInTheDocument();
+    // Use getAllByText since "New to Exercise" appears in both the option grid and calculated fitness level
+    const experienceElements = screen.getAllByText('New to Exercise');
+    expect(experienceElements.length).toBeGreaterThan(0);
+    
+    const activityElements = screen.getAllByText('Light Activity');
+    expect(activityElements.length).toBeGreaterThan(0);
 
     // Now test the full flow through ProfilePage
     const mockOnNavigate = jest.fn();
