@@ -163,10 +163,28 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
 
       const generatedWorkout = await workoutGeneration.generateWorkout(request);
       
+      // 🔍 DEBUG: Log workout generation result
+      console.log('🔍 ReviewPage - Workout generation result:', {
+        hasGeneratedWorkout: !!generatedWorkout,
+        workoutId: generatedWorkout?.id,
+        workoutTitle: generatedWorkout?.title,
+        workoutKeys: generatedWorkout ? Object.keys(generatedWorkout) : 'N/A'
+      });
+      
       if (generatedWorkout) {
+        // 🔍 DEBUG: Log before calling onWorkoutGenerated
+        console.log('🔍 ReviewPage - Calling onWorkoutGenerated with workout:', {
+          workoutId: generatedWorkout.id,
+          workoutTitle: generatedWorkout.title
+        });
+        
         onWorkoutGenerated(generatedWorkout);
+        
+        // 🔍 DEBUG: Log before navigation
+        console.log('🔍 ReviewPage - Navigating to results page');
         onNavigate('results');
       } else {
+        console.error('🔍 ReviewPage - No workout generated, setting error');
         setGenerationError('Failed to generate workout. Please try again.');
       }
     } catch (error) {
@@ -456,7 +474,7 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
           ) : (
             <>
               <span className="text-lg">
-                {workoutType === 'quick' ? 'Generate Quick Workout' : 'Generate Detailed Workout'}
+                {workoutType === 'quick' ? 'Generate Workout' : 'Generate Detailed Workout'}
               </span>
               <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
             </>

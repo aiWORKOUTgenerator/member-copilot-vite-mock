@@ -155,7 +155,7 @@ GENERATE A COMPLETE WORKOUT with the following structure:
     "Signs to stop or modify"
   ],
   "generatedAt": "2024-current-timestamp",
-  "aiModel": "gpt-4-turbo",
+  "aiModel": "gpt-4o",
   "confidence": 0.85,
   "tags": ["relevant", "tags", "for", "categorization"]
 }

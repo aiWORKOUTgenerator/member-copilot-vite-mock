@@ -403,6 +403,18 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
         retryDelay
       );
 
+      // 🔍 DEBUG: Log successful generation
+      console.log('🔍 useWorkoutGeneration - Workout generated successfully:', {
+        hasWorkout: !!generatedWorkout,
+        workoutId: generatedWorkout?.id,
+        workoutTitle: generatedWorkout?.title,
+        totalDuration: generatedWorkout?.totalDuration,
+        hasWarmup: !!generatedWorkout?.warmup,
+        hasMainWorkout: !!generatedWorkout?.mainWorkout,
+        hasCooldown: !!generatedWorkout?.cooldown,
+        workoutKeys: generatedWorkout ? Object.keys(generatedWorkout) : 'N/A'
+      });
+
       updateProgress(80);
       setStatus('enhancing');
 
@@ -419,6 +431,16 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
         ]
       };
 
+      // 🔍 DEBUG: Log enhanced workout
+      console.log('🔍 useWorkoutGeneration - Enhanced workout ready:', {
+        hasEnhancedWorkout: !!enhancedWorkout,
+        enhancedWorkoutId: enhancedWorkout?.id,
+        enhancedWorkoutTitle: enhancedWorkout?.title,
+        generatedAt: enhancedWorkout?.generatedAt,
+        confidence: enhancedWorkout?.confidence,
+        tagsLength: enhancedWorkout?.tags?.length
+      });
+
       updateProgress(100);
       setStatus('complete');
 
@@ -431,8 +453,13 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
         generationProgress: 100,
         lastGenerated: new Date()
       }));
-      setRetryCount(0);
-      setLastError(null);
+
+      // 🔍 DEBUG: Log state update
+      console.log('🔍 useWorkoutGeneration - State updated with generated workout:', {
+        isGenerating: false,
+        hasGeneratedWorkout: !!enhancedWorkout,
+        workoutInState: !!enhancedWorkout
+      });
 
       if (enableDetailedLogging) {
         logger.info('Workout generation completed successfully', { 

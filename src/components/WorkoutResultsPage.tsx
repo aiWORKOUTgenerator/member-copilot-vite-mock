@@ -18,6 +18,18 @@ const WorkoutResultsPage: React.FC<WorkoutResultsPageProps> = ({
   workoutGeneration,
   onWorkoutUpdate 
 }) => {
+  // 🔍 DEBUG: Log what WorkoutResultsPage receives
+  console.log('🔍 WorkoutResultsPage - Component rendered with props:', {
+    hasGeneratedWorkout: !!generatedWorkout,
+    workoutId: generatedWorkout?.id,
+    workoutTitle: generatedWorkout?.title,
+    workoutKeys: generatedWorkout ? Object.keys(generatedWorkout) : 'N/A',
+    isGenerating: workoutGeneration.isGenerating,
+    hasError: workoutGeneration.hasError,
+    status: workoutGeneration.status,
+    error: workoutGeneration.state.error
+  });
+  
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState<'idle' | 'downloading' | 'complete'>('idle');
   const [shareStatus, setShareStatus] = useState<'idle' | 'sharing' | 'complete'>('idle');

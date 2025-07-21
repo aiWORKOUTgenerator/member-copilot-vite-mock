@@ -237,17 +237,103 @@ export class OpenAIService {
 
   private parseResponseContent(response: OpenAIResponse): unknown {
     const content = response.choices?.[0]?.message?.content;
+    
+    // 🔍 DEBUG: Log the raw response content
+    console.log('🔍 OpenAIService.parseResponseContent - Raw response:', {
+      hasChoices: !!response.choices,
+      choicesLength: response.choices?.length,
+      hasContent: !!content,
+      contentLength: content?.length,
+      contentPreview: content?.substring(0, 200) + '...'
+    });
+    
+    // 🔍 DEBUG: Log the full content for debugging (truncated if too long)
+    if (content) {
+      const truncatedContent = content.length > 2000 ? content.substring(0, 2000) + '...[TRUNCATED]' : content;
+      console.log('🔍 OpenAIService.parseResponseContent - Full content:', truncatedContent);
+    }
+    
     if (!content) {
       throw new Error('Empty response from OpenAI');
     }
 
-    // Try to parse JSON if response looks like structured output
+    // Try multiple JSON parsing strategies
+    let parsed: any = null;
+    let parseMethod = '';
+    
     try {
-      return JSON.parse(content);
+      // Strategy 1: Try direct JSON parsing
+      parsed = JSON.parse(content);
+      parseMethod = 'direct';
     } catch {
-      // Return as text if not JSON
-      return content;
+      try {
+        // Strategy 2: Try to extract JSON from markdown code blocks
+        const jsonMatch = content.match(/```json\s*\n([\s\S]*?)\n```/);
+        if (jsonMatch) {
+          parsed = JSON.parse(jsonMatch[1]);
+          parseMethod = 'markdown';
+        }
+      } catch {
+        try {
+          // Strategy 3: Try to extract JSON from any code blocks
+          const codeMatch = content.match(/```\s*\n([\s\S]*?)\n```/);
+          if (codeMatch) {
+            parsed = JSON.parse(codeMatch[1]);
+            parseMethod = 'codeblock';
+          }
+        } catch {
+          try {
+            // Strategy 4: Try to find JSON object in the text
+            const jsonObjectMatch = content.match(/\{[\s\S]*\}/);
+            if (jsonObjectMatch) {
+              parsed = JSON.parse(jsonObjectMatch[0]);
+              parseMethod = 'extracted';
+            }
+          } catch {
+            // Strategy 5: Return as text if all JSON parsing fails
+            console.log('🔍 OpenAIService.parseResponseContent - All JSON parsing failed, returning as text');
+            return content;
+          }
+        }
+      }
     }
+    
+    if (parsed) {
+      console.log('🔍 OpenAIService.parseResponseContent - Successfully parsed JSON using method:', parseMethod);
+      console.log('🔍 OpenAIService.parseResponseContent - Parsed structure:', {
+        hasId: !!parsed.id,
+        hasTitle: !!parsed.title,
+        hasWarmup: !!parsed.warmup,
+        hasMainWorkout: !!parsed.mainWorkout,
+        hasCooldown: !!parsed.cooldown,
+        topLevelKeys: Object.keys(parsed)
+      });
+      
+      // 🔍 DEBUG: Log structure details for workout debugging
+      if (parsed.warmup) {
+        console.log('🔍 OpenAIService.parseResponseContent - Warmup structure:', {
+          hasName: !!parsed.warmup.name,
+          hasDuration: !!parsed.warmup.duration,
+          hasExercises: !!parsed.warmup.exercises,
+          exercisesLength: parsed.warmup.exercises?.length
+        });
+      }
+      
+      if (parsed.mainWorkout) {
+        console.log('🔍 OpenAIService.parseResponseContent - MainWorkout structure:', {
+          hasName: !!parsed.mainWorkout.name,
+          hasDuration: !!parsed.mainWorkout.duration,
+          hasExercises: !!parsed.mainWorkout.exercises,
+          exercisesLength: parsed.mainWorkout.exercises?.length
+        });
+      }
+      
+      return parsed;
+    }
+    
+    // If we get here, all parsing failed
+    console.log('🔍 OpenAIService.parseResponseContent - Failed to parse as JSON, returning as text');
+    return content;
   }
 }
 

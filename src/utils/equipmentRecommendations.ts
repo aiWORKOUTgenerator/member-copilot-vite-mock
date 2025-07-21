@@ -1,7 +1,7 @@
-import { DynamicEquipmentService } from './dynamicEquipmentService';
+import { DynamicEquipmentService, AvailableEquipment } from './dynamicEquipmentService';
 
 interface WorkoutEquipment {
-  equipment: string[];
+  equipment: AvailableEquipment[];
 }
 
 export const WORKOUT_EQUIPMENT_OPTIONS: Record<string, WorkoutEquipment> = {
@@ -12,7 +12,7 @@ export const WORKOUT_EQUIPMENT_OPTIONS: Record<string, WorkoutEquipment> = {
       'Kettlebells',
       'Suspension Trainer/TRX',
       'Body Weight'
-    ]
+    ] as AvailableEquipment[]
   },
   'Improve Posture': {
     equipment: [
@@ -20,13 +20,13 @@ export const WORKOUT_EQUIPMENT_OPTIONS: Record<string, WorkoutEquipment> = {
       'Dumbbells',
       'Yoga Mat',
       'Body Weight'
-    ]
+    ] as AvailableEquipment[]
   },
   'Stress Reduction': {
     equipment: [
       'Yoga Mat',
       'Body Weight'
-    ]
+    ] as AvailableEquipment[]
   },
   'Quick Sweat': {
     equipment: [
@@ -35,14 +35,14 @@ export const WORKOUT_EQUIPMENT_OPTIONS: Record<string, WorkoutEquipment> = {
       'Suspension Trainer/TRX',
       'Cardio Machine (Treadmill, Bike)',
       'Body Weight'
-    ]
+    ] as AvailableEquipment[]
   },
   'Gentle Recovery & Mobility': {
     equipment: [
       'Yoga Mat',
       'Resistance Bands',
       'Body Weight'
-    ]
+    ] as AvailableEquipment[]
   },
   'Core & Abs Focus': {
     equipment: [
@@ -51,40 +51,55 @@ export const WORKOUT_EQUIPMENT_OPTIONS: Record<string, WorkoutEquipment> = {
       'Dumbbells',
       'Kettlebells',
       'Suspension Trainer/TRX'
-    ]
+    ] as AvailableEquipment[]
   }
 };
+
+// Helper function to validate and convert string array to AvailableEquipment array
+function validateEquipmentArray(equipment: string[]): AvailableEquipment[] {
+  return equipment.filter((eq): eq is AvailableEquipment => 
+    Object.values(WORKOUT_EQUIPMENT_OPTIONS).some(option => 
+      option.equipment.includes(eq as AvailableEquipment)
+    ) || eq === 'Body Weight' || eq === 'Yoga Mat'
+  );
+}
 
 export function filterAvailableEquipment(
   workoutFocus: string,
   availableEquipment: string[],
   availableLocations?: string[]
-): string[] {
+): AvailableEquipment[] {
+  // Convert and validate available equipment
+  const validatedEquipment = validateEquipmentArray(availableEquipment);
+  
   // If locations are provided, validate equipment against them
   if (availableLocations && availableLocations.length > 0) {
     const validEquipment = DynamicEquipmentService.validateEquipmentForLocations(
-      availableEquipment as string[],
+      validatedEquipment,
       availableLocations
     );
     
     if (!validEquipment.isValid) {
       // Use default equipment for selected locations
-      return DynamicEquipmentService.getDefaultEquipmentForLocations(availableLocations);
+      const defaultEquipment = DynamicEquipmentService.getDefaultEquipmentForLocations(availableLocations) as AvailableEquipment[];
+      return defaultEquipment;
     }
   }
   
   // Existing logic for workout focus filtering
   const workoutOptions = WORKOUT_EQUIPMENT_OPTIONS[workoutFocus]?.equipment || [];
   
-  if (!workoutOptions.length || !availableEquipment?.length) {
+  if (!workoutOptions.length || !validatedEquipment?.length) {
     return ['Body Weight'];
   }
   
   const matchingEquipment = workoutOptions.filter(equipment => 
-    availableEquipment.includes(equipment)
+    validatedEquipment.includes(equipment)
   );
   
-  return matchingEquipment.length ? matchingEquipment : ['Body Weight'];
+  const result: AvailableEquipment[] = matchingEquipment.length ? matchingEquipment : ['Body Weight'];
+  
+  return result;
 }
 
 export function validateEquipmentForFocus(
@@ -94,9 +109,11 @@ export function validateEquipmentForFocus(
   const recommendation = WORKOUT_EQUIPMENT_OPTIONS[workoutFocus];
   if (!recommendation) return true;
 
+  const validatedEquipment = validateEquipmentArray(selectedEquipment);
+
   // Check if all required equipment is selected
   return recommendation.equipment.every(eq => 
-    selectedEquipment.includes(eq) || selectedEquipment.includes('Body Weight')
+    validatedEquipment.includes(eq) || validatedEquipment.includes('Body Weight')
   );
 }
 

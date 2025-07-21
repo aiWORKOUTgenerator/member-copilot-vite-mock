@@ -278,7 +278,7 @@ export const QuickWorkoutForm: React.FC<EnhancedQuickWorkoutFormProps> = ({
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
-            <span>Generate Quick Workout</span>
+            <span>Review Quick Workout Setup</span>
             <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
           </button>
         </div>

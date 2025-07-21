@@ -1,5 +1,6 @@
 import { ProfileData } from '../../../../components/Profile/types/profile.types';
 import { PerWorkoutOptions } from '../../../../types/enhanced-workout-types';
+import { filterAvailableEquipment } from '../../../../utils/equipmentRecommendations';
 
 /**
  * Centralized data transformer for workout generation prompts
@@ -58,12 +59,46 @@ export class PromptDataTransformer {
   }
 
   /**
-   * Transform workout focus data to prompt variables
+   * Transform workout focus data to prompt variables with enhanced focus extraction
    */
   static transformWorkoutFocusData(workoutFocusData: PerWorkoutOptions): Record<string, any> {
-    if (!workoutFocusData) {
-      throw new Error('WorkoutFocusData is required for workout generation');
-    }
+    // Extract focus value properly - handle both string and object formats
+    const extractFocusValue = (focusData: any): string => {
+      if (!focusData) return 'general';
+      
+      // If it's already a string, return it
+      if (typeof focusData === 'string') {
+        return focusData;
+      }
+      
+      // If it's an object (WorkoutFocusConfigurationData), extract the focus property
+      if (typeof focusData === 'object' && focusData.focus) {
+        return focusData.focus;
+      }
+      
+      // If it's an object with focusLabel, use that
+      if (typeof focusData === 'object' && focusData.focusLabel) {
+        return focusData.focusLabel;
+      }
+      
+      // If it's an object with label, use that
+      if (typeof focusData === 'object' && focusData.label) {
+        return focusData.label;
+      }
+      
+      // Fallback to string conversion
+      return String(focusData);
+    };
+    
+    const focus = extractFocusValue(workoutFocusData.customization_focus);
+    
+    // 🔍 DEBUG: Log the focus extraction for consistency check
+    console.log('🔍 PromptDataTransformer - Focus extraction:', {
+      originalFocus: workoutFocusData.customization_focus,
+      originalType: typeof workoutFocusData.customization_focus,
+      extractedFocus: focus,
+      isObject: typeof workoutFocusData.customization_focus === 'object'
+    });
 
     // Transform soreness data
     const sorenessAreas = workoutFocusData.customization_soreness ? 
@@ -75,7 +110,7 @@ export class PromptDataTransformer {
     return {
       energyLevel: workoutFocusData.customization_energy,
       duration: workoutFocusData.customization_duration,
-      focus: workoutFocusData.customization_focus,
+      focus: focus, // Use extracted focus value
       sorenessAreas: sorenessAreas,
       equipment: Array.isArray(workoutFocusData.customization_equipment) ? 
         workoutFocusData.customization_equipment :
@@ -117,6 +152,29 @@ export class PromptDataTransformer {
     console.log('  profileVars.experienceLevel:', profileVars.experienceLevel);
     console.log('  profileVars.primaryGoal:', profileVars.primaryGoal);
 
+    // ✅ FIXED: Apply equipment filtering to ensure AI gets the correctly filtered equipment
+    // This matches exactly what ReviewPage displays to the user
+    let filteredEquipment = ['Body Weight']; // Default fallback
+    
+    if (workoutFocusData.customization_focus && profileData.availableEquipment) {
+      try {
+        filteredEquipment = filterAvailableEquipment(
+          String(workoutFocusData.customization_focus),
+          profileData.availableEquipment,
+          profileData.availableLocations
+        );
+        
+        console.log('🔍 PromptDataTransformer - Equipment filtering:');
+        console.log('  INPUT focus:', workoutFocusData.customization_focus);
+        console.log('  INPUT availableEquipment:', profileData.availableEquipment);
+        console.log('  INPUT availableLocations:', profileData.availableLocations);
+        console.log('  OUTPUT filteredEquipment:', filteredEquipment);
+      } catch (error) {
+        console.warn('⚠️ Equipment filtering failed, using fallback:', error);
+        filteredEquipment = ['Body Weight'];
+      }
+    }
+
     // Set defaults first, then profile data, then workout data, then additional context (highest priority)
     const result = {
       // Set defaults for optional environmental factors first
@@ -135,6 +193,9 @@ export class PromptDataTransformer {
       // Workout data (higher priority)
       ...workoutVars,
       
+      // ✅ FIXED: Override equipment with filtered equipment for AI prompt
+      equipment: filteredEquipment,
+      
       // Additional context (highest priority - can override profile/workout data)
       // CAREFUL: This can override profile data if there are conflicting keys
       ...additionalContext
@@ -144,8 +205,10 @@ export class PromptDataTransformer {
     console.log('🔍 PromptDataTransformer - After merge check:');
     console.log('  result.experienceLevel:', (result as any).experienceLevel);
     console.log('  result.primaryGoal:', (result as any).primaryGoal);
+    console.log('  result.equipment:', (result as any).equipment);
     console.log('  experienceLevel overridden?', (result as any).experienceLevel !== profileVars.experienceLevel);
     console.log('  primaryGoal overridden?', (result as any).primaryGoal !== profileVars.primaryGoal);
+    console.log('  equipment filtered?', JSON.stringify((result as any).equipment) !== JSON.stringify(workoutVars.equipment));
     
     // 🔍 DEBUG: Log critical fields only
     console.log('🔍 PromptDataTransformer - Critical fields:', {
@@ -230,9 +293,43 @@ export class PromptDataTransformer {
       console.log('  focus:', variables.focus);
       console.log('  duration:', variables.duration);
       console.log('  energyLevel:', variables.energyLevel);
+      console.log('  equipment (filtered):', variables.equipment);
+      console.log('  availableEquipment (raw):', variables.availableEquipment);
       
     } catch (error) {
       console.error('❌ Transformation failed:', error);
+    }
+  }
+
+  /**
+   * Test equipment filtering with sample data - useful for debugging
+   */
+  static testEquipmentFiltering(): void {
+    console.log('🧪 Testing Equipment Filtering:');
+    
+    const sampleProfile: Partial<ProfileData> = {
+      availableEquipment: ['Dumbbells', 'Resistance Bands', 'Kettlebells'],
+      availableLocations: ['Home', 'Gym']
+    };
+    
+    const sampleWorkout: Partial<PerWorkoutOptions> = {
+      customization_focus: 'Quick Sweat'
+    };
+    
+    try {
+      const filteredEquipment = filterAvailableEquipment(
+        String(sampleWorkout.customization_focus),
+        sampleProfile.availableEquipment || [],
+        sampleProfile.availableLocations
+      );
+      
+      console.log('  Focus:', sampleWorkout.customization_focus);
+      console.log('  Available Equipment:', sampleProfile.availableEquipment);
+      console.log('  Available Locations:', sampleProfile.availableLocations);
+      console.log('  Filtered Equipment:', filteredEquipment);
+      console.log('  ✅ Equipment filtering working correctly');
+    } catch (error) {
+      console.error('  ❌ Equipment filtering failed:', error);
     }
   }
 } 

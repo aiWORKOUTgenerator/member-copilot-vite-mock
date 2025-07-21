@@ -135,11 +135,12 @@ export const OPENAI_CONFIG_CONSTANTS = {
   PRICING: {
     'gpt-4': 0.03,
     'gpt-4-turbo': 0.01,
+    'gpt-4o': 0.005,
     'gpt-3.5-turbo': 0.0015
   } as const,
   
   // Supported models
-  SUPPORTED_MODELS: ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo'] as const
+  SUPPORTED_MODELS: ['gpt-4', 'gpt-4-turbo', 'gpt-4o', 'gpt-3.5-turbo'] as const
 } as const;
 
 // Configuration validation result type
@@ -216,7 +217,7 @@ const validateEnvironmentVariables = (adapter: EnvironmentAdapter = environmentA
 // Default OpenAI configuration factory
 const createDefaultOpenAIConfig = (adapter: EnvironmentAdapter = environmentAdapter): OpenAIConfig => ({
   apiKey: adapter.getApiKey(),
-  model: 'gpt-4-turbo',
+  model: 'gpt-4o',
   maxTokens: OPENAI_CONFIG_CONSTANTS.MAX_TOKENS,
   temperature: OPENAI_CONFIG_CONSTANTS.DEFAULT_TEMPERATURE,
   organizationId: adapter.getOrgId(),

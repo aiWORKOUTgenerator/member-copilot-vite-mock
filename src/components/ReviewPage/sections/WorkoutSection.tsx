@@ -17,9 +17,6 @@ export const WorkoutSection: React.FC<Omit<WorkoutSectionProps, 'workoutFocusDat
   profileData, 
   displayWorkoutFocus 
 }) => {
-  // Debug logs for troubleshooting Muscle Soreness and data flow
-  console.log('DEBUG: displayWorkoutFocus', displayWorkoutFocus);
-  console.log('DEBUG: displayWorkoutFocus.currentSoreness', displayWorkoutFocus?.currentSoreness);
   return (
     <div className="space-y-6">
       <div className="text-center lg:text-left">
@@ -73,11 +70,13 @@ export const WorkoutSection: React.FC<Omit<WorkoutSectionProps, 'workoutFocusDat
               }
 
               // Filter equipment based on what the user has available
-              return filterAvailableEquipment(
+              const filteredEquipment = filterAvailableEquipment(
                 String(displayWorkoutFocus.workoutFocus),
                 profileData.availableEquipment,
                 profileData.availableLocations
               );
+              
+              return filteredEquipment;
             })()} 
             icon={Dumbbell} 
           />

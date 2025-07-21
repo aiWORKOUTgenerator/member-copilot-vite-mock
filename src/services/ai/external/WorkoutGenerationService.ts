@@ -226,36 +226,111 @@ export class WorkoutGenerationService {
    * Parse and normalize AI response to ensure it matches GeneratedWorkout structure
    */
   private parseAIResponse(aiResponse: any): GeneratedWorkout {
+    // 🔍 DEBUG: Log the AI response structure
+    console.log('🔍 WorkoutGenerationService.parseAIResponse - Input:', {
+      hasResponse: !!aiResponse,
+      responseType: typeof aiResponse,
+      isObject: aiResponse && typeof aiResponse === 'object',
+      isString: typeof aiResponse === 'string',
+      topLevelKeys: aiResponse && typeof aiResponse === 'object' ? Object.keys(aiResponse) : 'N/A',
+      hasWorkoutPlan: !!(aiResponse?.workoutPlan),
+      hasWorkout: !!(aiResponse?.workout),
+      hasData: !!(aiResponse?.data),
+      hasPhases: !!(aiResponse?.phases),
+      hasWarmup: !!(aiResponse?.warmup || aiResponse?.warmUp),
+      hasMainWorkout: !!(aiResponse?.mainWorkout),
+      hasCooldown: !!(aiResponse?.cooldown),
+      stringLength: typeof aiResponse === 'string' ? aiResponse.length : 'N/A',
+      stringPreview: typeof aiResponse === 'string' ? aiResponse.substring(0, 200) + '...' : 'N/A'
+    });
+    
+    // Handle string responses (text that wasn't parsed as JSON)
+    if (typeof aiResponse === 'string') {
+      console.log('🔍 WorkoutGenerationService.parseAIResponse - Handling string response, attempting manual parsing');
+      
+      // Try to extract JSON from the string
+      try {
+        // Look for JSON object in the string
+        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          console.log('🔍 WorkoutGenerationService.parseAIResponse - Successfully extracted JSON from string');
+          return this.normalizeWorkoutStructure(parsed);
+        }
+      } catch (error) {
+        console.warn('🔍 WorkoutGenerationService.parseAIResponse - Failed to extract JSON from string:', error);
+      }
+      
+      // If JSON extraction fails, create a basic workout from the text
+      console.log('🔍 WorkoutGenerationService.parseAIResponse - Creating basic workout from text response');
+      return this.createBasicWorkoutFromText(aiResponse);
+    }
+    
     // Handle nested response structure (e.g., { workoutPlan: { ... } })
     if (aiResponse && typeof aiResponse === 'object') {
       // Check if response is nested under workoutPlan
       if (aiResponse.workoutPlan && typeof aiResponse.workoutPlan === 'object') {
+        console.log('🔍 WorkoutGenerationService.parseAIResponse - Using workoutPlan nested structure');
         return this.normalizeWorkoutStructure(aiResponse.workoutPlan);
       }
       
       // Check if response is nested under workout
       if (aiResponse.workout && typeof aiResponse.workout === 'object') {
+        console.log('🔍 WorkoutGenerationService.parseAIResponse - Using workout nested structure');
         return this.normalizeWorkoutStructure(aiResponse.workout);
       }
       
       // Check if response is nested under data
       if (aiResponse.data && typeof aiResponse.data === 'object') {
+        console.log('🔍 WorkoutGenerationService.parseAIResponse - Using data nested structure');
         return this.normalizeWorkoutStructure(aiResponse.data);
       }
       
       // ✅ FIXED: Handle AI response with different property names
       if (aiResponse.workoutName || aiResponse.phases || aiResponse.warmUp || aiResponse.mainWorkout || aiResponse.cooldown) {
+        console.log('🔍 WorkoutGenerationService.parseAIResponse - Using direct structure with recognized properties');
         return this.normalizeWorkoutStructure(aiResponse);
       }
       
       // If response looks like a workout already, normalize it
       if (this.isWorkoutStructure(aiResponse)) {
+        console.log('🔍 WorkoutGenerationService.parseAIResponse - Using direct workout structure');
         return this.normalizeWorkoutStructure(aiResponse);
       }
     }
     
     // If we can't parse it, throw an error
-    throw new Error(`Invalid AI response format: ${JSON.stringify(aiResponse).substring(0, 200)}...`);
+    const errorMessage = `Invalid AI response format: ${JSON.stringify(aiResponse).substring(0, 200)}...`;
+    console.error('🔍 WorkoutGenerationService.parseAIResponse - Parse failed:', errorMessage);
+    throw new Error(errorMessage);
+  }
+  
+  /**
+   * Create a basic workout structure from text response
+   */
+  private createBasicWorkoutFromText(textResponse: string): GeneratedWorkout {
+    console.log('🔍 WorkoutGenerationService.createBasicWorkoutFromText - Creating fallback workout');
+    
+    return {
+      id: `workout_${Date.now()}`,
+      title: 'AI-Generated Workout',
+      description: 'A personalized workout based on your preferences',
+      totalDuration: 30,
+      estimatedCalories: 200,
+      difficulty: 'some experience',
+      equipment: ['Body Weight'],
+      warmup: this.createDefaultPhase('Warm-up', 5),
+      mainWorkout: this.createDefaultPhase('Main Workout', 20),
+      cooldown: this.createDefaultPhase('Cool-down', 5),
+      reasoning: textResponse.length > 500 ? textResponse.substring(0, 500) + '...' : textResponse,
+      personalizedNotes: ['This workout was generated from a text response'],
+      progressionTips: ['Focus on proper form', 'Increase intensity gradually'],
+      safetyReminders: ['Stop if you feel pain', 'Stay hydrated'],
+      generatedAt: new Date(),
+      aiModel: 'gpt-4o',
+      confidence: 0.7,
+      tags: ['ai_generated', 'fallback']
+    };
   }
 
   /**
@@ -398,7 +473,7 @@ export class WorkoutGenerationService {
       progressionTips: Array.isArray(workout.progressionTips) ? workout.progressionTips : [],
       safetyReminders: Array.isArray(workout.safetyReminders) ? workout.safetyReminders : [],
       generatedAt: workout.generatedAt || new Date(),
-      aiModel: workout.aiModel || 'gpt-4-turbo',
+      aiModel: workout.aiModel || 'gpt-4o',
       confidence: workout.confidence || 0.8,
       tags: Array.isArray(workout.tags) ? workout.tags : []
     };

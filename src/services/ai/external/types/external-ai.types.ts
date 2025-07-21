@@ -7,7 +7,7 @@ import { WorkoutGenerationRequest } from '../../../../types/workout-generation.t
 // OpenAI Configuration
 export interface OpenAIConfig {
   apiKey: string;
-  model: 'gpt-4' | 'gpt-4-turbo' | 'gpt-3.5-turbo';
+  model: 'gpt-4' | 'gpt-4-turbo' | 'gpt-4o' | 'gpt-3.5-turbo';
   maxTokens: number;
   temperature: number;
   organizationId?: string;

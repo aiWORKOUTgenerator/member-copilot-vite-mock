@@ -343,6 +343,13 @@ function AppContent() {
         } as ReviewPageProps;
       
       case 'results':
+        // 🔍 DEBUG: Log what's being passed to WorkoutResultsPage
+        console.log('🔍 App.tsx - WorkoutResultsPage props:', {
+          hasGeneratedWorkout: !!appState.generatedWorkout,
+          workoutId: appState.generatedWorkout?.id,
+          workoutTitle: appState.generatedWorkout?.title,
+          workoutKeys: appState.generatedWorkout ? Object.keys(appState.generatedWorkout) : 'N/A'
+        });
         return {
           ...baseProps,
           generatedWorkout: appState.generatedWorkout,

@@ -2,6 +2,17 @@ import { PromptDataTransformer } from '../PromptDataTransformer';
 import { ProfileData } from '../../../../components/Profile/types/profile.types';
 import { PerWorkoutOptions } from '../../../../types/enhanced-workout-types';
 
+// Mock the equipment filtering function
+jest.mock('../../../../../utils/equipmentRecommendations', () => ({
+  filterAvailableEquipment: jest.fn((focus: string, availableEquipment: string[], locations?: string[]) => {
+    // Mock implementation that returns filtered equipment based on focus
+    if (focus === 'strength' || focus === 'Quick Sweat') {
+      return ['Dumbbells', 'Resistance Bands'];
+    }
+    return ['Body Weight'];
+  })
+}));
+
 // Sample complete profile data (same as ReviewPage expects)
 const completeProfileData: ProfileData = {
   // Experience & Activity
@@ -46,6 +57,10 @@ const quickWorkoutData: PerWorkoutOptions = {
 };
 
 describe('PromptDataTransformer', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe('transformProfileData', () => {
     it('should transform all 17 profile fields correctly', () => {
       const result = PromptDataTransformer.transformProfileData(completeProfileData);
@@ -119,7 +134,7 @@ describe('PromptDataTransformer', () => {
   });
 
   describe('transformToPromptVariables', () => {
-    it('should combine all data sources correctly', () => {
+    it('should combine all data sources correctly with equipment filtering', () => {
       const result = PromptDataTransformer.transformToPromptVariables(
         completeProfileData,
         quickWorkoutData,
@@ -134,6 +149,9 @@ describe('PromptDataTransformer', () => {
       expect(result.energyLevel).toBe(7);
       expect(result.focus).toBe('strength');
       
+      // Should have filtered equipment (not raw equipment)
+      expect(result.equipment).toEqual(['Dumbbells', 'Resistance Bands']);
+      
       // Should have additional context
       expect(result.additionalContext).toBe('test');
       
@@ -141,6 +159,22 @@ describe('PromptDataTransformer', () => {
       expect(result.location).toBeDefined();
       expect(result.weather).toBe('indoor');
       expect(result.temperature).toBe('comfortable');
+    });
+
+    it('should fallback to Body Weight when equipment filtering fails', () => {
+      const incompleteWorkoutData: PerWorkoutOptions = {
+        customization_focus: '', // Empty focus should trigger fallback
+        customization_duration: 30,
+        customization_energy: 7
+      };
+
+      const result = PromptDataTransformer.transformToPromptVariables(
+        completeProfileData,
+        incompleteWorkoutData
+      );
+      
+      // Should fallback to Body Weight when filtering fails
+      expect(result.equipment).toEqual(['Body Weight']);
     });
   });
 
@@ -207,12 +241,16 @@ describe('PromptDataTransformer', () => {
       // All profile fields should be populated (not "Not specified")
       expect(Object.values(variables).filter(v => v === 'Not specified')).toHaveLength(0);
       
+      // Equipment should be filtered (not just default)
+      expect(variables.equipment).toEqual(['Dumbbells', 'Resistance Bands']);
+      
       // Debug output for manual verification
       console.log('🔍 Integration Test Results:', {
         populatedFields: validation.populatedFields,
         totalFields: validation.totalFields,
         coverage: `${((validation.populatedFields / validation.totalFields) * 100).toFixed(1)}%`,
-        missingRequired: validation.missingRequired
+        missingRequired: validation.missingRequired,
+        filteredEquipment: variables.equipment
       });
     });
   });

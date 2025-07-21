@@ -15,8 +15,47 @@ export const convertWorkoutFocusToDisplay = (
     return 'Balanced Training'; // fallback
   };
   
+  // Extract focus value properly - handle both string and object formats
+  const extractFocusValue = (focusData: any): string => {
+    if (!focusData) return 'Not specified';
+    
+    // If it's already a string, return it
+    if (typeof focusData === 'string') {
+      return focusData;
+    }
+    
+    // If it's an object (WorkoutFocusConfigurationData), extract the focus property
+    if (typeof focusData === 'object' && focusData.focus) {
+      return focusData.focus;
+    }
+    
+    // If it's an object with focusLabel, use that
+    if (typeof focusData === 'object' && focusData.focusLabel) {
+      return focusData.focusLabel;
+    }
+    
+    // If it's an object with label, use that
+    if (typeof focusData === 'object' && focusData.label) {
+      return focusData.label;
+    }
+    
+    // Fallback to string conversion
+    return String(focusData);
+  };
+  
+  const workoutFocus = extractFocusValue(workoutFocusData.customization_focus);
+  
+  // 🔍 DEBUG: Log the focus extraction
+  console.log('🔍 convertWorkoutFocusToDisplay - Focus extraction:', {
+    originalFocus: workoutFocusData.customization_focus,
+    originalType: typeof workoutFocusData.customization_focus,
+    extractedFocus: workoutFocus,
+    isObject: typeof workoutFocusData.customization_focus === 'object',
+    hasObjectFocus: typeof workoutFocusData.customization_focus === 'object' && workoutFocusData.customization_focus?.focus
+  });
+  
   return {
-    workoutFocus: String(workoutFocusData.customization_focus || 'Not specified'),
+    workoutFocus: workoutFocus,
     workoutIntensity: String('Not specified'), // Will be populated from profile data
     workoutType: getWorkoutTypeDisplay(),
     duration: workoutFocusData.customization_duration ? 

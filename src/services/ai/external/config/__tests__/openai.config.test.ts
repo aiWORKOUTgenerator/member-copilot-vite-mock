@@ -9,7 +9,7 @@ let currentAdapter: any = null;
 const mockConfig = {
   openai: {
     apiKey: 'test-api-key',
-    model: 'gpt-4-turbo',
+    model: 'gpt-4o',
     maxTokens: 4000,
     temperature: 0.7,
     organizationId: 'test-org',
@@ -54,9 +54,10 @@ const mockConstants = {
   PRICING: {
     'gpt-4': 0.03,
     'gpt-4-turbo': 0.01,
+    'gpt-4o': 0.005,
     'gpt-3.5-turbo': 0.0015
   },
-  SUPPORTED_MODELS: ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo']
+  SUPPORTED_MODELS: ['gpt-4', 'gpt-4-turbo', 'gpt-4o', 'gpt-3.5-turbo']
 };
 
 jest.mock('../openai.config', () => ({
@@ -282,7 +283,7 @@ describe('OpenAI Configuration - Refactored', () => {
       const config = getOpenAIConfig();
 
       expect(config.openai.apiKey).toBe('');
-      expect(config.openai.model).toBe('gpt-4-turbo');
+      expect(config.openai.model).toBe('gpt-4o');
       expect(config.performance.maxRequestsPerMinute).toBe(OPENAI_CONFIG_CONSTANTS.MAX_REQUESTS_DEV);
     });
   });
@@ -297,7 +298,7 @@ describe('OpenAI Configuration - Refactored', () => {
       setEnvironmentAdapter(testAdapter);
       const config = getOpenAIConfig();
       
-      expect(config.openai.model).toBe('gpt-4-turbo');
+      expect(config.openai.model).toBe('gpt-4o');
       expect(config.openai.apiKey).toBe('dev-api-key');
       expect(config.performance.maxRequestsPerMinute).toBe(OPENAI_CONFIG_CONSTANTS.MAX_REQUESTS_DEV);
       expect(config.performance.retryAttempts).toBe(OPENAI_CONFIG_CONSTANTS.MAX_RETRIES_DEV);
@@ -344,7 +345,7 @@ describe('OpenAI Configuration - Refactored', () => {
       const config = getOpenAIConfig();
       
       expect(config.performance.maxRequestsPerMinute).toBe(OPENAI_CONFIG_CONSTANTS.MAX_REQUESTS_DEV);
-      expect(config.openai.model).toBe('gpt-4-turbo');
+      expect(config.openai.model).toBe('gpt-4o');
     });
   });
 
@@ -480,7 +481,7 @@ describe('OpenAI Configuration - Refactored', () => {
       expect(OPENAI_CONFIG_CONSTANTS.MAX_TOKENS).toBeGreaterThan(0);
       expect(OPENAI_CONFIG_CONSTANTS.DEFAULT_TEMPERATURE).toBeGreaterThan(0);
       expect(OPENAI_CONFIG_CONSTANTS.DEFAULT_TEMPERATURE).toBeLessThan(1);
-      expect(OPENAI_CONFIG_CONSTANTS.SUPPORTED_MODELS).toContain('gpt-4-turbo');
+      expect(OPENAI_CONFIG_CONSTANTS.SUPPORTED_MODELS).toContain('gpt-4o');
     });
 
     it('should have valid pricing information', () => {
@@ -592,7 +593,7 @@ describe('OpenAI Configuration - Refactored', () => {
       
       const config = configPresets.development(testAdapter);
       
-      expect(config.openai.model).toBe('gpt-4-turbo');
+      expect(config.openai.model).toBe('gpt-4o');
       expect(config.openai.apiKey).toBe('dev-key');
       expect(config.performance.maxRequestsPerMinute).toBe(OPENAI_CONFIG_CONSTANTS.MAX_REQUESTS_DEV);
       expect(config.features.openai_user_analysis).toBe(false);
@@ -606,7 +607,7 @@ describe('OpenAI Configuration - Refactored', () => {
       
       const config = configPresets.production(testAdapter);
       
-      expect(config.openai.model).toBe('gpt-4-turbo');
+      expect(config.openai.model).toBe('gpt-4o');
       expect(config.openai.apiKey).toBe('prod-key');
       expect(config.performance.maxRequestsPerMinute).toBe(OPENAI_CONFIG_CONSTANTS.MAX_REQUESTS_PROD);
       expect(config.features.openai_user_analysis).toBe(true);

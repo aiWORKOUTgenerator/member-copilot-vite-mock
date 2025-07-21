@@ -7,6 +7,16 @@ dotenv.config();
 
 // Environment variables loaded successfully
 
+// Type declarations for global test utilities
+declare global {
+  var testUtils: {
+    isLiveAPITest: boolean;
+    originalConsoleLog: typeof console.log;
+    originalConsoleWarn: typeof console.warn;
+    originalConsoleError: typeof console.error;
+  };
+}
+
 // Setup fetch for testing environment
 if (typeof globalThis.fetch === 'undefined') {
   // Only mock fetch if live API testing is not enabled
@@ -38,7 +48,8 @@ if (typeof globalThis.TextEncoder === 'undefined') {
 }
 
 if (typeof globalThis.TextDecoder === 'undefined') {
-  globalThis.TextDecoder = TextDecoder;
+  // Cast to any to resolve type incompatibility between Node.js and DOM TextDecoder
+  globalThis.TextDecoder = TextDecoder as any;
 }
 
 // Mock console methods to reduce noise in tests
