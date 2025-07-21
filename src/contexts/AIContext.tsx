@@ -1,5 +1,42 @@
-// AI Context Provider - Manages AI service across the application
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+/**
+ * AI Context Provider - Centralized AI Service Management
+ * 
+ * This context provider manages the AI service lifecycle and provides a unified interface
+ * for AI-related functionality throughout the application.
+ * 
+ * KEY FEATURES:
+ * - Single initialization per user session
+ * - Memoized profile conversions
+ * - Feature flag caching
+ * - Performance monitoring
+ * - Fallback mechanisms
+ * 
+ * INITIALIZATION FLOW:
+ * 1. User profile validation
+ * 2. Feature flag loading (with caching)
+ * 3. AI service context setup
+ * 4. OpenAI strategy initialization (if enabled)
+ * 5. Health verification
+ * 6. State finalization
+ * 
+ * PERFORMANCE OPTIMIZATIONS:
+ * - Stable dependencies in useCallback hooks
+ * - Initialization guards to prevent duplicates
+ * - Profile conversion memoization
+ * - Feature flag caching
+ * - Performance timing metrics
+ * 
+ * ERROR HANDLING:
+ * - Comprehensive error logging
+ * - Graceful fallbacks
+ * - Retry mechanisms
+ * - State recovery
+ * 
+ * @version 2.0.0
+ * @author AI Service Team
+ */
+
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { AIService } from '../services/ai/core/AIService';
 import { UserProfile, PerWorkoutOptions, AIAssistanceLevel } from '../types';
 import { featureFlagService, useFeatureFlags, FeatureFlag, ABTestResults, AnalyticsEvent } from '../services/ai/featureFlags/FeatureFlagService';
@@ -40,7 +77,7 @@ interface AIContextValue {
   analyze: (partialSelections?: Partial<PerWorkoutOptions>) => Promise<any>;
   
   // External AI Integration
-  generateWorkout: (workoutData: PerWorkoutOptions) => Promise<any>;
+  generateWorkout: (workoutData: PerWorkoutOptions | any) => Promise<any>;
   getEnhancedRecommendations: () => Promise<any[]>;
   getEnhancedInsights: () => Promise<any>;
   analyzeUserPreferences: () => Promise<any>;
@@ -89,10 +126,15 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [initializationStartTime, setInitializationStartTime] = useState<Date | null>(null);
   const [initializationEndTime, setInitializationEndTime] = useState<Date | null>(null);
   
+  // Add initialization guards to prevent multiple initializations
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
+  const [lastUserProfileId, setLastUserProfileId] = useState<string | null>(null);
+  
   // Environment validation state
   const [environmentStatus, setEnvironmentStatus] = useState(() => checkEnvironmentConfiguration());
 
-  // Enhanced state validation function
+  // Enhanced state validation function - memoized to prevent recreation
   const validateAIContextState = useCallback(() => {
     const state = {
       serviceStatus,
@@ -103,12 +145,15 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       lastError: lastInitializationError,
       initializationDuration: initializationStartTime && initializationEndTime 
         ? initializationEndTime.getTime() - initializationStartTime.getTime() 
-        : null
+        : null,
+      isInitializing,
+      hasInitialized,
+      lastUserProfileId
     };
 
     console.log('🔍 AI Context State Validation:', state);
     return state;
-  }, [serviceStatus, currentUserProfile, featureFlags, environmentStatus, initializationAttempts, lastInitializationError, initializationStartTime, initializationEndTime]);
+  }, [serviceStatus, currentUserProfile, featureFlags, environmentStatus, initializationAttempts, lastInitializationError, initializationStartTime, initializationEndTime, isInitializing, hasInitialized, lastUserProfileId]);
 
   // Check environment configuration on mount
   useEffect(() => {
@@ -131,7 +176,7 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     }
   }, []);
 
-  // Initialize feature flags when user profile is available
+  // Simple feature flag loading for MVP
   useEffect(() => {
     if (currentUserProfile) {
       console.log('🔄 AIProvider: Loading feature flags for user profile...');
@@ -140,37 +185,38 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       
       console.log('✅ AIProvider: Feature flags loaded:', {
         totalFlags: Object.keys(flags).length,
-        enabledFlags: Object.keys(flags).filter(key => flags[key]),
-        userFitnessLevel: currentUserProfile.fitnessLevel
-      });
-      
-      // Set up analytics callback
-      featureFlagService.setAnalyticsCallback((event: AnalyticsEvent) => {
-        console.log('Feature Flag Analytics:', event);
-        
-        // In a real implementation, this would send to an analytics service
-        // trackEvent('feature_flag', event);
+        enabledFlags: Object.keys(flags).filter(key => flags[key])
       });
     } else {
       console.log('ℹ️ AIProvider: No user profile available for feature flags');
     }
   }, [currentUserProfile]);
 
-  // Enhanced initialization with comprehensive debugging
+  // Simplified initialization for MVP with basic guards
   const initialize = useCallback(async (userProfile: UserProfile) => {
+    // Simple guard to prevent multiple initializations
+    if (isInitializing) {
+      console.log('ℹ️ AIProvider: Already initializing, skipping duplicate request');
+      return;
+    }
+    
+    // Simple guard to prevent re-initialization if already done
+    if (hasInitialized) {
+      console.log('ℹ️ AIProvider: Already initialized, skipping');
+      return;
+    }
+    
     const attemptNumber = initializationAttempts + 1;
     const startTime = new Date();
     
-    console.log(`🔄 AIProvider: Starting AI service initialization (attempt ${attemptNumber})...`, { 
+    console.log('🔄 AIProvider: Starting AI service initialization...', { 
       userProfile: { 
         fitnessLevel: userProfile.fitnessLevel, 
-        goals: userProfile.goals,
-        hasPreferences: !!userProfile.preferences,
-        hasLimitations: !!userProfile.basicLimitations
-      },
-      startTime: startTime.toISOString()
+        goals: userProfile.goals
+      }
     });
     
+    setIsInitializing(true);
     setInitializationAttempts(attemptNumber);
     setInitializationStartTime(startTime);
     setLastInitializationError(null);
@@ -206,7 +252,7 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       
       console.log('✅ AIProvider: User profile set, loading feature flags...');
       
-      // Get feature flags for this user
+      // Get feature flags for this user (will use cache if available)
       const flags = featureFlagService.getAIFlags(userProfile);
       setFeatureFlags(flags);
       
@@ -235,14 +281,10 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       await aiService.setContext(context);
       console.log('✅ AIProvider: AI service context set successfully');
       
-      // Initialize external AI strategy if enabled
-      if (isFeatureEnabled('openai_workout_generation') || isFeatureEnabled('openai_enhanced_recommendations')) {
-        console.log('🔄 AIProvider: Initializing OpenAI strategy...');
-        aiService.setOpenAIStrategy(openAIStrategy);
-        console.log('✅ AIProvider: OpenAI strategy initialized');
-      } else {
-        console.log('ℹ️ AIProvider: OpenAI strategy not enabled, using internal services');
-      }
+      // Initialize OpenAI strategy for MVP
+      console.log('🔄 AIProvider: Initializing OpenAI strategy...');
+      aiService.setOpenAIStrategy(openAIStrategy);
+      console.log('✅ AIProvider: OpenAI strategy initialized');
       
       // Verify service is ready
       console.log('🔍 AIProvider: Verifying service health...');
@@ -254,11 +296,12 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       }
       
       const endTime = new Date();
+      
       setInitializationEndTime(endTime);
       setServiceStatus('ready');
+      setHasInitialized(true);
       
       console.log('✅ AIProvider: AI service initialization completed successfully', {
-        attemptNumber,
         duration: endTime.getTime() - startTime.getTime(),
         healthStatus: healthStatus.status,
         userProfile: {
@@ -295,8 +338,10 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       
       // Re-throw the error to allow calling code to handle it
       throw error;
+    } finally {
+      setIsInitializing(false);
     }
-  }, [aiService, enableValidation, initializationAttempts, validateAIContextState]);
+  }, [aiService, validateAIContextState]);
 
   // Update workout selections with feature flag awareness
   const updateSelections = useCallback((selections: Partial<PerWorkoutOptions>) => {
@@ -497,11 +542,26 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   };
 
   // External AI methods
-  const generateWorkout = useCallback(async (workoutData: PerWorkoutOptions) => {
+  const generateWorkout = useCallback(async (workoutData: PerWorkoutOptions | any) => {
     if (!currentUserProfile) {
       throw new Error('User profile required for workout generation');
     }
-    return await aiService.generateWorkout(workoutData);
+    
+    // Create a complete WorkoutGenerationRequest object
+    const request = {
+      workoutType: 'quick' as const, // Default to quick, could be made configurable
+      profileData: {} as any, // This will be filled by the AI service from context
+      workoutFocusData: workoutData,
+      userProfile: currentUserProfile
+    };
+    
+    console.log('🔍 AIContext generateWorkout - request:', {
+      hasUserProfile: !!request.userProfile,
+      fitnessLevel: request.userProfile.fitnessLevel,
+      workoutDataKeys: Object.keys(workoutData)
+    });
+    
+    return await aiService.generateWorkout(request);
   }, [aiService, currentUserProfile]);
 
   const getEnhancedRecommendations = useCallback(async () => {

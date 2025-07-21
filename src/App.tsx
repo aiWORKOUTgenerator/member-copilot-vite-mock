@@ -15,10 +15,10 @@ import { useWorkoutGeneration } from './hooks/useWorkoutGeneration';
 import type { UseWorkoutGenerationReturn } from './hooks/useWorkoutGeneration';
 import { GeneratedWorkout } from './services/ai/external/types/external-ai.types';
 import { PerWorkoutOptions, WorkoutType } from './types/enhanced-workout-types';
-import { UserProfile, FitnessLevel, IntensityLevel } from './types/user';
 import { ProfileData } from './components/Profile/types/profile.types';
 import { LiabilityWaiverData } from './components/LiabilityWaiver/types/liability-waiver.types';
-import { mapExperienceLevelToFitnessLevel } from './utils/configUtils';
+
+import { profileTransformers } from './utils/dataTransformers';
 
 type PageType = 'profile' | 'waiver' | 'focus' | 'review' | 'results';
 
@@ -60,6 +60,7 @@ function AppContent() {
       
       if (profileData) {
         const parsed = JSON.parse(profileData);
+        
         if (parsed.data) { // Check for enhanced persisted state format
           return {
             profileData: parsed.data,
@@ -73,6 +74,7 @@ function AppContent() {
     } catch (error) {
       console.warn('Failed to load profile data from localStorage:', error);
     }
+    
     return {
       profileData: null,
       waiverData: null,
@@ -89,8 +91,10 @@ function AppContent() {
   useEffect(() => {
     try {
       const profileData = localStorage.getItem('profileData');
+      
       if (profileData) {
         const parsed = JSON.parse(profileData);
+        
         if (parsed.data) {
           setAppState(prev => ({
             ...prev,
@@ -141,133 +145,8 @@ function AppContent() {
 
         console.log('✅ App.tsx: Profile data validation passed, converting to UserProfile...');
 
-        // Use calculated fitness level if available, otherwise fall back to mapping
-        const fitnessLevel = appState.profileData.calculatedFitnessLevel || mapExperienceLevelToFitnessLevel(appState.profileData.experienceLevel);
-        console.log('✅ App.tsx: Fitness level (calculated/fallback):', fitnessLevel);
-
-        // Convert primary goal
-        const primaryGoal = appState.profileData.primaryGoal?.toLowerCase().replace(/\s+/g, '_') || 'general_fitness';
-        console.log('✅ App.tsx: Primary goal converted:', primaryGoal);
-
-        // Convert preferred activities
-        const workoutStyle = (appState.profileData.preferredActivities || []).map(activity => 
-          activity.toLowerCase().replace(/[^a-z0-9]/g, '_')
-        );
-        console.log('✅ App.tsx: Workout style converted:', workoutStyle);
-
-        // Convert intensity level
-        let intensityLevel = (appState.profileData.intensityLevel || 'moderate').toLowerCase();
-        if (!['low', 'moderate', 'high'].includes(intensityLevel)) {
-          console.warn('⚠️ App.tsx: Invalid intensity level:', intensityLevel, 'using moderate as fallback');
-          intensityLevel = 'moderate';
-        }
-        console.log('✅ App.tsx: Intensity level converted:', intensityLevel);
-
-        // Convert age from string range to numeric (use middle of range)
-        let age: number | undefined;
-        if (appState.profileData.age) {
-          const ageRange = appState.profileData.age.split('-');
-          if (ageRange.length === 2) {
-            age = Math.floor((parseInt(ageRange[0]) + parseInt(ageRange[1])) / 2);
-          } else if (ageRange[0] === '65+') {
-            age = 70; // Default for 65+
-          }
-        }
-
-        // Convert height and weight to numbers if present
-        let height: number | undefined;
-        let weight: number | undefined;
-        
-        if (appState.profileData.height) {
-          // Handle both imperial and metric formats
-          const heightStr = appState.profileData.height.toLowerCase();
-          if (heightStr.includes("'") && heightStr.includes('"')) {
-            // Imperial format: 5'8" -> convert to cm
-            const match = heightStr.match(/(\d+)'(\d+)"/);
-            if (match) {
-              const feet = parseInt(match[1]);
-              const inches = parseInt(match[2]);
-              height = Math.round((feet * 12 + inches) * 2.54);
-            }
-          } else if (heightStr.includes('cm')) {
-            // Metric format: 173cm
-            const match = heightStr.match(/(\d+)cm/);
-            if (match) {
-              height = parseInt(match[1]);
-            }
-          }
-        }
-
-        if (appState.profileData.weight) {
-          // Handle both imperial and metric formats
-          const weightStr = appState.profileData.weight.toLowerCase();
-          if (weightStr.includes('lbs') || weightStr.includes('lb')) {
-            // Imperial format: 150 lbs -> convert to kg
-            const match = weightStr.match(/(\d+)\s*lbs?/);
-            if (match) {
-              weight = Math.round(parseInt(match[1]) * 0.453592);
-            }
-          } else if (weightStr.includes('kg')) {
-            // Metric format: 68 kg
-            const match = weightStr.match(/(\d+)\s*kg/);
-            if (match) {
-              weight = parseInt(match[1]);
-            }
-          }
-        }
-
-        const userProfile: UserProfile = {
-          fitnessLevel,
-          goals: [primaryGoal],
-          preferences: {
-            workoutStyle,
-            timePreference: 'morning',
-            intensityPreference: intensityLevel as IntensityLevel,
-            advancedFeatures: appState.profileData.experienceLevel === 'Advanced Athlete',
-            aiAssistanceLevel: 'moderate'
-          },
-          basicLimitations: {
-            injuries: (appState.profileData.injuries || []).filter(injury => injury !== 'No Injuries'),
-            availableEquipment: appState.profileData.availableEquipment || [],
-            availableLocations: appState.profileData.availableLocations || []
-          },
-          enhancedLimitations: {
-            timeConstraints: appState.profileData.preferredDuration ? 
-              parseInt(appState.profileData.preferredDuration.split('-')[1]) || 60 : 60,
-            equipmentConstraints: [],
-            locationConstraints: [],
-            recoveryNeeds: {
-              restDays: 2,
-              sleepHours: 7,
-              hydrationLevel: 'moderate'
-            },
-            mobilityLimitations: [],
-            progressionRate: 'moderate'
-          },
-          workoutHistory: {
-            estimatedCompletedWorkouts: 0,
-            averageDuration: appState.profileData.preferredDuration ? 
-              parseInt(appState.profileData.preferredDuration.split('-')[0]) || 30 : 30,
-            preferredFocusAreas: [],
-            progressiveEnhancementUsage: {},
-            aiRecommendationAcceptance: 0.7,
-            consistencyScore: 0.5,
-            plateauRisk: 'low'
-          },
-          learningProfile: {
-            prefersSimplicity: appState.profileData.experienceLevel === 'New to Exercise',
-            explorationTendency: 'moderate',
-            feedbackPreference: 'simple',
-            learningStyle: 'visual',
-            motivationType: 'intrinsic',
-            adaptationSpeed: 'moderate'
-          },
-          // Add optional personal metrics
-          age,
-          height,
-          weight,
-          gender: appState.profileData.gender
-        };
+        // Use memoized profile conversion to prevent unnecessary conversions
+        const userProfile = profileTransformers.convertProfileToUserProfileSimple(appState.profileData);
 
         console.log('✅ App.tsx: UserProfile created successfully:', {
           fitnessLevel: userProfile.fitnessLevel,
@@ -294,7 +173,7 @@ function AppContent() {
     };
 
     initializeAIService();
-  }, [appState.profileData, initialize, serviceStatus]);
+  }, [appState.profileData, serviceStatus]);
 
   // Workout generation hook - now inside AIProvider context
   const workoutGeneration = useWorkoutGeneration();

@@ -28,12 +28,9 @@ export class OpenAIService {
   private lastRequestTime = 0;
 
   constructor(config?: OpenAIConfig) {
-    this.config = config ?? openAIConfig.openai;
+    this.config = config ?? openAIConfig().openai;
     
-    if (!validateConfig({ ...openAIConfig, openai: this.config })) {
-      throw new Error('Invalid OpenAI configuration');
-    }
-
+    // Initialize components without strict validation
     this.requestHandler = new OpenAIRequestHandler(this.config);
     this.cacheManager = new OpenAICacheManager();
     this.metricsTracker = new OpenAIMetricsTracker();
@@ -50,6 +47,11 @@ export class OpenAIService {
     const startTime = Date.now();
     
     try {
+      // Runtime validation - only when actually making requests
+      if (!this.config.apiKey || this.config.apiKey === 'sk-mock-development-key-for-testing-only') {
+        throw new Error('OpenAI API key not configured. Please set VITE_OPENAI_API_KEY in your .env file.');
+      }
+
       // Check cache first
       if (options.cacheKey) {
         const cached = this.cacheManager.getCachedResponse<OpenAIResponse>(options.cacheKey);
@@ -112,6 +114,12 @@ export class OpenAIService {
       return this.parseResponseContent(response);
       
     } catch (error) {
+      // Handle API key configuration errors gracefully
+      if (error instanceof Error && error.message.includes('API key not configured')) {
+        logger.warn('OpenAI API key not configured. AI features will be limited.');
+        throw new Error('OpenAI API key not configured. Please set VITE_OPENAI_API_KEY in your .env file for full AI functionality.');
+      }
+      
       logger.error('OpenAI template generation failed:', error);
       throw this.errorHandler.createExternalAIError(error);
     }
@@ -157,7 +165,7 @@ export class OpenAIService {
   private async enforceRateLimit(): Promise<void> {
     const now = Date.now();
     const timeSinceLastRequest = now - this.lastRequestTime;
-    const minInterval = OPENAI_SERVICE_CONSTANTS.RATE_LIMIT_CALCULATION_MS / openAIConfig.performance.maxRequestsPerMinute;
+    const minInterval = OPENAI_SERVICE_CONSTANTS.RATE_LIMIT_CALCULATION_MS / openAIConfig().performance.maxRequestsPerMinute;
 
     if (timeSinceLastRequest < minInterval) {
       await new Promise(resolve => setTimeout(resolve, minInterval - timeSinceLastRequest));

@@ -13,73 +13,79 @@ const focusOptions: WorkoutFocusOption[] = [
     value: 'Energizing Boost',
     label: 'Energizing Boost',
     description: 'Get an energy boost to power through your day',
-    metadata: {
-      icon: Zap,
-      difficulty: 'new to exercise',
-      category: 'energy',
-      badge: 'Quick'
-    },
-    muscleGroups: WORKOUT_FOCUS_MUSCLE_GROUPS['Energizing Boost']
+    icon: 'Zap',
+    category: 'energy',
+    difficulty: 'new to exercise',
+    equipment: ['Body Weight'],
+    duration: 15,
+    intensity: 'moderate',
+    muscleGroups: ['Full Body'],
+    benefits: ['Energy boost', 'Mood improvement', 'Quick workout']
   },
   {
     value: 'Improve Posture',
     label: 'Improve Posture',
     description: 'Relieve desk-related tension and improve alignment',
-    metadata: {
-      icon: AlignCenter,
-      difficulty: 'new to exercise',
-      category: 'posture',
-      badge: 'Office'
-    },
-    muscleGroups: WORKOUT_FOCUS_MUSCLE_GROUPS['Improve Posture']
+    icon: 'AlignCenter',
+    category: 'posture',
+    difficulty: 'new to exercise',
+    equipment: ['Yoga Mat'],
+    duration: 20,
+    intensity: 'low',
+    muscleGroups: ['Core', 'Upper Body'],
+    benefits: ['Better posture', 'Reduced back pain', 'Improved alignment']
   },
   {
     value: 'Stress Reduction',
     label: 'Stress Reduction',
     description: 'Calm your mind and release tension',
-    metadata: {
-      icon: Smile,
-      difficulty: 'new to exercise',
-      category: 'wellness',
-      badge: 'Wellness'
-    },
-    muscleGroups: WORKOUT_FOCUS_MUSCLE_GROUPS['Stress Reduction']
+    icon: 'Smile',
+    category: 'wellness',
+    difficulty: 'new to exercise',
+    equipment: ['Yoga Mat'],
+    duration: 20,
+    intensity: 'low',
+    muscleGroups: ['Full Body'],
+    benefits: ['Stress relief', 'Mental clarity', 'Relaxation']
   },
   {
     value: 'Quick Sweat',
     label: 'Quick Sweat',
     description: 'High-intensity calorie-burning workout',
-    metadata: {
-      icon: Flame,
-      difficulty: 'some experience',
-      category: 'cardio',
-      badge: 'Intense'
-    },
-    muscleGroups: WORKOUT_FOCUS_MUSCLE_GROUPS['Quick Sweat']
+    icon: 'Flame',
+    category: 'cardio',
+    difficulty: 'some experience',
+    equipment: ['Body Weight'],
+    duration: 15,
+    intensity: 'high',
+    muscleGroups: ['Full Body'],
+    benefits: ['Calorie burn', 'Cardiovascular fitness', 'Quick results']
   },
   {
     value: 'Gentle Recovery & Mobility',
     label: 'Gentle Recovery & Mobility',
-    description: 'Improve flexibility and aid recovery',
-    metadata: {
-      icon: Heart,
-      difficulty: 'new to exercise',
-      category: 'recovery',
-      badge: 'Gentle'
-    },
-    muscleGroups: WORKOUT_FOCUS_MUSCLE_GROUPS['Gentle Recovery & Mobility']
+    description: 'Gentle stretching and mobility work for recovery',
+    icon: 'Heart',
+    category: 'recovery',
+    difficulty: 'new to exercise',
+    equipment: ['Yoga Mat'],
+    duration: 15,
+    intensity: 'low',
+    muscleGroups: ['Full Body'],
+    benefits: ['Recovery', 'Flexibility', 'Mobility improvement']
   },
   {
     value: 'Core & Abs Focus',
     label: 'Core & Abs Focus',
-    description: 'Strengthen your core and sculpt your abs',
-    metadata: {
-      icon: Dumbbell,
-      difficulty: 'some experience',
-      category: 'strength',
-      badge: 'Targeted'
-    },
-    muscleGroups: WORKOUT_FOCUS_MUSCLE_GROUPS['Core & Abs Focus']
+    description: 'Target your core muscles for strength and stability',
+    icon: 'Dumbbell',
+    category: 'strength',
+    difficulty: 'some experience',
+    equipment: ['Body Weight', 'Dumbbells'],
+    duration: 20,
+    intensity: 'moderate',
+    muscleGroups: ['Core'],
+    benefits: ['Core strength', 'Stability', 'Better posture']
   }
 ];
 
@@ -87,9 +93,19 @@ export const WorkoutFocusSection: React.FC<SectionProps> = ({
   focusData,
   onInputChange,
   viewMode,
+  _aiContext, // Prefix with _ to indicate intentionally unused
   userProfile
 }) => {
-  const { isFeatureEnabled, serviceStatus } = useAI();
+  const { serviceStatus } = useAI();
+
+  // Early return if focusData is null or undefined
+  if (!focusData) {
+    return (
+      <div className="p-8 text-center text-gray-500">
+        Loading focus data...
+      </div>
+    );
+  }
 
   // Generate AI insights for focus selection
   const generateFocusInsights = (selectedFocus?: string): AIInsight[] => {
@@ -107,6 +123,7 @@ export const WorkoutFocusSection: React.FC<SectionProps> = ({
       if (selectedFocus && WORKOUT_FOCUS_MUSCLE_GROUPS[selectedFocus]) {
         const muscleGroups = WORKOUT_FOCUS_MUSCLE_GROUPS[selectedFocus];
         insights.push({
+          id: `muscle_focus_${Date.now()}`,
           type: 'muscle_focus',
           title: 'Target Muscle Groups',
           content: muscleGroups.primaryMuscleGroups.map(group => group.name).join(', '),
@@ -115,6 +132,7 @@ export const WorkoutFocusSection: React.FC<SectionProps> = ({
         });
 
         insights.push({
+          id: `training_emphasis_${Date.now()}`,
           type: 'training_emphasis',
           title: 'Training Emphasis',
           content: muscleGroups.emphasis,
@@ -134,7 +152,7 @@ export const WorkoutFocusSection: React.FC<SectionProps> = ({
     onInputChange('workoutFocus', value);
     
     // Generate insights for the selected focus if AI is enabled
-    if (isFeatureEnabled('ai_service_unified') && viewMode === 'complex') {
+    if (serviceStatus === 'ready' && userProfile) {
       const insights = generateFocusInsights(value);
       insights.forEach(insight => {
         logger.debug('Focus AI Insight:', insight);
@@ -159,7 +177,7 @@ export const WorkoutFocusSection: React.FC<SectionProps> = ({
             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
               Required
             </span>
-            {isFeatureEnabled('ai_service_unified') && viewMode === 'complex' && (
+            {serviceStatus === 'ready' && userProfile && (
               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                 <Lightbulb className="w-3 h-3 mr-1" />
                 AI Enhanced
@@ -181,9 +199,7 @@ export const WorkoutFocusSection: React.FC<SectionProps> = ({
       options={focusOptions.map(option => ({
         value: option.value,
         label: option.label,
-        metadata: option.metadata ? {
-          icon: option.metadata.icon
-        } : undefined
+        description: option.description
       }))}
       selected={focusData.workoutFocus}
       onSelect={handleSelect}
@@ -230,15 +246,15 @@ export const WorkoutFocusSection: React.FC<SectionProps> = ({
         )}
 
         {/* AI Insights Panel */}
-        {isFeatureEnabled('ai_service_unified') && selectedFocus && (
+        {serviceStatus === 'ready' && userProfile && selectedFocus && (
           <div className="mt-4 p-3 bg-gray-50 rounded-lg">
             <div className="flex items-center justify-between text-sm text-gray-600">
               <div className="flex items-center gap-4">
                 <span>
-                  Difficulty: <span className="font-medium">{focusOptions.find(opt => opt.value === selectedFocus)?.metadata.difficulty}</span>
+                  Difficulty: <span className="font-medium">{focusOptions.find(opt => opt.value === selectedFocus)?.difficulty}</span>
                 </span>
                 <span>
-                  Category: <span className="font-medium">{focusOptions.find(opt => opt.value === selectedFocus)?.metadata.category}</span>
+                  Category: <span className="font-medium">{focusOptions.find(opt => opt.value === selectedFocus)?.category}</span>
                 </span>
               </div>
               <div className="flex gap-1">

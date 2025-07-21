@@ -5,7 +5,10 @@ import {
   validateFitnessLevelCalculation,
   type ExperienceLevel,
   type ActivityLevel,
-  type FitnessLevel 
+  type FitnessLevel,
+  calculateWorkoutIntensity,
+  type TargetActivityLevel,
+  getWorkoutIntensityDetails
 } from '../fitnessLevelCalculator';
 
 describe('Fitness Level Calculator', () => {
@@ -167,6 +170,108 @@ describe('Fitness Level Calculator', () => {
           expect(intensityRange.max).toBeLessThanOrEqual(10);
           expect(intensityRange.min).toBeLessThanOrEqual(intensityRange.max);
         });
+      });
+    });
+  });
+}); 
+
+describe('Workout Intensity Calculator', () => {
+  describe('calculateWorkoutIntensity', () => {
+    it('should calculate low intensity for beginner + lightly active', () => {
+      const result = calculateWorkoutIntensity('beginner', 'lightly');
+      expect(result).toBe('low');
+    });
+
+    it('should calculate low intensity for beginner + moderately active', () => {
+      const result = calculateWorkoutIntensity('beginner', 'moderately');
+      expect(result).toBe('low');
+    });
+
+    it('should calculate high intensity for intermediate + extremely active', () => {
+      const result = calculateWorkoutIntensity('intermediate', 'extremely');
+      expect(result).toBe('high');
+    });
+
+    it('should calculate high intensity for advanced + very active', () => {
+      const result = calculateWorkoutIntensity('advanced', 'very');
+      expect(result).toBe('high');
+    });
+
+    it('should cap at high intensity for advanced + extremely active', () => {
+      const result = calculateWorkoutIntensity('advanced', 'extremely');
+      expect(result).toBe('high');
+    });
+
+    it('should handle adaptive fitness level', () => {
+      const result = calculateWorkoutIntensity('adaptive', 'moderately');
+      expect(result).toBe('moderate');
+    });
+
+    it('should calculate correct intensities for all combinations', () => {
+      // Test the formula: Fitness Level + Target Activity Adjustment
+      const testCases = [
+        { fitness: 'beginner', target: 'lightly', expected: 'low' },      // 1 + 0 = 1
+        { fitness: 'beginner', target: 'light-moderate', expected: 'low' }, // 1 + 1 = 2
+        { fitness: 'beginner', target: 'moderately', expected: 'low' },    // 1 + 2 = 3
+        { fitness: 'novice', target: 'moderately', expected: 'low' },      // 2 + 2 = 4
+        { fitness: 'novice', target: 'active', expected: 'moderate' },     // 2 + 3 = 5
+        { fitness: 'intermediate', target: 'active', expected: 'moderate' }, // 3 + 3 = 6
+        { fitness: 'intermediate', target: 'very', expected: 'high' },     // 3 + 4 = 7
+        { fitness: 'advanced', target: 'very', expected: 'high' },         // 4 + 4 = 8
+        { fitness: 'advanced', target: 'extremely', expected: 'high' },    // 4 + 5 = 9
+      ];
+
+      testCases.forEach(({ fitness, target, expected }) => {
+        const result = calculateWorkoutIntensity(fitness as FitnessLevel, target as TargetActivityLevel);
+        expect(result).toBe(expected);
+      });
+    });
+  });
+
+  describe('getWorkoutIntensityDetails', () => {
+    it('should return correct details for low intensity', () => {
+      const details = getWorkoutIntensityDetails('low');
+      expect(details.description).toBe('Low Intensity Workouts');
+      expect(details.range).toBe('1-4/10');
+      expect(details.guidance).toContain('Gentle movement');
+    });
+
+    it('should return correct details for moderate intensity', () => {
+      const details = getWorkoutIntensityDetails('moderate');
+      expect(details.description).toBe('Moderate Intensity Workouts');
+      expect(details.range).toBe('5-6/10');
+      expect(details.guidance).toContain('Challenging but manageable');
+    });
+
+    it('should return correct details for high intensity', () => {
+      const details = getWorkoutIntensityDetails('high');
+      expect(details.description).toBe('High Intensity Workouts');
+      expect(details.range).toBe('7-10/10');
+      expect(details.guidance).toContain('Vigorous and demanding');
+    });
+  });
+
+  describe('Integration Tests', () => {
+    it('should provide consistent workout intensity calculations', () => {
+      const fitnessLevel = calculateFitnessLevel('Some Experience', 'moderate');
+      const workoutIntensity = calculateWorkoutIntensity(fitnessLevel, 'moderately');
+      const details = getWorkoutIntensityDetails(workoutIntensity);
+      
+      expect(fitnessLevel).toBe('intermediate');
+      expect(workoutIntensity).toBe('moderate');
+      expect(details.description).toBe('Moderate Intensity Workouts');
+    });
+
+    it('should handle edge cases gracefully', () => {
+      // Test that adaptive fitness level works correctly
+      const adaptiveIntensity = calculateWorkoutIntensity('adaptive', 'extremely');
+      expect(adaptiveIntensity).toBe('high');
+      
+      // Test that all target activity levels work
+      const allTargets: TargetActivityLevel[] = ['lightly', 'light-moderate', 'moderately', 'active', 'very', 'extremely'];
+      allTargets.forEach(target => {
+        const result = calculateWorkoutIntensity('intermediate', target);
+        expect(['low', 'moderate', 'high']).toContain(result);
       });
     });
   });

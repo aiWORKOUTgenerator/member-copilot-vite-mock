@@ -17,6 +17,21 @@ const PersonalInfoStep: React.FC<StepProps> = ({
   const [showHealthInfo, setShowHealthInfo] = React.useState(false);
   const [showInjuriesInfo, setShowInjuriesInfo] = React.useState(false);
 
+  // Early return if profileData is null
+  if (!profileData) {
+    return (
+      <div className="space-y-8">
+        <ProfileHeader 
+          title="Personal Metrics & Health"
+          description="Help us understand your physical characteristics and any health considerations"
+        />
+        <div className="p-8 text-center text-gray-500">
+          Loading profile data...
+        </div>
+      </div>
+    );
+  }
+
   const renderFieldError = (field: keyof ProfileData) => {
     const error = getFieldError ? getFieldError(field) : undefined;
     if (error) {

@@ -1,5 +1,5 @@
 // External AI Service Types
-import { PrioritizedRecommendation, GlobalAIContext } from '../../core/AIService';
+import { PrioritizedRecommendation, GlobalAIContext } from '../../core/types/AIServiceTypes';
 import { AIInsight } from '../../../../types/insights';
 // PerWorkoutOptions and UserProfile are now imported from the unified types
 import { WorkoutGenerationRequest } from '../../../../types/workout-generation.types';

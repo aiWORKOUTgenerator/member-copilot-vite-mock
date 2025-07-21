@@ -12,6 +12,21 @@ const GoalsStep: React.FC<StepProps> = ({
   const [showGoalInfo, setShowGoalInfo] = React.useState(false);
   const [showTimelineInfo, setShowTimelineInfo] = React.useState(false);
 
+  // Early return if profileData is null
+  if (!profileData) {
+    return (
+      <div className="space-y-8">
+        <ProfileHeader 
+          title="Goals & Timeline"
+          description="Help us understand what you want to achieve through your fitness journey"
+        />
+        <div className="p-8 text-center text-gray-500">
+          Loading profile data...
+        </div>
+      </div>
+    );
+  }
+
   const goalOptions: OptionConfig[] = [
     { 
       value: 'Weight Loss', 

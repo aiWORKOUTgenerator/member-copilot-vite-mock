@@ -113,12 +113,15 @@ const PreferencesStep: React.FC<StepProps> = ({
 
   // Dynamic equipment options based on selected locations
   const equipmentOptions = React.useMemo(() => {
+    if (!profileData?.availableLocations) {
+      return [];
+    }
     return createEquipmentOptions(profileData.availableLocations);
-  }, [profileData.availableLocations]);
+  }, [profileData?.availableLocations]);
   
   // Auto-select default equipment when locations change
   React.useEffect(() => {
-    if (profileData.availableLocations.length > 0 && profileData.availableEquipment.length === 0) {
+    if (profileData?.availableLocations?.length > 0 && profileData?.availableEquipment?.length === 0) {
       const defaultEquipment = DynamicEquipmentService.getDefaultEquipmentForLocations(
         profileData.availableLocations
       );
@@ -126,17 +129,17 @@ const PreferencesStep: React.FC<StepProps> = ({
         onArrayToggle('availableEquipment', equipment);
       });
     }
-  }, [profileData.availableLocations, profileData.availableEquipment.length, onArrayToggle]);
+  }, [profileData?.availableLocations, profileData?.availableEquipment?.length, onArrayToggle]);
   
   // Clear equipment when locations are cleared
   React.useEffect(() => {
-    if (profileData.availableLocations.length === 0 && profileData.availableEquipment.length > 0) {
+    if (profileData?.availableLocations?.length === 0 && profileData?.availableEquipment?.length > 0) {
       // Clear equipment selection when no locations are selected
       profileData.availableEquipment.forEach(equipment => {
         onArrayToggle('availableEquipment', equipment);
       });
     }
-  }, [profileData.availableLocations.length, profileData.availableEquipment, onArrayToggle]);
+  }, [profileData?.availableLocations?.length, profileData?.availableEquipment, onArrayToggle]);
 
   return (
     <div className="space-y-8">
@@ -189,7 +192,7 @@ const PreferencesStep: React.FC<StepProps> = ({
 
           <OptionGrid
             options={activityOptions}
-            selectedValues={profileData.preferredActivities}
+            selectedValues={profileData?.preferredActivities || []}
             onSelect={(value: string) => onArrayToggle('preferredActivities', value)}
             multiple={true}
             columns={3}
@@ -244,7 +247,7 @@ const PreferencesStep: React.FC<StepProps> = ({
 
           <OptionGrid
             options={locationOptions}
-            selectedValues={profileData.availableLocations}
+            selectedValues={profileData?.availableLocations || []}
             onSelect={(value: string) => onArrayToggle('availableLocations', value)}
             multiple={true}
             columns={3}
@@ -261,7 +264,7 @@ const PreferencesStep: React.FC<StepProps> = ({
             <div className="inline-block px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white text-sm font-medium rounded-md shadow-sm">
               Available Equipment
             </div>
-            {profileData.availableLocations.length > 0 && (
+            {profileData?.availableLocations?.length > 0 && (
               <span className="text-sm text-gray-600">
                 Based on your selected locations
               </span>

@@ -4,6 +4,7 @@ import { Eye, ChevronLeft, ChevronRight, AlertTriangle, XCircle, Loader2, Sparkl
 import { WorkoutGenerationRequest } from '../../types/workout-generation.types';
 import { UserProfile, TimePreference, IntensityLevel, AIAssistanceLevel } from '../../types/user';
 import { mapExperienceLevelToFitnessLevel } from '../../utils/configUtils';
+import { calculateWorkoutIntensity } from '../../utils/fitnessLevelCalculator';
 import { ReviewPageProps } from './types';
 import { ProfileSection, WorkoutSection } from './sections';
 import { 
@@ -39,15 +40,42 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
     setGenerationError(null);
 
     try {
+      // Use the calculated workout intensity from TimeCommitmentStep, or calculate if not available
+      const calculatedWorkoutIntensity = profileData.calculatedWorkoutIntensity || 
+        (profileData.experienceLevel && profileData.intensityLevel ? 
+          calculateWorkoutIntensity(
+            mapExperienceLevelToFitnessLevel(profileData.experienceLevel),
+            profileData.intensityLevel
+          ) : 
+          undefined
+        );
+
+      // Validate required profile data before building userProfile
+      if (!profileData.experienceLevel) {
+        throw new Error('Experience level is required but not provided in profile data');
+      }
+      
+      if (!profileData.primaryGoal) {
+        throw new Error('Primary goal is required but not provided in profile data');
+      }
+
+      // Use the calculated fitness level from ExperienceStep, or fall back to mapping if not available
+      const fitnessLevel = profileData.calculatedFitnessLevel || mapExperienceLevelToFitnessLevel(profileData.experienceLevel);
+      
+      // Validate fitness level was determined correctly
+      if (!fitnessLevel) {
+        throw new Error(`Failed to determine fitness level. Experience level: "${profileData.experienceLevel}", Calculated fitness level: "${profileData.calculatedFitnessLevel}"`);
+      }
+
       const userProfile: UserProfile = {
-        fitnessLevel: mapExperienceLevelToFitnessLevel(profileData.experienceLevel),
+        fitnessLevel: fitnessLevel,
         goals: [profileData.primaryGoal.toLowerCase().replace(' ', '_')],
         preferences: {
           workoutStyle: profileData.preferredActivities.map(activity => 
             activity.toLowerCase().replace(/[^a-z0-9]/g, '_')
           ),
           timePreference: 'morning' as TimePreference,
-          intensityPreference: profileData.intensityLevel as IntensityLevel,
+          intensityPreference: calculatedWorkoutIntensity as IntensityLevel,
           advancedFeatures: profileData.experienceLevel === 'Advanced Athlete',
           aiAssistanceLevel: 'moderate' as AIAssistanceLevel
         },
@@ -87,6 +115,18 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
         }
       };
 
+      // Debug log to verify userProfile is built correctly
+      console.log('✅ UserProfile built successfully:', {
+        fitnessLevel: userProfile.fitnessLevel,
+        goals: userProfile.goals,
+        experienceLevel: profileData.experienceLevel,
+        primaryGoal: profileData.primaryGoal,
+        calculatedFitnessLevel: profileData.calculatedFitnessLevel,
+        fitnessLevelSource: profileData.calculatedFitnessLevel ? 'calculated' : 'mapped',
+        calculatedWorkoutIntensity: profileData.calculatedWorkoutIntensity,
+        workoutIntensitySource: profileData.calculatedWorkoutIntensity ? 'calculated' : 'computed'
+      });
+
       const request: WorkoutGenerationRequest = {
         workoutType,
         profileData,
@@ -104,8 +144,29 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
         setGenerationError('Failed to generate workout. Please try again.');
       }
     } catch (error) {
-      console.error('Workout generation failed:', error);
-      setGenerationError('An error occurred while generating your workout. Please try again.');
+      // Enhanced error logging with actionable information
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      console.error('Workout generation failed:', {
+        error: errorMessage,
+        profileDataKeys: profileData ? Object.keys(profileData) : 'N/A',
+        experienceLevel: profileData?.experienceLevel || 'MISSING',
+        primaryGoal: profileData?.primaryGoal || 'MISSING',
+        intensityLevel: profileData?.intensityLevel || 'MISSING'
+      });
+      
+      // Provide more specific error messages based on the error type
+      if (errorMessage.includes('Experience level is required')) {
+        setGenerationError('Please complete your experience level in your profile before generating a workout.');
+      } else if (errorMessage.includes('Primary goal is required')) {
+        setGenerationError('Please select a primary goal in your profile before generating a workout.');
+      } else if (errorMessage.includes('userProfile is required')) {
+        setGenerationError('Profile data is incomplete. Please complete your profile before generating a workout.');
+      } else if (errorMessage.includes('fitnessLevel is required')) {
+        setGenerationError('Fitness level could not be determined. Please update your experience level in your profile.');
+      } else {
+        setGenerationError(`An error occurred while generating your workout: ${errorMessage}`);
+      }
     } finally {
       setIsGenerating(false);
     }

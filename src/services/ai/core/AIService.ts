@@ -155,15 +155,18 @@ export class AIService {
   /**
    * Generate workout using OpenAI strategy
    */
-  async generateWorkout(workoutData: any): Promise<any> {
+  async generateWorkout(request: any): Promise<any> {
     try {
+      // Extract workoutData from request or use request directly
+      const workoutData = request.workoutFocusData || request;
+      
       // Get current context or create default context
       let context = this.context.getContext();
       
       if (!context) {
         // Create a default context if none exists
         context = {
-          userProfile: {
+          userProfile: request.userProfile || {
             fitnessLevel: 'intermediate' as const,
             goals: ['general_fitness'],
             preferences: {
@@ -238,9 +241,9 @@ export class AIService {
       }
       
       // Generate workout using OpenAI strategy directly
-      return await this.openAIStrategy.generateWorkout(workoutData);
+      return await this.openAIStrategy.generateWorkout(request);
     } catch (error) {
-      this.errorHandler.handleError(error as Error, 'generateWorkout', { workoutData });
+      this.errorHandler.handleError(error as Error, 'generateWorkout', { request });
       throw error;
     }
   }

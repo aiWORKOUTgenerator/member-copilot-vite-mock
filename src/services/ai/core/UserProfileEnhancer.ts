@@ -25,15 +25,15 @@ export class UserProfileEnhancer {
    * Enhances basic profile data with AI-generated insights
    */
   static enhanceProfile(profileData: ProfileData): UserProfile {
-    return profileTransformers.convertProfileToUserProfile(profileData);
+    return profileTransformers.convertProfileToUserProfileSimple(profileData);
   }
 
   private static mapExperienceToFitnessLevel(experienceLevel: ProfileData['experienceLevel']): FitnessLevel {
     switch (experienceLevel) {
-          case 'New to Exercise': return 'new to exercise';
-    case 'Some Experience': return 'some experience';
-    case 'Advanced Athlete': return 'advanced athlete';
-    default: return 'new to exercise';
+      case 'New to Exercise': return 'beginner';
+      case 'Some Experience': return 'intermediate';
+      case 'Advanced Athlete': return 'advanced';
+      default: return 'beginner';
     }
   }
 
@@ -44,7 +44,7 @@ export class UserProfileEnhancer {
     });
 
     const timePreference: TimePreference = 'morning'; // default, could be enhanced with user input
-    const intensityPreference: IntensityLevel = this.mapIntensityLevel(profileData.intensityLevel, profileData.physicalActivity);
+    const intensityPreference: IntensityLevel = profileData.calculatedWorkoutIntensity;
     const advancedFeatures: boolean = profileData.experienceLevel === 'Advanced Athlete';
     const aiAssistanceLevel: AIAssistanceLevel = 'moderate';
 
@@ -69,68 +69,7 @@ export class UserProfileEnhancer {
     };
   }
 
-  private static mapIntensityLevel(intensityLevel: ProfileData['intensityLevel'], physicalActivity?: ProfileData['physicalActivity']): IntensityLevel {
-    // Map target activity level to progression rate (not immediate intensity)
-    let targetProgressionRate: 'conservative' | 'moderate' | 'aggressive';
-    switch (intensityLevel) {
-      case 'lightly':
-        targetProgressionRate = 'conservative';
-        break;
-      case 'light-moderate':
-        targetProgressionRate = 'conservative';
-        break;
-      case 'moderately':
-        targetProgressionRate = 'moderate';
-        break;
-      case 'active':
-        targetProgressionRate = 'moderate';
-        break;
-      case 'very':
-        targetProgressionRate = 'aggressive';
-        break;
-      case 'extremely':
-        targetProgressionRate = 'aggressive';
-        break;
-      default:
-        targetProgressionRate = 'moderate';
-    }
 
-    // If no physical activity data, use moderate intensity as default
-    if (!physicalActivity) {
-      return 'moderate';
-    }
-
-    // Calculate appropriate starting intensity based on current activity level
-    // This ensures safety while working toward the target goal
-    switch (physicalActivity) {
-      case 'sedentary':
-        // Sedentary users start with low intensity regardless of target
-        return 'low';
-        
-      case 'light':
-        // Lightly active users start with low-to-moderate intensity
-        return targetProgressionRate === 'aggressive' ? 'moderate' : 'low';
-        
-      case 'moderate':
-        // Moderately active users can start with moderate intensity
-        return 'moderate';
-        
-      case 'very':
-        // Very active users can handle moderate-to-high intensity
-        return targetProgressionRate === 'conservative' ? 'moderate' : 'high';
-        
-      case 'extremely':
-        // Extremely active users can handle high intensity
-        return targetProgressionRate === 'conservative' ? 'moderate' : 'high';
-        
-      case 'varies':
-        // For users with varying activity, use moderate as default
-        return 'moderate';
-        
-      default:
-        return 'moderate';
-    }
-  }
 
   private static generateEnhancedLimitations(profileData: ProfileData): AIEnhancedLimitations {
     // Calculate time constraints from duration and commitment
@@ -149,7 +88,7 @@ export class UserProfileEnhancer {
     const recoveryNeeds = this.calculateRecoveryNeeds(age, profileData.physicalActivity);
 
     // Determine progression rate
-    const progressionRate: 'conservative' | 'moderate' | 'aggressive' = this.determineProgressionRate(profileData.experienceLevel, profileData.intensityLevel);
+    const progressionRate: 'conservative' | 'moderate' | 'aggressive' = this.determineProgressionRate(profileData.experienceLevel, profileData.calculatedWorkoutIntensity);
 
     const mobilityLimitations: string[] = this.inferMobilityLimitations(profileData);
 
@@ -343,9 +282,9 @@ export class UserProfileEnhancer {
     return { restDays: roundedRestDays, sleepHours, hydrationLevel };
   }
 
-  private static determineProgressionRate(experienceLevel: ProfileData['experienceLevel'], intensityLevel: ProfileData['intensityLevel']): 'conservative' | 'moderate' | 'aggressive' {
+  private static determineProgressionRate(experienceLevel: ProfileData['experienceLevel'], calculatedIntensity: ProfileData['calculatedWorkoutIntensity']): 'conservative' | 'moderate' | 'aggressive' {
     if (experienceLevel === 'New to Exercise') return 'conservative';
-    if (experienceLevel === 'Advanced Athlete' && (intensityLevel === 'very' || intensityLevel === 'extremely')) return 'aggressive';
+    if (experienceLevel === 'Advanced Athlete' && calculatedIntensity === 'high') return 'aggressive';
     return 'moderate';
   }
 

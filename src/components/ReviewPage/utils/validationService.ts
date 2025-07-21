@@ -47,8 +47,11 @@ export class ValidationService {
         helpText: 'Your profile helps us create workouts tailored to your fitness level, goals, and preferences.'
       });
     } else {
-      // Validate specific profile fields
-      if (!profileData.experienceLevel) {
+      // Validate specific profile fields - handle empty strings and undefined values
+      const experienceLevel = profileData.experienceLevel;
+      const primaryGoal = profileData.primaryGoal;
+      
+      if (!experienceLevel || experienceLevel === '' || experienceLevel === 'undefined') {
         issues.push({
           field: 'Experience Level',
           message: 'Please specify your fitness experience level.',
@@ -61,7 +64,7 @@ export class ValidationService {
         });
       }
 
-      if (!profileData.primaryGoal) {
+      if (!primaryGoal || primaryGoal === '' || primaryGoal === 'undefined') {
         issues.push({
           field: 'Primary Goal',
           message: 'Please select your primary fitness goal.',

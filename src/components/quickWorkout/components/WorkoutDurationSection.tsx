@@ -23,6 +23,15 @@ export const WorkoutDurationSection: React.FC<SectionProps> = ({
 }) => {
   const { aiService, serviceStatus, isFeatureEnabled } = useAI();
 
+  // Early return if focusData is null or undefined
+  if (!focusData) {
+    return (
+      <div className="p-8 text-center text-gray-500">
+        Loading duration data...
+      </div>
+    );
+  }
+
   // Generate AI insights for duration selection
   const generateDurationInsights = (selectedDuration?: number): AIInsight[] => {
     if (serviceStatus !== 'ready' || !userProfile) {
@@ -31,12 +40,13 @@ export const WorkoutDurationSection: React.FC<SectionProps> = ({
 
     try {
       const insights: AIInsight[] = [];
-      const energyLevel = focusData.energyLevel || 5;
-      const sorenessLevel = focusData.sorenessLevel || 1;
+      const energyLevel = focusData?.energyLevel || 5;
+      const sorenessLevel = focusData?.sorenessLevel || 1;
       
       // Energy-based duration recommendations
       if (energyLevel <= 3 && selectedDuration && selectedDuration > 20) {
         insights.push({
+          id: `energy_duration_warning_${Date.now()}`,
           type: 'warning',
           title: 'Energy Level Warning',
           content: 'Consider a shorter workout when energy is low',
@@ -53,6 +63,7 @@ export const WorkoutDurationSection: React.FC<SectionProps> = ({
       // Soreness-based duration recommendations
       if (sorenessLevel >= 6 && selectedDuration && selectedDuration > 15) {
         insights.push({
+          id: `soreness_duration_warning_${Date.now()}`,
           type: 'warning',
           title: 'Soreness Warning',
           content: 'Shorter, gentler workouts recommended with high soreness',
@@ -69,6 +80,7 @@ export const WorkoutDurationSection: React.FC<SectionProps> = ({
       // Positive reinforcement for good choices
       if (energyLevel >= 7 && selectedDuration && selectedDuration >= 20) {
         insights.push({
+          id: `energy_duration_encouragement_${Date.now()}`,
           type: 'encouragement',
           title: 'Good Duration Choice',
           content: 'Great choice! Your high energy supports a longer workout',
@@ -82,8 +94,9 @@ export const WorkoutDurationSection: React.FC<SectionProps> = ({
       }
 
       // Beginner-specific guidance
-      if (userProfile.fitnessLevel === 'new to exercise' && selectedDuration && selectedDuration > 20) {
+      if (userProfile.fitnessLevel === 'beginner' && selectedDuration && selectedDuration > 20) {
         insights.push({
+          id: `beginner_duration_education_${Date.now()}`,
           type: 'education',
           title: 'New to Exercise Guidance',
           content: 'As a beginner, shorter workouts help build consistency',

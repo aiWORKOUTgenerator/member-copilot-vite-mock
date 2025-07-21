@@ -258,7 +258,7 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
 
   // Enhanced profile conversion with better error handling
   const convertProfileToUserProfile = useCallback((profileData: ProfileData): UserProfile => {
-    return profileTransformers.convertProfileToUserProfile(profileData);
+    return profileTransformers.convertProfileToUserProfileSimple(profileData);
   }, []);
 
   // Enhanced validation with better error messages
@@ -343,8 +343,17 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
       setStatus('generating');
       updateProgress(10);
 
-      // Convert profile data to user profile
-      const userProfile = convertProfileToUserProfile(request.profileData);
+      // Use the provided userProfile or convert from profileData if not provided
+      const userProfile = request.userProfile || convertProfileToUserProfile(request.profileData);
+      
+      // Debug log to verify userProfile
+      console.log('🔍 useWorkoutGeneration - userProfile:', {
+        hasUserProfile: !!request.userProfile,
+        fitnessLevel: userProfile.fitnessLevel,
+        goals: userProfile.goals,
+        source: request.userProfile ? 'provided' : 'converted'
+      });
+      
       updateProgress(20);
 
       // Prepare workout options

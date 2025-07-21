@@ -17,6 +17,15 @@ export const MuscleSorenessSection: React.FC<SectionProps> = ({
 }) => {
   const { getSorenessInsights, serviceStatus } = useAI();
 
+  // Early return if focusData is null or undefined
+  if (!focusData) {
+    return (
+      <div className="p-8 text-center text-gray-500">
+        Loading soreness data...
+      </div>
+    );
+  }
+
   const handleSorenessChange = (value: number) => {
     onInputChange('sorenessLevel', value);
   };

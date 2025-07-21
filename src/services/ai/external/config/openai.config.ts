@@ -433,12 +433,18 @@ export const isFeatureEnabled = (
   feature: keyof ExternalAIServiceConfig['features'],
   config?: ExternalAIServiceConfig
 ): boolean => {
-  const currentConfig = config ?? getOpenAIConfig();
+  const currentConfig = config ?? openAIConfig();
   return currentConfig.features[feature] && !!currentConfig.openai.apiKey;
 };
 
-// Export the main configuration (now safe to import in tests)
-export const openAIConfig = getOpenAIConfig();
+// Export the main configuration (lazy-loaded to ensure proper environment detection)
+let _openAIConfig: ExternalAIServiceConfig | null = null;
+export const openAIConfig = (): ExternalAIServiceConfig => {
+  if (!_openAIConfig) {
+    _openAIConfig = getOpenAIConfig();
+  }
+  return _openAIConfig;
+};
 
 // Export configuration presets for testing
 export const configPresets = {

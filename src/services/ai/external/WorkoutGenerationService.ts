@@ -208,7 +208,7 @@ export class WorkoutGenerationService {
       physicalActivity: profileData.physicalActivity,
       preferredDuration: profileData.preferredDuration,
       timeCommitment: profileData.timeCommitment,
-      intensityLevel: profileData.intensityLevel,
+      intensityLevel: profileData.calculatedWorkoutIntensity,
       preferredActivities: profileData.preferredActivities,
       availableEquipment: profileData.availableEquipment,
       primaryGoal: profileData.primaryGoal,

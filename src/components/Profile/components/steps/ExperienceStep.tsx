@@ -19,20 +19,35 @@ const ExperienceStep: React.FC<StepProps> = ({
   const [showActivityInfo, setShowActivityInfo] = React.useState(false);
   const [showFitnessLevelInfo, setShowFitnessLevelInfo] = React.useState(false);
 
+  // Early return if profileData is null
+  if (!profileData) {
+    return (
+      <div className="space-y-8">
+        <ProfileHeader 
+          title="Experience & Activity"
+          description="Help us understand your current fitness level and activity patterns to create the perfect workout plan"
+        />
+        <div className="p-8 text-center text-gray-500">
+          Loading profile data...
+        </div>
+      </div>
+    );
+  }
+
   // Calculate fitness level when both experience and activity are selected
   const calculatedFitnessLevel: FitnessLevel | null = React.useMemo(() => {
-    if (profileData.experienceLevel && profileData.physicalActivity) {
+    if (profileData?.experienceLevel && profileData?.physicalActivity) {
       return calculateFitnessLevel(profileData.experienceLevel, profileData.physicalActivity);
     }
     return null;
-  }, [profileData.experienceLevel, profileData.physicalActivity]);
+  }, [profileData?.experienceLevel, profileData?.physicalActivity]);
 
   // Save calculated fitness level to profile data when it changes
   React.useEffect(() => {
-    if (calculatedFitnessLevel && calculatedFitnessLevel !== profileData.calculatedFitnessLevel) {
+    if (calculatedFitnessLevel && calculatedFitnessLevel !== profileData?.calculatedFitnessLevel) {
       onInputChange('calculatedFitnessLevel', calculatedFitnessLevel);
     }
-  }, [calculatedFitnessLevel, profileData.calculatedFitnessLevel, onInputChange]);
+  }, [calculatedFitnessLevel, profileData?.calculatedFitnessLevel, onInputChange]);
 
   const experienceOptions: OptionConfig[] = [
     {
@@ -136,7 +151,7 @@ const ExperienceStep: React.FC<StepProps> = ({
 
           <OptionGrid
             options={experienceOptions}
-            selectedValues={profileData.experienceLevel}
+            selectedValues={profileData?.experienceLevel || ''}
             onSelect={(value: string) => onInputChange('experienceLevel', value)}
             columns={3}
             variant="default"
@@ -191,7 +206,7 @@ const ExperienceStep: React.FC<StepProps> = ({
           <div>
             <OptionGrid
               options={physicalActivityOptions}
-              selectedValues={profileData.physicalActivity}
+              selectedValues={profileData?.physicalActivity || ''}
               onSelect={(value: string) => onInputChange('physicalActivity', value)}
               columns={3}
               variant="default"
@@ -241,11 +256,11 @@ const ExperienceStep: React.FC<StepProps> = ({
                   <ul className="list-none pl-4 space-y-1">
                     <li className="flex items-start">
                       <span className="text-green-600 mr-2">•</span>
-                      <strong>Experience:</strong> {profileData.experienceLevel}
+                      <strong>Experience:</strong> {profileData?.experienceLevel || 'Not selected'}
                     </li>
                     <li className="flex items-start">
                       <span className="text-green-600 mr-2">•</span>
-                      <strong>Activity:</strong> {profileData.physicalActivity}
+                      <strong>Activity:</strong> {profileData?.physicalActivity || 'Not selected'}
                     </li>
                   </ul>
                 </div>
@@ -270,7 +285,7 @@ const ExperienceStep: React.FC<StepProps> = ({
         )}
 
         {/* Progress Indication */}
-        {profileData.experienceLevel && profileData.physicalActivity && !calculatedFitnessLevel && (
+        {profileData?.experienceLevel && profileData?.physicalActivity && !calculatedFitnessLevel && (
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-center">
               <Activity className="w-5 h-5 text-blue-600 mr-3" />

@@ -6,7 +6,7 @@ import {
   UserPreferenceAnalysis
 } from './types/external-ai.types';
 import { WorkoutGenerationRequest } from '../../../types/workout-generation.types';
-import { PrioritizedRecommendation, GlobalAIContext } from '../core/AIService';
+import { PrioritizedRecommendation, GlobalAIContext } from '../core/types/AIServiceTypes';
 import { AIInsight } from '../../../types/insights';
 import { OpenAIService } from './OpenAIService';
 import { 
@@ -31,14 +31,19 @@ import { enhanceGeneratedWorkout } from './helpers/WorkoutEnhancementHelpers';
 
 
 export class OpenAIStrategy implements AIStrategy {
-  private openAIService: OpenAIService;
+  private openAIService?: OpenAIService;
   private fallbackStrategy?: AIStrategy;
 
   constructor(
     openAIService?: OpenAIService,
     fallbackStrategy?: AIStrategy
   ) {
-    this.openAIService = openAIService ?? new OpenAIService();
+    try {
+      this.openAIService = openAIService ?? new OpenAIService();
+    } catch (error) {
+      console.warn('⚠️  Failed to create OpenAIService, using fallback strategy:', error);
+      this.openAIService = undefined;
+    }
     this.fallbackStrategy = fallbackStrategy;
   }
 
@@ -63,6 +68,11 @@ export class OpenAIStrategy implements AIStrategy {
         optimizationOpportunities: this.findOptimizationOpportunities(context)
       };
 
+      // Check if OpenAIService is available
+      if (!this.openAIService) {
+        return this.fallbackToRuleBased('recommendations', context);
+      }
+
       // Generate recommendations using OpenAI
       const recommendations = await this.openAIService.generateFromTemplate(
         prompt,
@@ -85,6 +95,11 @@ export class OpenAIStrategy implements AIStrategy {
   // Generate AI-powered workout
   async generateWorkout(request: WorkoutGenerationRequest): Promise<GeneratedWorkout> {
     try {
+      // Check if OpenAIService is available
+      if (!this.openAIService) {
+        throw new Error('OpenAI service not available. Please configure VITE_OPENAI_API_KEY for AI-powered workouts.');
+      }
+
       // Validate request and configuration
       this.validateWorkoutRequest(request);
       
@@ -98,8 +113,27 @@ export class OpenAIStrategy implements AIStrategy {
       return this.enhanceGeneratedWorkout(workout, request);
 
     } catch (error) {
-      logger.error('OpenAI workout generation failed:', error);
-      throw ErrorHandler.createWorkoutError(error, request);
+      // Enhanced error logging with actionable information
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : '';
+      
+      logger.error('OpenAI workout generation failed:', {
+        error: errorMessage,
+        stack: errorStack,
+        requestKeys: Object.keys(request),
+        hasUserProfile: !!request.userProfile,
+        userProfileKeys: request.userProfile ? Object.keys(request.userProfile) : 'N/A',
+        fitnessLevel: request.userProfile?.fitnessLevel || 'MISSING'
+      });
+      
+      // Create more specific error based on the type
+      if (errorMessage.includes('userProfile is required')) {
+        throw new Error('Workout generation failed: User profile is incomplete. Please complete your profile before generating workouts.');
+      } else if (errorMessage.includes('fitnessLevel is required')) {
+        throw new Error('Workout generation failed: Fitness level is missing from profile. Please update your profile with your experience level.');
+      } else {
+        throw ErrorHandler.createWorkoutError(error, request);
+      }
     }
   }
 
@@ -108,6 +142,11 @@ export class OpenAIStrategy implements AIStrategy {
     try {
       if (!isFeatureEnabled('openai_enhanced_recommendations') || insights.length === 0) {
         return insights;
+      }
+
+      // Check if OpenAIService is available
+      if (!this.openAIService) {
+        return insights; // Return original insights if service not available
       }
 
       // Create enhancement prompt using helper
@@ -135,6 +174,11 @@ export class OpenAIStrategy implements AIStrategy {
     try {
       if (!isFeatureEnabled('openai_user_analysis')) {
         return createBasicUserAnalysis(context);
+      }
+
+      // Check if OpenAIService is available
+      if (!this.openAIService) {
+        return createBasicUserAnalysis(context); // Use fallback if service not available
       }
 
       const analysisPrompt = createUserAnalysisPrompt(context);
@@ -224,13 +268,22 @@ export class OpenAIStrategy implements AIStrategy {
       throw new Error(OPENAI_STRATEGY_CONSTANTS.ERROR_MESSAGES.WORKOUT_GENERATION_DISABLED);
     }
     
+    // Validate userProfile exists and has required fields
     if (!request.userProfile) {
-      throw new Error(OPENAI_STRATEGY_CONSTANTS.ERROR_MESSAGES.MISSING_USER_PROFILE);
+      throw new Error('OpenAIStrategy: userProfile is required for workout generation. Please ensure the user profile is complete.');
     }
     
-    if (!request.preferences) {
-      throw new Error(OPENAI_STRATEGY_CONSTANTS.ERROR_MESSAGES.MISSING_PREFERENCES);
+    if (!request.userProfile.fitnessLevel) {
+      throw new Error(`OpenAIStrategy: userProfile.fitnessLevel is required but missing. Available userProfile fields: ${Object.keys(request.userProfile).join(', ')}`);
     }
+    
+    // Log validation success for debugging
+    console.log('✅ Workout request validation passed:', {
+      hasUserProfile: !!request.userProfile,
+      fitnessLevel: request.userProfile.fitnessLevel,
+      hasPreferences: !!request.preferences,
+      requestKeys: Object.keys(request)
+    });
   }
 
   // Execute workout generation with OpenAI
@@ -238,6 +291,11 @@ export class OpenAIStrategy implements AIStrategy {
     request: WorkoutGenerationRequest, 
     variables: Record<string, string | number | string[] | boolean>
   ): Promise<GeneratedWorkout> {
+    // Check if OpenAIService is available
+    if (!this.openAIService) {
+      throw new Error('OpenAI service not available for workout generation');
+    }
+
     // Ensure request has preferences, use defaults if missing
     const preferences = request.preferences ?? {
       duration: 30,

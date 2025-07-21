@@ -1,28 +1,9 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useEnhancedPersistedState } from '../../../hooks/usePersistedState';
 import { ProfileData, ProfileFormHookReturn } from '../types/profile.types';
-import { calculateCompletionPercentage } from '../utils/profileHelpers';
+import { logger } from '../../../utils/logger';
 
-// Default profile data with proper default values
-const defaultProfileData: ProfileData = {
-  experienceLevel: 'New to Exercise',
-  physicalActivity: 'sedentary',
-  preferredDuration: '30-45 min',
-  timeCommitment: '2-3',
-  intensityLevel: 'lightly',
-  preferredActivities: [],
-  availableLocations: [],
-  availableEquipment: [],
-  primaryGoal: 'General Health',
-  goalTimeline: '3 months',
-  age: '26-35',
-  height: '',
-  weight: '',
-  gender: 'prefer-not-to-say',
-  hasCardiovascularConditions: 'No',
-  injuries: ['No Injuries']
-};
-
+// Simplified MVP version - focus on core functionality
 export const useProfileForm = (): ProfileFormHookReturn => {
   const {
     state: profileData,
@@ -30,38 +11,33 @@ export const useProfileForm = (): ProfileFormHookReturn => {
     metadata,
     hasUnsavedChanges,
     forceSave
-  } = useEnhancedPersistedState<ProfileData>(
+  } = useEnhancedPersistedState<ProfileData | null>(
     'profileData', 
-    defaultProfileData,
-    { debounceDelay: 500 } // Faster debounce for better responsiveness
+    null,
+    { debounceDelay: 500 }
   );
-  
+
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [touchedFields, setTouchedFields] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  // Handle unsaved changes warning
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges]);
-
+  // Simple input change handler
   const handleInputChange = useCallback(async (field: keyof ProfileData, value: string | string[]) => {
     try {
       setIsLoading(true);
       setError(null);
       
-      setProfileData(prev => ({
-        ...prev,
-        [field]: value
-      }));
+      setProfileData(prev => {
+        if (!prev) {
+          // Initialize with just the field being set
+          return { [field]: value } as ProfileData;
+        }
+        return {
+          ...prev,
+          [field]: value
+        };
+      });
       
       // Mark field as touched
       setTouchedFields(prev => {
@@ -77,95 +53,102 @@ export const useProfileForm = (): ProfileFormHookReturn => {
     }
   }, [setProfileData]);
 
+  // Simple array toggle handler
   const handleArrayToggle = useCallback(async (field: keyof ProfileData, value: string) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const currentArray = profileData[field] as string[];
-      const newArray = currentArray.includes(value)
-        ? currentArray.filter(item => item !== value)
-        : [...currentArray, value];
+      setProfileData(prev => {
+        if (!prev) {
+          logger.warn('Attempted to toggle array field when profileData is null:', { field, value });
+          return null;
+        }
+        
+        const currentValue = prev[field];
+        if (!Array.isArray(currentValue)) {
+          return {
+            ...prev,
+            [field]: [value]
+          };
+        }
+        
+        const stringArray = currentValue as string[];
+        const newArray = stringArray.includes(value)
+          ? stringArray.filter(item => item !== value)
+          : [...stringArray, value];
+        
+        return {
+          ...prev,
+          [field]: newArray
+        };
+      });
       
-      await handleInputChange(field, newArray);
+      setTouchedFields(prev => {
+        if (!prev.includes(field as string)) {
+          return [...prev, field as string];
+        }
+        return prev;
+      });
     } catch (err) {
       setError(err instanceof Error ? err : new Error('An error occurred while updating the form'));
     } finally {
       setIsLoading(false);
     }
-  }, [profileData, handleInputChange]);
-
-  const resetForm = useCallback(() => {
-    setProfileData(defaultProfileData);
   }, [setProfileData]);
 
-  // Step validation logic
+  const resetForm = useCallback(() => {
+    setProfileData(null);
+  }, [setProfileData]);
+
+  // Simplified step validation - only check if required fields exist
   const validateStep = useCallback((step: number): boolean => {
+    if (!profileData) return false;
+    
     switch (step) {
       case 1:
         return !!(profileData.experienceLevel && profileData.physicalActivity);
       case 2:
         return !!(profileData.preferredDuration && profileData.timeCommitment && profileData.intensityLevel);
       case 3:
-        return !!(profileData.preferredActivities.length > 0 && profileData.availableLocations.length > 0 && profileData.availableEquipment.length > 0);
+        return !!(profileData.preferredActivities?.length > 0 && profileData.availableLocations?.length > 0 && profileData.availableEquipment?.length > 0);
       case 4:
         return !!(profileData.primaryGoal && profileData.goalTimeline);
       case 5:
-        return !!(profileData.age && profileData.gender && profileData.hasCardiovascularConditions && profileData.injuries.length > 0);
+        return !!(profileData.age && profileData.gender && profileData.hasCardiovascularConditions && profileData.injuries?.length > 0);
       default:
         return false;
     }
   }, [profileData]);
 
-  // Calculate completion status
+  // Simple completion check
   const isComplete = useMemo(() => {
-    // Use step validation to determine completion
     return [1, 2, 3, 4, 5].every(step => validateStep(step));
   }, [validateStep]);
 
+  // Simple completion percentage
   const getCompletionPercentageValue = useCallback(() => {
-    return calculateCompletionPercentage(profileData);
-  }, [profileData]);
+    if (!profileData) return 0;
+    const completedSteps = [1, 2, 3, 4, 5].filter(step => validateStep(step)).length;
+    return (completedSteps / 5) * 100;
+  }, [profileData, validateStep]);
 
-  // Step completion status
+  // Simplified step completion - just track if each step is complete
   const stepCompletion = useMemo(() => {
     const completion: Record<number, { isComplete: boolean; progress: number }> = {};
     
-    // Define fields for each step
-    const stepFields = {
-      1: ['experienceLevel', 'physicalActivity'],
-      2: ['preferredDuration', 'timeCommitment', 'intensityLevel'],
-      3: ['preferredActivities', 'availableLocations', 'availableEquipment'],
-      4: ['primaryGoal', 'goalTimeline'],
-      5: ['age', 'gender', 'hasCardiovascularConditions', 'injuries']
-    };
-
     for (let step = 1; step <= 5; step++) {
-      const fields = stepFields[step as keyof typeof stepFields];
-      let completedFields = 0;
-
-      fields.forEach(field => {
-        const value = profileData[field as keyof ProfileData];
-        if (Array.isArray(value)) {
-          if (value.length > 0) completedFields++;
-        } else if (typeof value === 'string') {
-          if (value.trim().length > 0) completedFields++;
-        }
-      });
-
-      const progress = Math.round((completedFields / fields.length) * 100);
-      const isComplete = validateStep(step);
-
+      const isStepComplete = validateStep(step);
       completion[step] = {
-        isComplete,
-        progress
+        isComplete: isStepComplete,
+        progress: isStepComplete ? 100 : 0
       };
     }
     
     return completion;
-  }, [profileData, validateStep]);
+  }, [validateStep]);
 
-  // Navigation functions
+  // Simple navigation
   const canProceedToNextStep = useCallback(() => {
     return validateStep(currentStep);
   }, [currentStep, validateStep]);
@@ -183,23 +166,12 @@ export const useProfileForm = (): ProfileFormHookReturn => {
   }, [currentStep]);
 
   const setStep = useCallback((step: number) => {
-    // Validate all steps up to the target step
-    const canNavigate = Array.from({ length: step }, (_, i) => i + 1)
-      .every(s => validateStep(s));
-    
-    if (canNavigate) {
-      setCurrentStep(step + 1); // +1 because step is 0-based index from SectionNavigation
-    }
-  }, [validateStep]);
-
-  const handleStepChange = useCallback((step: number) => {
-    forceSave(); // Force save before changing steps
-    setStep(step);
-  }, [forceSave, setStep]);
+    setCurrentStep(step);
+  }, []);
 
   const getFieldError = useCallback((field: keyof ProfileData) => {
-    // Simple validation - you can enhance this with more specific error messages
     if (!touchedFields.includes(field as string)) return undefined;
+    if (!profileData) return undefined;
     
     const value = profileData[field];
     if (typeof value === 'string' && !value.trim()) {
@@ -212,12 +184,11 @@ export const useProfileForm = (): ProfileFormHookReturn => {
   }, [profileData, touchedFields]);
 
   const getTotalProgress = useCallback(() => {
-    const completedSteps = Object.values(stepCompletion).filter(s => s.isComplete).length;
-    return (completedSteps / 5) * 100;
-  }, [stepCompletion]);
+    return getCompletionPercentageValue();
+  }, [getCompletionPercentageValue]);
 
-      return {
-    profileData,
+  return {
+    profileData: profileData,
     handleInputChange,
     handleArrayToggle,
     resetForm,
@@ -230,7 +201,7 @@ export const useProfileForm = (): ProfileFormHookReturn => {
     canProceedToNextStep,
     nextStep,
     prevStep,
-    setStep: handleStepChange,
+    setStep,
     isProfileComplete: () => isComplete,
     getTotalProgress,
     isLoading,

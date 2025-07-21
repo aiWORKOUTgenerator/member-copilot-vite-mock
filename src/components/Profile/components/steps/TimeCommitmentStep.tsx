@@ -1,8 +1,13 @@
 import React from 'react';
-import { Clock, AlertCircle } from 'lucide-react';
+import { Clock, AlertCircle, Target } from 'lucide-react';
 import { StepProps } from '../../types/profile.types';
 import { OptionGrid, OptionConfig } from '../../shared';
 import ProfileHeader from '../ProfileHeader';
+import { 
+  calculateWorkoutIntensity, 
+  getWorkoutIntensityDetails,
+  type WorkoutIntensity 
+} from '../../../../utils/fitnessLevelCalculator';
 
 const TimeCommitmentStep: React.FC<StepProps> = ({ 
   profileData, 
@@ -12,6 +17,36 @@ const TimeCommitmentStep: React.FC<StepProps> = ({
   const [showDurationInfo, setShowDurationInfo] = React.useState(false);
   const [showCommitmentInfo, setShowCommitmentInfo] = React.useState(false);
   const [showIntensityInfo, setShowIntensityInfo] = React.useState(false);
+
+  // Early return if profileData is null
+  if (!profileData) {
+    return (
+      <div className="space-y-8">
+        <ProfileHeader 
+          title="Time & Intensity"
+          description="Help us understand your schedule and preferred workout intensity"
+        />
+        <div className="p-8 text-center text-gray-500">
+          Loading profile data...
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate workout intensity when fitness level and target activity are available
+  const calculatedWorkoutIntensity: WorkoutIntensity | null = React.useMemo(() => {
+    if (profileData?.calculatedFitnessLevel && profileData?.intensityLevel) {
+      return calculateWorkoutIntensity(profileData.calculatedFitnessLevel, profileData.intensityLevel);
+    }
+    return null;
+  }, [profileData?.calculatedFitnessLevel, profileData?.intensityLevel]);
+
+  // Save calculated workout intensity to profile data when it changes
+  React.useEffect(() => {
+    if (calculatedWorkoutIntensity && calculatedWorkoutIntensity !== profileData?.calculatedWorkoutIntensity) {
+      onInputChange('calculatedWorkoutIntensity', calculatedWorkoutIntensity);
+    }
+  }, [calculatedWorkoutIntensity, profileData?.calculatedWorkoutIntensity, onInputChange]);
 
   const durationOptions: OptionConfig[] = [
     { value: '15-30 min', label: '15-30 min' },
@@ -111,7 +146,7 @@ const TimeCommitmentStep: React.FC<StepProps> = ({
 
           <OptionGrid
             options={durationOptions}
-            selectedValues={profileData.preferredDuration}
+            selectedValues={profileData?.preferredDuration || ''}
             onSelect={(value: string) => onInputChange('preferredDuration', value)}
             variant="default"
             columns={4}
@@ -164,7 +199,7 @@ const TimeCommitmentStep: React.FC<StepProps> = ({
 
           <OptionGrid
             options={commitmentOptions}
-            selectedValues={profileData.timeCommitment}
+            selectedValues={profileData?.timeCommitment || ''}
             onSelect={(value: string) => onInputChange('timeCommitment', value)}
             variant="default"
             columns={4}
@@ -218,7 +253,7 @@ const TimeCommitmentStep: React.FC<StepProps> = ({
 
           <OptionGrid
             options={intensityOptions}
-            selectedValues={profileData.intensityLevel}
+            selectedValues={profileData?.intensityLevel || ''}
             onSelect={(value: string) => onInputChange('intensityLevel', value)}
             variant="default"
             columns={3}
@@ -229,8 +264,74 @@ const TimeCommitmentStep: React.FC<StepProps> = ({
           />
         </div>
 
+        {/* Calculated Workout Intensity Display */}
+        {calculatedWorkoutIntensity && (
+          <div className="border-2 border-orange-200 bg-orange-50 rounded-lg p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Target className="w-5 h-5 text-orange-600" />
+              <div className="inline-block px-4 py-2 bg-gradient-to-r from-orange-500 to-red-600 text-white text-sm font-medium rounded-md shadow-sm">
+                Calculated Workout Intensity
+              </div>
+              <button 
+                onClick={() => setShowIntensityInfo(prev => !prev)}
+                className="p-1 rounded-full hover:bg-orange-100 transition-colors"
+                aria-label="Toggle workout intensity information"
+              >
+                <AlertCircle className="w-4 h-4 text-orange-400 hover:text-orange-600 transition-colors" />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <h3 className="text-xl font-bold text-orange-800 mb-2 capitalize">
+                {calculatedWorkoutIntensity} Intensity
+              </h3>
+              <p className="text-orange-700">
+                {getWorkoutIntensityDetails(calculatedWorkoutIntensity).guidance}
+              </p>
+            </div>
+
+            {/* Workout Intensity Information Panel */}
+            <div className={`mb-4 bg-white border border-orange-200 rounded-lg p-4 ${showIntensityInfo ? 'block' : 'hidden'}`}>
+              <div className="prose prose-sm max-w-none">
+                <h4 className="text-orange-800 font-semibold mb-3">How We Calculated Your Workout Intensity</h4>
+                <p className="text-gray-700 mb-4">
+                  Your workout intensity is calculated by combining your current fitness level with your target activity goal. This ensures workouts are safe yet challenging.
+                </p>
+                <div className="space-y-2">
+                  <p className="text-gray-700">Your inputs:</p>
+                  <ul className="list-none pl-4 space-y-1">
+                    <li className="flex items-start">
+                      <span className="text-orange-600 mr-2">•</span>
+                      <strong>Fitness Level:</strong> {profileData?.calculatedFitnessLevel || 'Not calculated'}
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-orange-600 mr-2">•</span>
+                      <strong>Target Activity:</strong> {profileData?.intensityLevel || 'Not selected'}
+                    </li>
+                  </ul>
+                </div>
+                <div className="mt-4 p-3 bg-orange-100 rounded-lg">
+                  <p className="text-orange-800 text-sm">
+                    <strong>Recommended Intensity Range:</strong> {getWorkoutIntensityDetails(calculatedWorkoutIntensity).range}
+                  </p>
+                  <p className="text-orange-700 text-sm mt-1">
+                    {getWorkoutIntensityDetails(calculatedWorkoutIntensity).description}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center">
+              <Target className="w-5 h-5 text-orange-600 mr-3" />
+              <span className="text-orange-800 font-medium">
+                Perfect! We'll design workouts at this intensity level to help you reach your target activity goal safely.
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Progress Indication */}
-        {profileData.preferredDuration && profileData.timeCommitment && profileData.intensityLevel && (
+        {profileData?.preferredDuration && profileData?.timeCommitment && profileData?.intensityLevel && !calculatedWorkoutIntensity && (
           <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
             <div className="flex items-center">
               <Clock className="w-5 h-5 text-green-600 mr-3" />

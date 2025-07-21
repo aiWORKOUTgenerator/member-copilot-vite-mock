@@ -2,8 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { User, ChevronLeft, ChevronRight, Target, Loader2, Save, AlertTriangle } from 'lucide-react';
 import { PageHeader, SectionNavigation, ErrorBoundary } from '../shared';
 import { useProfileForm } from './hooks/useProfileForm';
-import { useAnalytics, formatDuration } from '../../hooks/useAnalytics';
-import { ProfilePageProps } from './types/profile.types';
+import { ProfilePageProps, ProfileData } from './types/profile.types';
 import ExperienceStep from './components/steps/ExperienceStep';
 import TimeCommitmentStep from './components/steps/TimeCommitmentStep';
 import PreferencesStep from './components/steps/PreferencesStep';
@@ -32,158 +31,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
   // State to control auto-save message visibility
   const [showSaveMessage, setShowSaveMessage] = React.useState(false);
 
-  const { trackProfileEvent } = useAnalytics();
-  const stepStartTimeRef = useRef<number>(Date.now());
-  const sessionStartTimeRef = useRef<number>(Date.now());
-
-  // Clean up any existing backup data
-  useEffect(() => {
-    localStorage.removeItem('profileData_backup');
-  }, []);
-
-  // Track step changes
-  useEffect(() => {
-    const stepTitle = stepTitles[currentStep - 1];
-    trackProfileEvent('profile_step_started', { step: currentStep, title: stepTitle });
-
-    // Track duration of previous step
-    if (stepStartTimeRef.current) {
-      const duration = formatDuration(stepStartTimeRef.current);
-      trackProfileEvent('profile_step_completed', { step: currentStep - 1, duration });
-    }
-
-    stepStartTimeRef.current = Date.now();
-  }, [currentStep, trackProfileEvent]);
-
-  // Track form abandonment
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && !isProfileComplete()) {
-        trackProfileEvent('profile_abandoned', {
-          step: currentStep,
-          reason: 'page_hidden'
-        });
-      }
-    };
-
-    const handleBeforeUnload = () => {
-      if (!isProfileComplete()) {
-        trackProfileEvent('profile_abandoned', {
-          step: currentStep,
-          reason: 'page_closed'
-        });
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [currentStep, isProfileComplete, trackProfileEvent]);
-
-  // Handle keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Only handle keyboard navigation when not in an input field
-      if (document.activeElement?.tagName === 'INPUT' || 
-          document.activeElement?.tagName === 'TEXTAREA' ||
-          document.activeElement?.tagName === 'SELECT') {
-        return;
-      }
-
-      switch (e.key) {
-        case 'ArrowRight':
-        case 'ArrowDown':
-          if (canProceedToNextStep() && !isLoading) {
-            e.preventDefault();
-            nextStep();
-          }
-          break;
-        case 'ArrowLeft':
-        case 'ArrowUp':
-          if (currentStep > 1 && !isLoading) {
-            e.preventDefault();
-            prevStep();
-          }
-          break;
-        case 'Enter':
-          if (currentStep === 5 && isProfileComplete() && !isLoading) {
-            e.preventDefault();
-            handleSubmit();
-          }
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentStep, canProceedToNextStep, isLoading, nextStep, prevStep, isProfileComplete]);
-
-  // Handle unsaved changes warning
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges]);
-
-  // Handle auto-save message visibility
-  useEffect(() => {
-    if (!hasUnsavedChanges && lastSaved) {
-      setShowSaveMessage(true);
-      const timer = setTimeout(() => {
-        setShowSaveMessage(false);
-      }, 1500);
-      return () => clearTimeout(timer);
-    } else if (hasUnsavedChanges) {
-      setShowSaveMessage(false);
-    }
-  }, [hasUnsavedChanges, lastSaved]);
-
-  // Removed backup functionality
-
-  const handleSubmit = async () => {
-    if (isProfileComplete()) {
-      // Track profile completion
-      const totalTime = formatDuration(sessionStartTimeRef.current);
-      trackProfileEvent('profile_completed', {
-        totalTime,
-        completionRate: getTotalProgress()
-      });
-      onNavigate('waiver');
-    }
-  };
-
-  const handleSectionChange = React.useCallback((index: number) => {
-    setStep(index);
-  }, [setStep]);
-
-  const handleFieldChange = async (field: keyof typeof profileData, value: string | string[]) => {
+  // Simple field change handler
+  const handleFieldChange = async (field: keyof ProfileData, value: string | string[]) => {
     await handleInputChange(field, value);
-    trackProfileEvent('profile_field_changed', {
-      field,
-      step: currentStep
-    });
   };
 
-  const handleFieldError = (field: keyof typeof profileData) => {
-    const error = getFieldError(field);
-    if (error) {
-      trackProfileEvent('profile_validation_error', {
-        field,
-        error,
-        step: currentStep
-      });
-    }
-    return error;
+  const handleFieldError = (field: keyof ProfileData) => {
+    return getFieldError(field);
   };
 
   if (error) {
@@ -227,6 +81,16 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
     if (!lastSaved) return '';
     const date = new Date(lastSaved);
     return date.toLocaleTimeString();
+  };
+
+  const handleSubmit = async () => {
+    if (isProfileComplete()) {
+      onNavigate('waiver');
+    }
+  };
+
+  const handleSectionChange = (step: number) => {
+    setStep(step + 1); // +1 because step is 0-based index from SectionNavigation
   };
 
   return (
@@ -279,126 +143,78 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
 
             {/* Section Navigation */}
             <nav aria-label="Profile Steps">
-              <SectionNavigation
-                sections={[
-                  { step: 1, title: 'Experience & Activity', color: 'from-blue-500 to-purple-600' },
-                  { step: 2, title: 'Time & Commitment', color: 'from-green-500 to-blue-600' },
-                  { step: 3, title: 'Preferences & Resources', color: 'from-purple-500 to-pink-600' },
-                  { step: 4, title: 'Goals & Timeline', color: 'from-orange-500 to-red-600' },
-                  { step: 5, title: 'Metrics & Health', color: 'from-teal-500 to-green-600' }
-                ]}
-                currentSection={currentStep - 1}
-                onSectionChange={handleSectionChange}
-                variant="steps"
-              />
+                          <SectionNavigation
+              sections={[
+                { step: 1, title: 'Experience & Activity', color: 'from-blue-500 to-purple-600' },
+                { step: 2, title: 'Time & Commitment', color: 'from-green-500 to-blue-600' },
+                { step: 3, title: 'Preferences & Resources', color: 'from-purple-500 to-pink-600' },
+                { step: 4, title: 'Goals & Timeline', color: 'from-orange-500 to-red-600' },
+                { step: 5, title: 'Metrics & Health', color: 'from-teal-500 to-green-600' }
+              ]}
+              currentSection={currentStep - 1}
+              onSectionChange={handleSectionChange}
+              variant="steps"
+              className="mb-8"
+            />
             </nav>
 
-            {/* Progress Bar */}
-            <div className="mb-8" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={getTotalProgress()}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-600" aria-label={`Current Step ${currentStep} of 5`}>
-                  Step {currentStep} of 5
-                </span>
-                <span className="text-sm font-medium text-gray-600" aria-label={`${Math.round(getTotalProgress())}% Complete`}>
-                  {Math.round(getTotalProgress())}% Complete
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${getTotalProgress()}%` }}
-                ></div>
-              </div>
-            </div>
-
-            {/* Form Content */}
-            <div 
-              className="bg-white rounded-2xl shadow-xl p-8 mb-8 relative"
-              role="region"
-              aria-label={`Step ${currentStep}: ${stepTitles[currentStep - 1]}`}
-            >
+            {/* Main Content */}
+            <div className="bg-white rounded-lg shadow-lg p-8">
               {isLoading && (
-                <div 
-                  className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center rounded-2xl"
-                  role="alert"
-                  aria-live="polite"
-                >
-                  <div className="flex items-center gap-3">
-                    <Loader2 className="w-6 h-6 text-blue-600 animate-spin" aria-hidden="true" />
-                    <span className="text-gray-700 font-medium">Loading...</span>
-                  </div>
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                  <span className="ml-2 text-gray-600">Saving...</span>
                 </div>
               )}
-              {renderStep()}
-            </div>
 
-            {/* Navigation */}
-            <div className="flex justify-between items-center" role="navigation" aria-label="Form Navigation">
-              <button
-                onClick={prevStep}
-                disabled={currentStep === 1 || isLoading}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
-                  currentStep === 1 || isLoading
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-                aria-label="Previous Step"
-                aria-disabled={currentStep === 1 || isLoading}
-              >
-                <ChevronLeft className="w-5 h-5" aria-hidden="true" />
-                Previous
-              </button>
+              {/* Step Content */}
+              <div className="min-h-[400px]">
+                {renderStep()}
+              </div>
 
-              {currentStep === 5 ? (
+              {/* Navigation Buttons */}
+              <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
                 <button
-                  onClick={handleSubmit}
-                  disabled={!isProfileComplete() || isLoading || hasUnsavedChanges}
-                  className={`flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium transition-all shadow-lg ${
-                    !isProfileComplete() || isLoading || hasUnsavedChanges ? 'opacity-50 cursor-not-allowed' : 'hover:from-blue-700 hover:to-purple-700'
-                  }`}
-                  aria-label="Complete Profile"
-                  aria-disabled={!isProfileComplete() || isLoading || hasUnsavedChanges}
+                  onClick={prevStep}
+                  disabled={currentStep === 1 || isLoading}
+                  className="flex items-center gap-2 px-6 py-3 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
-                      Saving...
-                    </>
-                  ) : hasUnsavedChanges ? (
-                    <>
-                      <Save className="w-5 h-5 animate-pulse" aria-hidden="true" />
-                      Saving Changes...
-                    </>
-                  ) : (
-                    <>
-                      Complete Profile
-                      <Target className="w-5 h-5" aria-hidden="true" />
-                    </>
-                  )}
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
                 </button>
-              ) : (
-                <button
-                  onClick={nextStep}
-                  disabled={!canProceedToNextStep() || isLoading}
-                  className={`flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium transition-all shadow-lg ${
-                    !canProceedToNextStep() || isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:from-blue-700 hover:to-purple-700'
-                  }`}
-                  aria-label={`Next Step: ${stepTitles[currentStep]}`}
-                  aria-disabled={!canProceedToNextStep() || isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
-                      Loading...
-                    </>
-                  ) : (
-                    <>
-                      Next
-                      <ChevronRight className="w-5 h-5" aria-hidden="true" />
-                    </>
-                  )}
-                </button>
-              )}
+
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-gray-500">
+                    Step {currentStep} of 5
+                  </span>
+                  <div className="w-32 bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${getTotalProgress()}%` }}
+                    />
+                  </div>
+                </div>
+
+                {currentStep === 5 ? (
+                  <button
+                    onClick={handleSubmit}
+                    disabled={!isProfileComplete() || isLoading}
+                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    <Target className="w-4 h-4" />
+                    Complete Profile
+                  </button>
+                ) : (
+                  <button
+                    onClick={nextStep}
+                    disabled={!canProceedToNextStep() || isLoading}
+                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

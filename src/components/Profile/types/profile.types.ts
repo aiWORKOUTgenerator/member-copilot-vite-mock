@@ -4,6 +4,7 @@ export type ProfileData = {
   experienceLevel: 'New to Exercise' | 'Some Experience' | 'Advanced Athlete';
   physicalActivity: 'sedentary' | 'light' | 'moderate' | 'very' | 'extremely' | 'varies';
   calculatedFitnessLevel?: 'beginner' | 'novice' | 'intermediate' | 'advanced' | 'adaptive';
+  calculatedWorkoutIntensity: 'low' | 'moderate' | 'high';
   
   // Time & Commitment
   preferredDuration: '15-30 min' | '30-45 min' | '45-60 min' | '60+ min';
@@ -50,7 +51,7 @@ export interface ValidationResult {
 }
 
 export interface StepProps {
-  profileData: ProfileData;
+  profileData: ProfileData | null;
   onInputChange: (field: keyof ProfileData, value: string | string[]) => void;
   onArrayToggle: (field: keyof ProfileData, value: string) => void;
   getFieldError?: (field: keyof ProfileData) => string | undefined;
@@ -72,7 +73,7 @@ export interface StepConfig {
 }
 
 export interface ProfileFormHookReturn {
-  profileData: ProfileData;
+  profileData: ProfileData | null;
   handleInputChange: (field: keyof ProfileData, value: string | string[]) => void;
   handleArrayToggle: (field: keyof ProfileData, value: string) => void;
   resetForm: () => void;

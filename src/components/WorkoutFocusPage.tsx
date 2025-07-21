@@ -11,7 +11,7 @@ import { profileTransformers } from '../utils/dataTransformers';
 
 // Helper function to convert ProfileData to UserProfile
 const convertProfileDataToUserProfile = (profileData: ProfileData): UserProfile => {
-  return profileTransformers.convertProfileToUserProfile(profileData);
+  return profileTransformers.convertProfileToUserProfileSimple(profileData);
 };
 
 export interface WorkoutFocusPageProps {

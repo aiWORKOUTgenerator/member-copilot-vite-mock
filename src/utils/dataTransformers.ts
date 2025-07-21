@@ -259,14 +259,14 @@ export const profileTransformers = {
   convertExperienceToFitnessLevel: (experienceLevel: ProfileData['experienceLevel']): FitnessLevel => {
     switch (experienceLevel.toLowerCase()) {
       case 'new to exercise':
-        return 'new to exercise';
+        return 'beginner';
       case 'some experience':
-        return 'some experience';
+        return 'intermediate';
       case 'advanced athlete':
-        return 'advanced athlete';
+        return 'advanced';
       default:
-        console.warn(`Unknown experience level: ${experienceLevel}, defaulting to 'some experience'`);
-        return 'some experience';
+        console.warn(`Unknown experience level: ${experienceLevel}, defaulting to 'intermediate'`);
+        return 'intermediate';
     }
   },
 
@@ -336,6 +336,9 @@ export const profileTransformers = {
    * Convert ProfileData duration to time constraints
    */
   convertDurationToTimeConstraints: (preferredDuration: ProfileData['preferredDuration']): number => {
+    if (!preferredDuration) {
+      return 60; // Default duration
+    }
     const durationParts = preferredDuration.split('-');
     const maxDuration = parseInt(durationParts[1]) || 60;
     return maxDuration;
@@ -423,7 +426,7 @@ export const profileTransformers = {
       const fitnessLevel = profileData.calculatedFitnessLevel || profileTransformers.convertExperienceToFitnessLevel(profileData.experienceLevel);
       const primaryGoal = profileTransformers.convertPrimaryGoal(profileData.primaryGoal);
       const workoutStyle = profileTransformers.convertGoalToWorkoutStyle(profileData.primaryGoal);
-      const intensityPreference = profileTransformers.convertExperienceToIntensity(profileData.experienceLevel);
+      const intensityPreference = profileData.calculatedWorkoutIntensity;
       const timeConstraints = profileTransformers.convertDurationToTimeConstraints(profileData.preferredDuration || '30-45 min');
       const equipmentConstraints = profileTransformers.convertEquipmentToNormalized(profileData.availableEquipment || []);
       const locationConstraints = profileTransformers.convertLocationsToNormalized(profileData.availableLocations || []);
@@ -498,12 +501,12 @@ export const profileTransformers = {
           aiAssistanceLevel: 'moderate'
         },
         basicLimitations: {
-          injuries: injuries || [],
-          availableEquipment: profileData.availableEquipment || [],
-          availableLocations: profileData.availableLocations || []
+          injuries,
+          availableEquipment: equipmentConstraints,
+          availableLocations: locationConstraints
         },
         enhancedLimitations: {
-          timeConstraints: maxDuration,
+          timeConstraints,
           equipmentConstraints,
           locationConstraints,
           recoveryNeeds: {
@@ -526,7 +529,7 @@ export const profileTransformers = {
         learningProfile: {
           prefersSimplicity: profileData.experienceLevel === 'New to Exercise',
           explorationTendency: 'moderate',
-          feedbackPreference: 'detailed',
+          feedbackPreference: 'simple',
           learningStyle: 'visual',
           motivationType: 'intrinsic',
           adaptationSpeed: 'moderate'
@@ -538,16 +541,6 @@ export const profileTransformers = {
         gender: profileData.gender
       };
 
-      // Validate the converted profile
-      if (!isValidUserProfile(userProfile)) {
-        throw new Error('Generated UserProfile is invalid');
-      }
-
-      // Validate conversion accuracy
-      if (!validateProfileConversion(profileData, userProfile)) {
-        console.warn('Profile conversion validation failed, but continuing with generated profile');
-      }
-
       console.log('✅ ProfileData successfully converted to UserProfile:', {
         fitnessLevel: userProfile.fitnessLevel,
         goals: userProfile.goals,
@@ -558,16 +551,15 @@ export const profileTransformers = {
       return userProfile;
 
     } catch (error) {
-      console.error('❌ Failed to convert ProfileData to UserProfile:', error);
-      console.error('ProfileData that caused the error:', profileData);
-      console.error('Error details:', {
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      });
-      
-      // Return a safe fallback profile
-      return profileTransformers.createFallbackUserProfile();
+      console.error('❌ Error converting ProfileData to UserProfile:', error);
+      console.error('ProfileData:', profileData);
+      throw new Error(`Failed to convert ProfileData to UserProfile: ${error instanceof Error ? error.message : String(error)}`);
     }
+  },
+
+  // Simple conversion function for MVP - no caching complexity
+  convertProfileToUserProfileSimple: (profileData: ProfileData): UserProfile => {
+    return profileTransformers.convertProfileToUserProfile(profileData);
   },
 
   /**
@@ -575,7 +567,7 @@ export const profileTransformers = {
    */
   createFallbackUserProfile: (): UserProfile => {
     return {
-      fitnessLevel: 'some experience',
+      fitnessLevel: 'intermediate',
       goals: ['general_fitness'],
       preferences: {
         workoutStyle: ['balanced'],

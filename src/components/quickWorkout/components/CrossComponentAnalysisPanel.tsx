@@ -29,15 +29,20 @@ export const CrossComponentAnalysisPanel: React.FC<CrossComponentAnalysisPanelPr
   const { isFeatureEnabled, serviceStatus } = useAI();
   const [insights, setInsights] = useState<CrossComponentInsight[]>([]);
 
+  // Early return if focusData is null or undefined
+  if (!focusData) {
+    return null;
+  }
+
   // Generate cross-component insights
   const generateCrossComponentInsights = (): CrossComponentInsight[] => {
     if (serviceStatus !== 'ready') return [];
 
     const insights: CrossComponentInsight[] = [];
-    const energyLevel = focusData.energyLevel || 5;
-    const sorenessLevel = focusData.sorenessLevel || 1;
-    const duration = focusData.workoutDuration || 20;
-    const focus = focusData.workoutFocus;
+    const energyLevel = focusData?.energyLevel || 5;
+    const sorenessLevel = focusData?.sorenessLevel || 1;
+    const duration = focusData?.workoutDuration || 20;
+    const focus = focusData?.workoutFocus;
 
     try {
       // Energy vs Duration vs Focus conflicts
@@ -80,8 +85,8 @@ export const CrossComponentAnalysisPanel: React.FC<CrossComponentAnalysisPanelPr
         });
       }
 
-      // Beginner optimization suggestions
-      if (userProfile.fitnessLevel === 'new to exercise' && duration <= 15 && focus === 'Energizing Boost') {
+              // Beginner optimization suggestions
+        if (userProfile?.fitnessLevel === 'beginner' && duration <= 15 && focus === 'Energizing Boost') {
         insights.push({
           id: 'beginner_optimal_setup',
           type: 'optimization',

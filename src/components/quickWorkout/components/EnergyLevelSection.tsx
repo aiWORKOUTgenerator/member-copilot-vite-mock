@@ -17,6 +17,15 @@ export const EnergyLevelSection: React.FC<SectionProps> = ({
 }) => {
   const { getEnergyInsights, serviceStatus } = useAI();
 
+  // Early return if focusData is null or undefined
+  if (!focusData) {
+    return (
+      <div className="p-8 text-center text-gray-500">
+        Loading energy level data...
+      </div>
+    );
+  }
+
   const handleEnergyChange = (value: number) => {
     onInputChange('energyLevel', value);
   };
@@ -71,7 +80,7 @@ export const EnergyLevelSection: React.FC<SectionProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-xl font-semibold text-gray-900">Energy Level</h3>
-            {typeof focusData.energyLevel === 'number' && focusData.energyLevel > 0 && (
+            {typeof focusData?.energyLevel === 'number' && focusData.energyLevel > 0 && (
               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                 Level {focusData.energyLevel}
               </span>
@@ -90,7 +99,7 @@ export const EnergyLevelSection: React.FC<SectionProps> = ({
     </div>
   );
 
-  const currentEnergyLevel = typeof focusData.energyLevel === 'number' 
+  const currentEnergyLevel = typeof focusData?.energyLevel === 'number' 
     ? focusData.energyLevel 
     : 0; // Show 0 initially, not DEFAULT_ENERGY_LEVEL
 
