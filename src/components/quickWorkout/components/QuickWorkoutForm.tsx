@@ -189,53 +189,6 @@ export const QuickWorkoutForm: React.FC<EnhancedQuickWorkoutFormProps> = ({
     }
   };
 
-  // Create a default user profile if none provided
-  const defaultUserProfile: UserProfile = userProfile || {
-    fitnessLevel: 'beginner' as const,
-    goals: ['general_fitness'],
-    preferences: {
-      workoutStyle: ['balanced'],
-      timePreference: 'morning',
-      intensityPreference: 'moderate',
-      advancedFeatures: false,
-      aiAssistanceLevel: 'moderate'
-    },
-    basicLimitations: {
-      injuries: [],
-      availableEquipment: ['Body Weight'],
-      availableLocations: ['Home']
-    },
-    enhancedLimitations: {
-      timeConstraints: 0,
-      equipmentConstraints: [],
-      locationConstraints: [],
-      recoveryNeeds: {
-        restDays: 2,
-        sleepHours: 7,
-        hydrationLevel: 'moderate'
-      },
-      mobilityLimitations: [],
-      progressionRate: 'moderate'
-    },
-    workoutHistory: {
-      estimatedCompletedWorkouts: 0,
-      averageDuration: 45,
-      preferredFocusAreas: [],
-      progressiveEnhancementUsage: {},
-      aiRecommendationAcceptance: 0.7,
-      consistencyScore: 0.5,
-      plateauRisk: 'low'
-    },
-    learningProfile: {
-      prefersSimplicity: true,
-      explorationTendency: 'moderate',
-      feedbackPreference: 'simple',
-      learningStyle: 'visual',
-      motivationType: 'intrinsic',
-      adaptationSpeed: 'moderate'
-    }
-  };
-
   return (
     <div className="space-y-8">
       {/* Page Header */}
@@ -269,7 +222,7 @@ export const QuickWorkoutForm: React.FC<EnhancedQuickWorkoutFormProps> = ({
       {/* Cross-Component AI Analysis */}
       <CrossComponentAnalysisPanel 
         focusData={focusData}
-        userProfile={defaultUserProfile}
+        userProfile={userProfile}
         viewMode={viewMode}
       />
 
@@ -279,7 +232,7 @@ export const QuickWorkoutForm: React.FC<EnhancedQuickWorkoutFormProps> = ({
           focusData={focusData}
           onInputChange={handleInputChange}
           viewMode={viewMode}
-          userProfile={defaultUserProfile}
+          userProfile={userProfile}
           _aiContext={aiContext}
         />
         
@@ -287,7 +240,7 @@ export const QuickWorkoutForm: React.FC<EnhancedQuickWorkoutFormProps> = ({
           focusData={focusData}
           onInputChange={handleInputChange}
           viewMode={viewMode}
-          userProfile={defaultUserProfile}
+          userProfile={userProfile}
           _aiContext={aiContext}
         />
         
@@ -295,7 +248,7 @@ export const QuickWorkoutForm: React.FC<EnhancedQuickWorkoutFormProps> = ({
           focusData={focusData}
           onInputChange={handleInputChange}
           viewMode={viewMode}
-          userProfile={defaultUserProfile}
+          userProfile={userProfile}
           _aiContext={aiContext}
         />
 
@@ -303,7 +256,7 @@ export const QuickWorkoutForm: React.FC<EnhancedQuickWorkoutFormProps> = ({
           focusData={focusData}
           onInputChange={handleInputChange}
           viewMode={viewMode}
-          userProfile={defaultUserProfile}
+          userProfile={userProfile}
           _aiContext={aiContext}
         />
 

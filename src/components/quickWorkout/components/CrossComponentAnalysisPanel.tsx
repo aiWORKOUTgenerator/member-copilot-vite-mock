@@ -6,7 +6,7 @@ import { logger } from '../../../utils/logger';
 
 interface CrossComponentAnalysisPanelProps {
   focusData: any;
-  userProfile: UserProfile;
+  userProfile?: UserProfile;
   viewMode: 'simple' | 'complex';
 }
 
