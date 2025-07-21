@@ -33,7 +33,7 @@ ${generateWorkoutStructure(CONFIG)}
 
 CRITICAL REQUIREMENTS FOR 5-MINUTE WORKOUTS:
 1. EXACTLY 4 total exercises (1 warm-up + 2 main + 1 cool-down)
-2. Each exercise should be 45-90 seconds duration (use numeric values: 45, 60, 75, 90)
+2. Each exercise should be 45-90 seconds duration (use numeric values in seconds: 45, 60, 75, 90)
 3. Focus on bodyweight compound movements
 4. Minimize equipment requirements
 5. Target energy boost and posture correction

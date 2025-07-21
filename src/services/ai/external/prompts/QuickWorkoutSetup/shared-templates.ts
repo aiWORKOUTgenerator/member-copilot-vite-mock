@@ -95,11 +95,6 @@ ${RESPONSE_FORMAT}`;
 // Generate workout structure template for specific duration
 export const generateWorkoutStructure = (config: DurationConfig): string => {
   const exerciseTemplate = getExerciseTemplate(config.complexity);
-  const timeAllocation = {
-    warmup: Math.round(config.duration * config.timeAllocation.warmupPercent / 100) * 60, // Seconds
-    main: Math.round(config.duration * config.timeAllocation.mainPercent / 100) * 60,    // Seconds
-    cooldown: Math.round(config.duration * config.timeAllocation.cooldownPercent / 100) * 60 // Seconds
-  };
 
   return `
 GENERATE A ${config.duration.toUpperCase()}-MINUTE WORKOUT with this exact structure:
@@ -107,13 +102,12 @@ GENERATE A ${config.duration.toUpperCase()}-MINUTE WORKOUT with this exact struc
   "id": "unique_workout_id",
   "title": "Engaging ${config.duration}-minute workout title",
   "description": "Brief description emphasizing ${config.name.toLowerCase()} workout benefits",
-  "totalDuration": ${config.duration * 60},
+  "totalDuration": ${config.duration},
   "estimatedCalories": "calculated_estimate",
   "difficulty": "{{fitnessLevel}}",
   "equipment": ["required_equipment"],
   "warmup": {
     "name": "Warm-up",
-    "duration": ${timeAllocation.warmup},
     "exercises": [
       // EXACTLY ${config.exerciseCount.warmup} warm-up exercises
       ${exerciseTemplate}
@@ -123,7 +117,6 @@ GENERATE A ${config.duration.toUpperCase()}-MINUTE WORKOUT with this exact struc
   },
   "mainWorkout": {
     "name": "Main Workout", 
-    "duration": ${timeAllocation.main},
     "exercises": [
       // EXACTLY ${config.exerciseCount.main} main workout exercises
       ${exerciseTemplate}
@@ -132,8 +125,7 @@ GENERATE A ${config.duration.toUpperCase()}-MINUTE WORKOUT with this exact struc
     "tips": ["Performance tips"]
   },
   "cooldown": {
-    "name": "Cool-down",
-    "duration": ${timeAllocation.cooldown}, 
+    "name": "Cool-down", 
     "exercises": [
       // EXACTLY ${config.exerciseCount.cooldown} cool-down exercises
       ${exerciseTemplate}
@@ -152,10 +144,15 @@ GENERATE A ${config.duration.toUpperCase()}-MINUTE WORKOUT with this exact struc
 }
 
 CRITICAL DURATION FORMATTING REQUIREMENTS:
-- Phase durations (warmup, mainWorkout, cooldown) must be output in SECONDS as a number (e.g., 180, 420, 600)
-- Individual exercise durations MUST also be in SECONDS (e.g., 60, 90, 120)
-- Example: For a 1.5-minute exercise, use "duration": 90 (not "duration": 1.5 or "duration": "1.5 minutes")
-- All duration fields in the JSON response must be numeric values representing seconds`;
+- Individual exercise durations MUST be in SECONDS (not minutes)
+- Example: For a 90-second exercise, use "duration": 90 (not "duration": 1.5 or "duration": "1.5 minutes")
+- All duration fields in the JSON response must be numeric values representing seconds
+- The UI will automatically convert seconds to "Xm Ys" format for display
+- Phase durations will be calculated automatically based on exercise durations and rest periods
+- WARNING: If you use minutes instead of seconds, the workout will be 60x shorter than intended
+- VALIDATION: All exercise durations must be between 30 and 600 seconds (30s to 10m)
+- CRITICAL: DO NOT include "duration" field in phase objects (warmup, mainWorkout, cooldown) - these will be calculated automatically
+- CRITICAL: Only include "duration" field in individual exercise objects, and always use seconds`;
 };
 
 // Get exercise template based on complexity

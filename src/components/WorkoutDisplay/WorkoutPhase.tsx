@@ -16,7 +16,11 @@ export const WorkoutPhase: React.FC<WorkoutPhaseDisplayProps> = ({
     if (!phase?.duration) return '0s';
     const minutes = Math.floor(phase.duration / 60);
     const seconds = phase.duration % 60;
-    return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+    // ✅ FIXED: Always show minutes if duration is 60+ seconds, otherwise show seconds
+    if (phase.duration >= 60) {
+      return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+    }
+    return `${seconds}s`;
   };
 
   const getPhaseColor = (title: string) => {

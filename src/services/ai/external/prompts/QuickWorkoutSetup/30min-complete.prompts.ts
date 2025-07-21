@@ -41,7 +41,7 @@ CRITICAL REQUIREMENTS FOR 30-MINUTE WORKOUTS:
 2. Warm-up: 4 minutes with thorough preparation and activation
 3. Main workout: 22 minutes with diverse exercise blocks and adequate recovery
 4. Cool-down: 4 minutes with comprehensive stretching and relaxation
-5. Each exercise should be 2-2.5 minutes including rest/transitions
+5. Each exercise should be 120-150 seconds duration (use numeric values in seconds: 120, 135, 150)
 6. Include 4-5 different movement patterns and exercise types
 7. Allow 30-60 seconds rest between strength exercises, 15-30 seconds between cardio
 8. Target all major muscle groups with multiple approaches

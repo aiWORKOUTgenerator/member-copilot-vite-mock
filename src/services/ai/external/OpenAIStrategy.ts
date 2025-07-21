@@ -316,7 +316,10 @@ export class OpenAIStrategy implements AIStrategy {
       }
     );
     
-    return result as GeneratedWorkout;
+    // ✅ FIXED: Normalize the workout to fix duration calculation issues
+    const normalizedWorkout = this.normalizeWorkoutStructure(result as any);
+    
+    return normalizedWorkout;
   }
 
   // Enhance and validate generated workout
@@ -335,6 +338,189 @@ export class OpenAIStrategy implements AIStrategy {
       return await this.fallbackStrategy.generateRecommendations(context);
     }
     return [];
+  }
+
+  // Helper to normalize the workout structure to ensure consistent phases and durations
+  private normalizeWorkoutStructure(workout: any): GeneratedWorkout {
+    console.log('🔍 DEBUG: OpenAIStrategy.normalizeWorkoutStructure called with workout:', {
+      hasWorkout: !!workout,
+      workoutKeys: workout ? Object.keys(workout) : 'N/A',
+      hasWarmup: !!(workout?.warmup),
+      hasMainWorkout: !!(workout?.mainWorkout),
+      hasCooldown: !!(workout?.cooldown),
+      warmupDuration: workout?.warmup?.duration,
+      mainWorkoutDuration: workout?.mainWorkout?.duration,
+      cooldownDuration: workout?.cooldown?.duration
+    });
+    
+    // Handle different phase structures
+    let warmup, mainWorkout, cooldown;
+    
+    // Handle phases at root level
+    if (workout.warmup || workout.mainWorkout || workout.cooldown) {
+      warmup = workout.warmup;
+      mainWorkout = workout.mainWorkout;
+      cooldown = workout.cooldown;
+    }
+
+    // ✅ FIXED: Recalculate phase durations based on exercises to ensure accuracy
+    if (warmup && warmup.exercises && Array.isArray(warmup.exercises)) {
+      console.log(`🔍 DEBUG: Recalculating warm-up phase duration`);
+      console.log(`🔍 DEBUG: Original warm-up duration: ${warmup.duration}`);
+      // ✅ FIXED: Check if AI generated phase duration in minutes and convert
+      if (warmup.duration && warmup.duration >= 1 && warmup.duration <= 10) {
+        console.warn(`Warm-up phase has duration ${warmup.duration} which appears to be in minutes. Converting to seconds.`);
+        warmup.duration = warmup.duration * 60;
+      }
+      warmup = this.createPhaseFromExercises('Warm-up', warmup.exercises);
+      console.log(`🔍 DEBUG: Final warm-up duration: ${warmup.duration}`);
+    }
+    if (mainWorkout && mainWorkout.exercises && Array.isArray(mainWorkout.exercises)) {
+      console.log(`🔍 DEBUG: Recalculating main workout phase duration`);
+      console.log(`🔍 DEBUG: Original main workout duration: ${mainWorkout.duration}`);
+      // ✅ FIXED: Check if AI generated phase duration in minutes and convert
+      if (mainWorkout.duration && mainWorkout.duration >= 1 && mainWorkout.duration <= 10) {
+        console.warn(`Main workout phase has duration ${mainWorkout.duration} which appears to be in minutes. Converting to seconds.`);
+        mainWorkout.duration = mainWorkout.duration * 60;
+      }
+      mainWorkout = this.createPhaseFromExercises('Main Workout', mainWorkout.exercises);
+      console.log(`🔍 DEBUG: Final main workout duration: ${mainWorkout.duration}`);
+    }
+    if (cooldown && cooldown.exercises && Array.isArray(cooldown.exercises)) {
+      console.log(`🔍 DEBUG: Recalculating cool-down phase duration`);
+      console.log(`🔍 DEBUG: Original cool-down duration: ${cooldown.duration}`);
+      // ✅ FIXED: Check if AI generated phase duration in minutes and convert
+      if (cooldown.duration && cooldown.duration >= 1 && cooldown.duration <= 10) {
+        console.warn(`Cool-down phase has duration ${cooldown.duration} which appears to be in minutes. Converting to seconds.`);
+        cooldown.duration = cooldown.duration * 60;
+      }
+      cooldown = this.createPhaseFromExercises('Cool-down', cooldown.exercises);
+      console.log(`🔍 DEBUG: Final cool-down duration: ${cooldown.duration}`);
+    }
+
+    return {
+      id: workout.id || `workout_${Date.now()}`,
+      title: workout.title || workout.name || workout.workoutName || 'Generated Workout',
+      description: workout.description || 'AI-generated workout plan',
+      totalDuration: workout.totalDuration || workout.duration || 30,
+      estimatedCalories: workout.estimatedCalories || 200,
+      difficulty: workout.difficulty || 'some experience',
+      equipment: Array.isArray(workout.equipment) ? workout.equipment : [],
+      warmup: warmup || this.createDefaultPhase('Warm-up', 5),
+      mainWorkout: mainWorkout || this.createDefaultPhase('Main Workout', 20),
+      cooldown: cooldown || this.createDefaultPhase('Cool-down', 5),
+      reasoning: workout.reasoning || 'AI-generated workout based on your profile and preferences',
+      personalizedNotes: Array.isArray(workout.personalizedNotes) ? workout.personalizedNotes : [],
+      progressionTips: Array.isArray(workout.progressionTips) ? workout.progressionTips : [],
+      safetyReminders: Array.isArray(workout.safetyReminders) ? workout.safetyReminders : [],
+      generatedAt: workout.generatedAt || new Date(),
+      aiModel: workout.aiModel || 'gpt-4o',
+      confidence: workout.confidence || 0.8,
+      tags: Array.isArray(workout.tags) ? workout.tags : []
+    };
+  }
+
+  // Helper to create a workout phase from exercises
+  private createPhaseFromExercises(name: string, exercises: any[]): any {
+    console.log(`🔍 DEBUG: Creating phase "${name}" with ${exercises.length} exercises`);
+    
+    // Calculate total duration including exercise time and rest periods
+    const totalDuration = exercises.reduce((sum, ex, index) => {
+      let exerciseDuration = ex.duration || ex.durationMinutes || 60;
+      const restTime = ex.restTime || ex.rest || 30;
+      
+      console.log(`🔍 DEBUG: Exercise "${ex.name}" - original duration: ${exerciseDuration}, rest: ${restTime}`);
+      
+      // ✅ FIXED: More intelligent duration detection
+      // If duration is between 1-10, it's likely in minutes and needs conversion
+      // If duration is already 60+ seconds, it's already in seconds
+      if (exerciseDuration >= 1 && exerciseDuration <= 10) {
+        console.warn(`Exercise "${ex.name}" has duration ${exerciseDuration} which appears to be in minutes. Converting to seconds.`);
+        exerciseDuration = exerciseDuration * 60;
+      }
+      
+      // Add exercise duration
+      let phaseTime = exerciseDuration;
+      
+      // Add rest time after each exercise (except the last one)
+      if (index < exercises.length - 1) {
+        phaseTime += restTime;
+      }
+      
+      console.log(`🔍 DEBUG: Exercise "${ex.name}" - final duration: ${exerciseDuration}, phase time: ${phaseTime}, running sum: ${sum + phaseTime}`);
+      
+      return sum + phaseTime;
+    }, 0);
+    
+    console.log(`🔍 DEBUG: Phase "${name}" total duration: ${totalDuration} seconds`);
+    
+    return {
+      name,
+      duration: totalDuration,
+      exercises: exercises.map((exercise, index) => {
+        let exerciseDuration = exercise.duration || exercise.durationMinutes || 60;
+        
+        // ✅ FIXED: Apply the same intelligent duration fix to individual exercises
+        if (exerciseDuration >= 1 && exerciseDuration <= 10) {
+          exerciseDuration = exerciseDuration * 60;
+        }
+        
+        return {
+          id: exercise.id || `exercise_${index + 1}`,
+          name: exercise.name || exercise.activityName || `Exercise ${index + 1}`,
+          description: exercise.description || exercise.instructions || `Perform ${exercise.name || exercise.activityName || 'exercise'}`,
+          duration: exerciseDuration,
+          sets: exercise.sets || 1,
+          reps: exercise.reps || exercise.repetitions || 10,
+          restTime: exercise.rest || exercise.restTime || 30,
+          equipment: exercise.equipment || exercise.equipmentNeeded ? [exercise.equipmentNeeded] : [],
+          form: exercise.form || exercise.instructions || `Perform ${exercise.name || exercise.activityName || 'exercise'} with proper form`,
+          modifications: exercise.modifications || [],
+          commonMistakes: exercise.commonMistakes || [],
+          primaryMuscles: exercise.primaryMuscles || [],
+          secondaryMuscles: exercise.secondaryMuscles || [],
+          movementType: exercise.movementType || 'strength' as const,
+          personalizedNotes: exercise.personalizedNotes || [],
+          difficultyAdjustments: exercise.difficultyAdjustments || []
+        };
+      }),
+      instructions: `Complete ${name.toLowerCase()} phase with proper form`,
+      tips: []
+    };
+  }
+
+  // Helper to create a default workout phase
+  private createDefaultPhase(name: string, duration: number): any {
+    let exerciseDuration = duration * 60; // Convert minutes to seconds
+    
+    // ✅ FIXED: Apply the same intelligent duration validation
+    if (exerciseDuration >= 1 && exerciseDuration <= 10) {
+      console.warn(`Default phase "${name}" has duration ${exerciseDuration} which appears to be in minutes. Converting to seconds.`);
+      exerciseDuration = exerciseDuration * 60;
+    }
+    
+    return {
+      name,
+      duration: exerciseDuration,
+      exercises: [
+        {
+          id: `exercise_1`,
+          name: `${name} Exercise`,
+          description: `Perform ${name.toLowerCase()} exercises`,
+          duration: exerciseDuration,
+          form: `Perform ${name.toLowerCase()} exercises with proper form`,
+          modifications: [],
+          commonMistakes: [],
+          primaryMuscles: [],
+          secondaryMuscles: [],
+          movementType: 'strength' as const,
+          personalizedNotes: [],
+          difficultyAdjustments: []
+        }
+      ],
+      instructions: `Complete ${name.toLowerCase()} phase`,
+      tips: []
+    };
   }
 }
 

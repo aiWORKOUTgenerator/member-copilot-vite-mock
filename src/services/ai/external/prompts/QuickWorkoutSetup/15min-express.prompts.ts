@@ -39,7 +39,7 @@ CRITICAL REQUIREMENTS FOR 15-MINUTE WORKOUTS:
 2. Warm-up: 2 minutes with progressive activation and mobility
 3. Main workout: 11 minutes with varied exercise types and intensities
 4. Cool-down: 2 minutes with targeted stretching and recovery
-5. Each exercise should be 90-120 seconds including rest/transitions
+5. Each exercise should be 90-120 seconds duration (use numeric values in seconds: 90, 105, 120)
 6. Include variety in movement patterns (push, pull, squat, lunge, core)
 7. Balance strength and cardiovascular elements
 8. Accommodate available equipment and space constraints

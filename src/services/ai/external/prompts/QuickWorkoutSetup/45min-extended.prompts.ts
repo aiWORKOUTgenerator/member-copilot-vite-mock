@@ -54,7 +54,7 @@ CRITICAL REQUIREMENTS FOR 45-MINUTE WORKOUTS:
 11. Provide clear progression pathways for advancement
 12. Ensure workout variety to maintain engagement
 13. Consider cardiovascular health and injury limitations
-14. Plan realistic timing for each exercise including transitions (all durations in seconds: 60, 90, 120, 150, 180, etc.)
+14. Plan realistic timing for each exercise including transitions - use numeric values in seconds: 90, 120, 150, 180, etc.
 15. Include motivational elements for session completion
 
 EXERCISE PROGRESSION STRATEGY:

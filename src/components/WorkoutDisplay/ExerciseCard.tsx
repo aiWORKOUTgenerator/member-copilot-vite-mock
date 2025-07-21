@@ -15,7 +15,11 @@ export const ExerciseCard: React.FC<ExerciseDisplayProps> = ({
     if (exercise.duration) {
       const minutes = Math.floor(exercise.duration / 60);
       const seconds = exercise.duration % 60;
-      return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+      // ✅ FIXED: Always show minutes if duration is 60+ seconds, otherwise show seconds
+      if (exercise.duration >= 60) {
+        return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+      }
+      return `${seconds}s`;
     }
     return null;
   };
@@ -37,7 +41,11 @@ export const ExerciseCard: React.FC<ExerciseDisplayProps> = ({
     if (exercise.restTime) {
       const minutes = Math.floor(exercise.restTime / 60);
       const seconds = exercise.restTime % 60;
-      return minutes > 0 ? `${minutes}m ${seconds}s rest` : `${seconds}s rest`;
+      // ✅ FIXED: Always show minutes if rest time is 60+ seconds, otherwise show seconds
+      if (exercise.restTime >= 60) {
+        return seconds > 0 ? `${minutes}m ${seconds}s rest` : `${minutes}m rest`;
+      }
+      return `${seconds}s rest`;
     }
     return null;
   };

@@ -39,7 +39,7 @@ CRITICAL REQUIREMENTS FOR 20-MINUTE WORKOUTS:
 2. Warm-up: 3 minutes with progressive activation, mobility, and preparation
 3. Main workout: 14 minutes with diverse exercise selection and adequate rest
 4. Cool-down: 3 minutes with comprehensive stretching and recovery
-5. Each exercise should be 90-150 seconds including rest/transitions
+5. Each exercise should be 90-150 seconds duration (use numeric values in seconds: 90, 120, 150)
 6. Include 3-4 different movement patterns (push, pull, squat, hinge, lunge, core)
 7. Balance strength, cardio, and stability components
 8. Allow proper rest periods between high-intensity exercises (30-45 seconds)

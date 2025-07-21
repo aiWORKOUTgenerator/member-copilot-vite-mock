@@ -36,7 +36,7 @@ CRITICAL REQUIREMENTS FOR 10-MINUTE WORKOUTS:
 2. Warm-up: 1.5 minutes with dynamic movements to prepare the body
 3. Main workout: 7 minutes with high-efficiency compound exercises
 4. Cool-down: 1.5 minutes with essential stretching
-5. Each exercise should be 60-120 seconds duration (use numeric values: 60, 75, 90, 105, 120)
+5. Each exercise should be 60-120 seconds duration (use numeric values in seconds: 60, 75, 90, 105, 120)
 6. Focus on bodyweight or minimal equipment exercises
 7. Target major muscle groups with compound movements
 8. Maintain moderate to moderately-high intensity
