@@ -78,7 +78,26 @@ export class OpenAIService {
       
       return response;
       
-    } catch (error) {
+    } catch (error: any) {
+      // BEGIN: Enhanced error logging
+      if (error && typeof error === 'object') {
+        console.error('[OpenAIService.makeRequest] Error object:', error);
+        if (error.status) {
+          console.error('[OpenAIService.makeRequest] Error status:', error.status);
+        }
+        if (error.statusText) {
+          console.error('[OpenAIService.makeRequest] Error statusText:', error.statusText);
+        }
+        if (error.message) {
+          console.error('[OpenAIService.makeRequest] Error message:', error.message);
+        }
+        if (error.response) {
+          console.error('[OpenAIService.makeRequest] Error response:', error.response);
+        }
+      } else {
+        console.error('[OpenAIService.makeRequest] Error:', error);
+      }
+      // END: Enhanced error logging
       this.errorHandler.handleError(error);
       this.metricsTracker.recordError();
       throw this.errorHandler.createExternalAIError(error);
@@ -113,7 +132,26 @@ export class OpenAIService {
 
       return this.parseResponseContent(response);
       
-    } catch (error) {
+    } catch (error: any) {
+      // BEGIN: Enhanced error logging
+      if (error && typeof error === 'object') {
+        console.error('[OpenAIService.generateFromTemplate] Error object:', error);
+        if (error.status) {
+          console.error('[OpenAIService.generateFromTemplate] Error status:', error.status);
+        }
+        if (error.statusText) {
+          console.error('[OpenAIService.generateFromTemplate] Error statusText:', error.statusText);
+        }
+        if (error.message) {
+          console.error('[OpenAIService.generateFromTemplate] Error message:', error.message);
+        }
+        if (error.response) {
+          console.error('[OpenAIService.generateFromTemplate] Error response:', error.response);
+        }
+      } else {
+        console.error('[OpenAIService.generateFromTemplate] Error:', error);
+      }
+      // END: Enhanced error logging
       // Handle API key configuration errors gracefully
       if (error instanceof Error && error.message.includes('API key not configured')) {
         logger.warn('OpenAI API key not configured. AI features will be limited.');
