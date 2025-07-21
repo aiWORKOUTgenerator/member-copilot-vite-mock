@@ -28,6 +28,9 @@ PERSONALIZATION FACTORS:
 - Equipment limitations require creative alternatives
 - Environmental factors impact exercise selection`;
 
+// LEGACY: This complex prompt template is no longer used
+// Use QUICK_WORKOUT_PROMPT_TEMPLATE from quick-workout-generation.prompts.ts instead
+/*
 export const WORKOUT_GENERATION_PROMPT_TEMPLATE: PromptTemplate = {
   id: 'workout_generation_v1',
   name: 'Personalized Workout Generation',
@@ -227,6 +230,7 @@ IMPORTANT GUIDELINES:
     }
   ]
 };
+*/
 
 export const QUICK_WORKOUT_PROMPT_TEMPLATE: PromptTemplate = {
   id: 'quick_workout_v1',
@@ -358,13 +362,14 @@ Return a complete GeneratedWorkout JSON object with extensive guidance for peopl
 
 // Export all workout generation prompts
 export const workoutGenerationPrompts = {
-  general: WORKOUT_GENERATION_PROMPT_TEMPLATE,
+  // general: WORKOUT_GENERATION_PROMPT_TEMPLATE, // LEGACY: No longer used
   quick: QUICK_WORKOUT_PROMPT_TEMPLATE,
   recovery: RECOVERY_WORKOUT_PROMPT_TEMPLATE,
   beginner: BEGINNER_WORKOUT_PROMPT_TEMPLATE
 };
 
 // Helper function to select appropriate prompt template
+// UPDATED: Always use simplified quick workout prompt for consistency
 export const selectWorkoutPrompt = (
   fitnessLevel: string,
   duration: number,
@@ -381,11 +386,7 @@ export const selectWorkoutPrompt = (
     return BEGINNER_WORKOUT_PROMPT_TEMPLATE;
   }
   
-  // Quick workout for short duration
-  if (duration <= 15) {
-    return QUICK_WORKOUT_PROMPT_TEMPLATE;
-  }
-  
-  // Default to general workout template
-  return WORKOUT_GENERATION_PROMPT_TEMPLATE;
+  // ALWAYS use simplified quick workout prompt for all other cases
+  // This ensures consistency with the simplified approach
+  return QUICK_WORKOUT_PROMPT_TEMPLATE;
 }; 

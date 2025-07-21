@@ -89,22 +89,82 @@ function AppContent() {
 
   // Load profile data from localStorage when it changes
   useEffect(() => {
-    try {
-      const profileData = localStorage.getItem('profileData');
-      
-      if (profileData) {
-        const parsed = JSON.parse(profileData);
+    const loadProfileData = () => {
+      try {
+        const profileData = localStorage.getItem('profileData');
         
-        if (parsed.data) {
-          setAppState(prev => ({
-            ...prev,
-            profileData: parsed.data
-          }));
+        // 🔍 DEBUG: Log localStorage load (only on changes)
+        const previousData = (window as any).previousProfileData;
+        const hasChanged = profileData !== previousData;
+        if (hasChanged) {
+          (window as any).previousProfileData = profileData;
+          console.log('🔍 App.tsx - localStorage changed:', {
+            hasData: !!profileData
+          });
         }
+        
+        if (profileData) {
+          const parsed = JSON.parse(profileData);
+          
+          // 🔍 DEBUG: Log parsed data structure
+          console.log('🔍 App.tsx - Parsed localStorage data:', {
+            hasDataProperty: !!parsed.data,
+            parsedKeys: Object.keys(parsed),
+            dataKeys: parsed.data ? Object.keys(parsed.data) : 'no data property',
+            primaryGoal: parsed.data?.primaryGoal,
+            experienceLevel: parsed.data?.experienceLevel,
+            primaryGoalType: typeof parsed.data?.primaryGoal,
+            isValidPrimaryGoal: !!(parsed.data?.primaryGoal && parsed.data.primaryGoal !== '' && parsed.data.primaryGoal !== 'undefined')
+          });
+          
+          if (parsed.data) {
+            // Validate that the data is complete before setting it
+            const hasRequiredFields = !!(parsed.data.experienceLevel && parsed.data.primaryGoal);
+            
+            console.log('🔍 App.tsx - Data validation:', {
+              hasRequiredFields,
+              experienceLevel: parsed.data.experienceLevel,
+              primaryGoal: parsed.data.primaryGoal
+            });
+            
+            setAppState(prev => ({
+              ...prev,
+              profileData: parsed.data
+            }));
+            
+            // 🔍 DEBUG: Log what we're setting in state
+            console.log('🔍 App.tsx - Setting profileData in state:', {
+              primaryGoal: parsed.data.primaryGoal,
+              experienceLevel: parsed.data.experienceLevel,
+              hasRequiredFields
+            });
+          } else {
+            console.warn('🔍 App.tsx - No data property found in parsed localStorage');
+          }
+        } else {
+          console.log('🔍 App.tsx - No profileData found in localStorage');
+        }
+      } catch (error) {
+        console.error('Failed to load profile data from localStorage:', error);
       }
-    } catch (error) {
-      console.warn('Failed to load profile data from localStorage:', error);
-    }
+    };
+
+    // Initial load
+    loadProfileData();
+
+    // Also listen for storage changes (when user updates profile in another tab)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'profileData') {
+        console.log('🔍 App.tsx - Detected localStorage change, reloading...');
+        loadProfileData();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   // Initialize AI service when profile data is available
@@ -265,6 +325,13 @@ function AppContent() {
         } as WorkoutFocusPageProps;
       
       case 'review':
+        // 🔍 DEBUG: Log what's being passed to ReviewPage (key fields only)
+        if (appState.profileData) {
+          console.log('🔍 App.tsx - ReviewPage data:', {
+            primaryGoal: appState.profileData.primaryGoal,
+            experienceLevel: appState.profileData.experienceLevel
+          });
+        }
         return {
           ...baseProps,
           profileData: appState.profileData,

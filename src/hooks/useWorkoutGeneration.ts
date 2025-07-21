@@ -301,10 +301,16 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
     request: WorkoutGenerationRequest, 
     options: WorkoutGenerationOptions = {}
   ): Promise<GeneratedWorkout | null> => {
+    
+    // 🔍 CRITICAL DEBUG: Log what useWorkoutGeneration receives
+    console.log('🔍 CRITICAL - useWorkoutGeneration received:');
+    console.log('  request.profileData exists:', !!request.profileData);
+    console.log('  request.profileData.experienceLevel:', request.profileData?.experienceLevel);
+    console.log('  request.profileData.primaryGoal:', request.profileData?.primaryGoal);
     const {
       retryAttempts = 3,
       retryDelay = 1000,
-      timeout = 30000, // 30 seconds
+              timeout = 90000, // 90 seconds
       useFallback = true,
       enableDetailedLogging = false
     } = options;
@@ -374,7 +380,14 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
           });
         }
         
-        const generatedWorkout = await aiGenerateWorkout(workoutOptions);
+        // Pass the complete request to preserve profileData
+        const generatedWorkout = await aiGenerateWorkout({
+          workoutType: request.workoutType,
+          profileData: request.profileData,
+          waiverData: request.waiverData,
+          workoutFocusData: workoutOptions,
+          userProfile
+        });
         
         if (abortControllerRef.current?.signal.aborted) {
           throw new Error('Generation was cancelled');

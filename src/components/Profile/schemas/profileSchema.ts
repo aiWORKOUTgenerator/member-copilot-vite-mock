@@ -5,6 +5,8 @@ export const profileSchema = z.object({
   // Experience & Activity
   experienceLevel: z.enum(['New to Exercise', 'Some Experience', 'Advanced Athlete']).describe('Please select your experience level'),
   physicalActivity: z.enum(['sedentary', 'light', 'moderate', 'very', 'extremely', 'varies']).describe('Please select your current activity level'),
+  calculatedFitnessLevel: z.enum(['beginner', 'novice', 'intermediate', 'advanced', 'adaptive']).optional(),
+  calculatedWorkoutIntensity: z.enum(['low', 'moderate', 'high']).optional(),
   
   // Time & Commitment
   preferredDuration: z.enum(['15-30 min', '30-45 min', '45-60 min', '60+ min']).describe('Please select your preferred workout duration'),
@@ -173,7 +175,8 @@ export const validateFullProfile = (data: ProfileData): ValidationResult => {
 // Field-specific validation function
 export const validateField = (field: keyof ProfileData, value: unknown): ValidationResult => {
   // Create a minimal schema for just this field
-  const fieldSchema = profileSchema.pick({ [field]: true });
+  const pickObj = { [field]: true };
+  const fieldSchema = profileSchema.pick(pickObj as any);
   const testData = { [field]: value } as Partial<ProfileData>;
   
   const result = fieldSchema.safeParse(testData);
@@ -193,6 +196,8 @@ export const getStepForField = (field: keyof ProfileData): number => {
   const stepFieldMap: Record<keyof ProfileData, number> = {
     experienceLevel: 1,
     physicalActivity: 1,
+    calculatedFitnessLevel: 1,
+    calculatedWorkoutIntensity: 2,
     preferredDuration: 2,
     timeCommitment: 2,
     intensityLevel: 2,
@@ -249,6 +254,8 @@ export const getFirstIncompleteStep = (data: Partial<ProfileData>): number => {
 export const defaultProfileData: ProfileData = {
   experienceLevel: 'New to Exercise',
   physicalActivity: 'sedentary',
+  calculatedFitnessLevel: 'beginner',
+  calculatedWorkoutIntensity: undefined,
   preferredDuration: '30-45 min',
   timeCommitment: '2-3',
   intensityLevel: 'lightly',

@@ -4,7 +4,7 @@ export type ProfileData = {
   experienceLevel: 'New to Exercise' | 'Some Experience' | 'Advanced Athlete';
   physicalActivity: 'sedentary' | 'light' | 'moderate' | 'very' | 'extremely' | 'varies';
   calculatedFitnessLevel?: 'beginner' | 'novice' | 'intermediate' | 'advanced' | 'adaptive';
-  calculatedWorkoutIntensity: 'low' | 'moderate' | 'high';
+  calculatedWorkoutIntensity?: 'low' | 'moderate' | 'high';
   
   // Time & Commitment
   preferredDuration: '15-30 min' | '30-45 min' | '45-60 min' | '60+ min';

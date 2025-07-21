@@ -7,6 +7,7 @@ import { logger } from '../../../utils/logger';
 import { WORKOUT_GENERATION_CONSTANTS } from './constants/workout-generation-constants';
 import { validateWorkoutRequest, createValidationErrorMessage, createValidationWarningMessage } from './utils/workout-validation';
 import { WorkoutCacheManager } from './utils/cache-manager';
+import { WorkoutVariableBuilder } from './helpers/WorkoutVariableBuilder';
 
 // Performance metrics interface
 interface WorkoutGenerationMetrics {
@@ -133,10 +134,8 @@ export class WorkoutGenerationService {
               dataTransformers.extractFocusValue(workoutFocusData.customization_focus) ?? WORKOUT_GENERATION_CONSTANTS.DEFAULT_FOCUS
             );
 
-        // Prepare the prompt variables based on workout type
-        const promptVariables = workoutType === 'quick' 
-          ? this.prepareQuickWorkoutVariables(request)
-          : this.prepareDetailedWorkoutVariables(request);
+        // ✅ FIXED: Use centralized WorkoutVariableBuilder instead of local methods
+        const promptVariables = WorkoutVariableBuilder.buildWorkoutVariables(request);
 
         // Generate the workout using OpenAI with timeout
         const aiResponse = await Promise.race([
@@ -154,84 +153,15 @@ export class WorkoutGenerationService {
 
       } catch (error) {
         lastError = error as Error;
+        logger.warn(`Workout generation attempt ${attempt} failed:`, error);
         
-        // Don't retry on validation errors or user errors
-        if (this.isNonRetryableError(error)) {
-          throw error;
-        }
-
-        // Log retry attempt
-        logger.warn(`Workout generation attempt ${attempt} failed:`, {
-          error: error instanceof Error ? error.message : String(error),
-          attempt,
-          maxAttempts: WORKOUT_GENERATION_CONSTANTS.MAX_RETRY_ATTEMPTS
-        });
-
-        // Wait before retry (exponential backoff)
         if (attempt < WORKOUT_GENERATION_CONSTANTS.MAX_RETRY_ATTEMPTS) {
-          const delay = WORKOUT_GENERATION_CONSTANTS.RETRY_DELAY_MS * Math.pow(WORKOUT_GENERATION_CONSTANTS.BACKOFF_MULTIPLIER, attempt - 1);
-          await this.delay(Math.min(delay, WORKOUT_GENERATION_CONSTANTS.MAX_BACKOFF_DELAY_MS));
+          await this.delay(WORKOUT_GENERATION_CONSTANTS.RETRY_DELAY_MS * attempt);
         }
       }
     }
 
-    // All retries failed
-    throw new Error(`${WORKOUT_GENERATION_CONSTANTS.ERROR_MESSAGES.RETRY_FAILED}. Last error: ${lastError?.message}`);
-  }
-
-  /**
-   * Prepare variables for quick workout generation
-   */
-  private prepareQuickWorkoutVariables(request: WorkoutGenerationRequest) {
-    const { workoutFocusData, userProfile } = request;
-    
-    return {
-      experienceLevel: userProfile.fitnessLevel,
-      primaryGoal: userProfile.goals?.[0] ?? 'general fitness',
-      availableEquipment: dataTransformers.extractEquipmentList(workoutFocusData.customization_equipment),
-      energyLevel: workoutFocusData.customization_energy ?? 5,
-      sorenessAreas: Object.keys(workoutFocusData.customization_soreness ?? {}),
-      duration: dataTransformers.extractDurationValue(workoutFocusData.customization_duration) ?? 30,
-      focus: dataTransformers.extractFocusValue(workoutFocusData.customization_focus) ?? 'general'
-    };
-  }
-
-  /**
-   * Prepare variables for detailed workout generation
-   */
-  private prepareDetailedWorkoutVariables(request: WorkoutGenerationRequest) {
-    const { profileData, workoutFocusData, userProfile } = request;
-    
-    return {
-      // Profile data
-      experienceLevel: profileData.experienceLevel,
-      physicalActivity: profileData.physicalActivity,
-      preferredDuration: profileData.preferredDuration,
-      timeCommitment: profileData.timeCommitment,
-      intensityLevel: profileData.calculatedWorkoutIntensity,
-      preferredActivities: profileData.preferredActivities,
-      availableEquipment: profileData.availableEquipment,
-      primaryGoal: profileData.primaryGoal,
-      goalTimeline: profileData.goalTimeline,
-      age: profileData.age,
-      height: profileData.height,
-      weight: profileData.weight,
-      gender: profileData.gender,
-      hasCardiovascularConditions: profileData.hasCardiovascularConditions,
-      injuries: profileData.injuries,
-      
-      // Workout focus data
-      energyLevel: workoutFocusData.customization_energy,
-      sorenessAreas: Object.keys(workoutFocusData.customization_soreness ?? {}),
-      duration: dataTransformers.extractDurationValue(workoutFocusData.customization_duration),
-      focus: dataTransformers.extractFocusValue(workoutFocusData.customization_focus),
-      equipment: dataTransformers.extractEquipmentList(workoutFocusData.customization_equipment),
-      
-      // ✅ FIXED: Add missing required variables for detailed workout templates
-      fitnessLevel: userProfile.fitnessLevel,
-      goals: userProfile.goals,
-      location: userProfile.basicLimitations.availableLocations[0] || 'home'
-    };
+    throw lastError || new Error('Workout generation failed after all retry attempts');
   }
 
   /**

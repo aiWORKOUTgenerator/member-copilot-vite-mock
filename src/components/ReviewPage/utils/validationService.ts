@@ -1,5 +1,6 @@
 import { PerWorkoutOptions } from '../../../types/enhanced-workout-types';
 import { ProfileData } from '../../Profile/types/profile.types';
+import { PromptDataTransformer } from '../../../services/ai/external/utils/PromptDataTransformer';
 
 export interface ValidationIssue {
   field: string;
@@ -34,6 +35,14 @@ export class ValidationService {
   ): ValidationResult {
     const issues: ValidationIssue[] = [];
 
+    // 🔍 DEBUG: Log what ValidationService receives (key fields only)
+    if (profileData) {
+      console.log('🔍 ValidationService - Key fields:', {
+        primaryGoal: profileData.primaryGoal,
+        experienceLevel: profileData.experienceLevel
+      });
+    }
+
     // Profile validation
     if (!profileData) {
       issues.push({
@@ -51,7 +60,28 @@ export class ValidationService {
       const experienceLevel = profileData.experienceLevel;
       const primaryGoal = profileData.primaryGoal;
       
+      // 🔍 DEBUG: Log detailed field validation
+      console.log('🔍 ValidationService - Field validation:', {
+        experienceLevel: {
+          value: experienceLevel,
+          type: typeof experienceLevel,
+          isEmpty: experienceLevel === '',
+          isUndefined: experienceLevel === undefined,
+          isStringUndefined: experienceLevel === 'undefined',
+          isValid: !!(experienceLevel && experienceLevel !== '' && experienceLevel !== 'undefined')
+        },
+        primaryGoal: {
+          value: primaryGoal,
+          type: typeof primaryGoal,
+          isEmpty: primaryGoal === '',
+          isUndefined: primaryGoal === undefined,
+          isStringUndefined: primaryGoal === 'undefined',
+          isValid: !!(primaryGoal && primaryGoal !== '' && primaryGoal !== 'undefined')
+        }
+      });
+      
       if (!experienceLevel || experienceLevel === '' || experienceLevel === 'undefined') {
+        console.warn('🔍 ValidationService - Experience Level invalid:', experienceLevel);
         issues.push({
           field: 'Experience Level',
           message: 'Please specify your fitness experience level.',
@@ -65,6 +95,7 @@ export class ValidationService {
       }
 
       if (!primaryGoal || primaryGoal === '' || primaryGoal === 'undefined') {
+        console.warn('🔍 ValidationService - Primary Goal invalid:', primaryGoal);
         issues.push({
           field: 'Primary Goal',
           message: 'Please select your primary fitness goal.',
@@ -380,5 +411,72 @@ export class ValidationService {
     }
 
     return issues;
+  }
+
+  /**
+   * Enhanced validation using PromptDataTransformer for consistency
+   * This ensures validation and data transformation use the same logic
+   */
+  static validateDataTransformation(
+    profileData: ProfileData,
+    workoutFocusData: PerWorkoutOptions
+  ): {
+    isTransformable: boolean;
+    transformationIssues: string[];
+    fieldCoverage: number;
+  } {
+    try {
+      // Use PromptDataTransformer to validate the same way generation does
+      const transformedVariables = PromptDataTransformer.transformToPromptVariables(
+        profileData,
+        workoutFocusData
+      );
+
+      const validation = PromptDataTransformer.validatePromptVariables(transformedVariables);
+
+      return {
+        isTransformable: validation.isValid,
+        transformationIssues: validation.missingRequired,
+        fieldCoverage: (validation.populatedFields / validation.totalFields) * 100
+      };
+
+    } catch (error) {
+      return {
+        isTransformable: false,
+        transformationIssues: [error instanceof Error ? error.message : 'Unknown transformation error'],
+        fieldCoverage: 0
+      };
+    }
+  }
+
+  /**
+   * Debug method to log validation and transformation consistency
+   */
+  static debugValidationConsistency(
+    profileData: ProfileData | null,
+    workoutFocusData: PerWorkoutOptions | null,
+    workoutType: 'quick' | 'detailed'
+  ): void {
+    console.log('🔍 ValidationService Debug:');
+    
+    if (!profileData || !workoutFocusData) {
+      console.log('❌ Missing data - cannot debug transformation');
+      return;
+    }
+
+    // Standard validation
+    const standardValidation = this.validateWorkoutData(workoutFocusData, profileData, workoutType);
+    console.log(`📊 Standard Validation: ${standardValidation.summary.errors} errors, ${standardValidation.summary.warnings} warnings`);
+
+    // Transformation validation
+    const transformationValidation = this.validateDataTransformation(profileData, workoutFocusData);
+    console.log(`🔄 Transformation Validation: ${transformationValidation.fieldCoverage.toFixed(1)}% field coverage`);
+    
+    if (transformationValidation.transformationIssues.length > 0) {
+      console.warn('⚠️ Transformation Issues:', transformationValidation.transformationIssues);
+    }
+
+    // Debug the actual transformed data
+    PromptDataTransformer.debugTransformation(profileData, workoutFocusData);
   }
 } 

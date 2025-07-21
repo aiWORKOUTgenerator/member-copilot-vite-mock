@@ -1,7 +1,7 @@
 // OpenAI Service Constants
 export const OPENAI_SERVICE_CONSTANTS = {
   // Timeouts (in milliseconds)
-  DEFAULT_TIMEOUT_MS: 30000,
+  DEFAULT_TIMEOUT_MS: 90000, // Increased to 90 seconds for complex workout generation
   HEALTH_CHECK_TIMEOUT_MS: 5000,
   RATE_LIMIT_CALCULATION_MS: 60000,
   

@@ -83,9 +83,19 @@ export class OpenAIRequestHandler {
     timeout: number
   ): Promise<OpenAIResponse> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    const timeoutId = setTimeout(() => {
+      console.warn(`OpenAI API request timed out after ${timeout}ms`);
+      controller.abort();
+    }, timeout);
 
     try {
+      console.log('Making OpenAI API request:', {
+        url: `${this.config.baseURL}/chat/completions`,
+        model: requestBody.model,
+        maxTokens: requestBody.max_tokens,
+        timeout: timeout
+      });
+
       const response = await fetch(`${this.config.baseURL}/chat/completions`, {
         method: 'POST',
         headers: this.buildHeaders(),
@@ -95,10 +105,20 @@ export class OpenAIRequestHandler {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('OpenAI API error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText: errorText
+        });
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
-      return await response.json();
+      const result = await response.json();
+      console.log('OpenAI API request successful');
+      return result;
+    } catch (error) {
+      console.error('OpenAI API request failed:', error);
+      throw error;
     } finally {
       clearTimeout(timeoutId);
     }

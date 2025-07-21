@@ -1,18 +1,15 @@
 // OpenAI Workout Generator - Specialized service for generating AI-powered workouts
-import { 
-  WorkoutGenerationRequest, 
-  GeneratedWorkout
-} from '../../../types/workout-generation.types';
-import { OpenAIService } from './OpenAIService';
-import { selectWorkoutPrompt } from './prompts/workout-generation.prompts';
-import { isFeatureEnabled } from './config/openai.config';
-import { logger } from '../../../utils/logger';
+import { WorkoutGenerationRequest, GeneratedWorkout } from '../../../types/workout-generation.types';
 import { PerWorkoutOptions, UserProfile } from '../../../types';
-import { WorkoutRequestAdapter } from '../../../types/workout-generation.types';
+import { OpenAIService } from './OpenAIService';
 import { WorkoutRequestConverter } from './helpers/WorkoutRequestConverter';
+import { WorkoutRequestAdapter } from '../../../types/workout-generation.types';
+import { WorkoutVariationGenerator } from './helpers/WorkoutVariationGenerator';
 import { WorkoutValidator } from './helpers/WorkoutValidator';
 import { WorkoutEnhancer } from './helpers/WorkoutEnhancer';
-import { WorkoutVariationGenerator } from './helpers/WorkoutVariationGenerator';
+import { QUICK_WORKOUT_PROMPT_TEMPLATE } from './prompts/quick-workout-generation.prompts';
+import { logger } from '../../../utils/logger';
+import { WorkoutVariableBuilder } from './helpers/WorkoutVariableBuilder';
 import { WORKOUT_GENERATOR_CONSTANTS } from './constants/workout-generator-constants';
 
 export class OpenAIWorkoutGenerator {
@@ -41,74 +38,47 @@ export class OpenAIWorkoutGenerator {
     }
   }
 
-  // Main workout generation method
+  /**
+   * Generate workout using OpenAI
+   */
   async generateWorkout(request: WorkoutGenerationRequest): Promise<GeneratedWorkout> {
     try {
-      if (!isFeatureEnabled('openai_workout_generation')) {
-        throw new Error('OpenAI workout generation is disabled');
-      }
-
-      // Check cache first
-      const cacheKey = this.generateCacheKey(request);
-      const cached = this.generatedWorkouts.get(cacheKey);
-      if (cached && this.isCacheValid(cached)) {
-        logger.info('Returning cached workout');
-        return cached;
-      }
-
-      // Execute workout generation
-      const generatedWorkout = await this.executeWorkoutGeneration(request);
+      // Enhance request with additional context
+      const enhancedRequest = WorkoutRequestAdapter.enhanceRequest(request);
       
+      // ✅ FIXED: Use centralized WorkoutVariableBuilder instead of WorkoutRequestConverter
+      const promptVariables = WorkoutVariableBuilder.buildWorkoutVariables(enhancedRequest);
+
+      // ALWAYS use simplified quick workout prompt for consistency
+      const prompt = QUICK_WORKOUT_PROMPT_TEMPLATE;
+
+      // Generate workout using OpenAI
+      const result = await this.openAIService.generateFromTemplate(
+        prompt,
+        promptVariables,
+        {
+          cacheKey: `workout_${enhancedRequest.userProfile.fitnessLevel}_${JSON.stringify(promptVariables)}`,
+          timeout: 30000
+        }
+      );
+
       // Validate and enhance the generated workout
-      const validatedWorkout = WorkoutValidator.validateWorkout(generatedWorkout, request);
-      const enhancedWorkout = WorkoutEnhancer.enhanceWorkout(validatedWorkout, request);
+      const generatedWorkout = result as GeneratedWorkout;
+      const validatedWorkout = WorkoutValidator.validateWorkout(generatedWorkout, enhancedRequest);
+      const enhancedWorkout = WorkoutEnhancer.enhanceWorkout(validatedWorkout, enhancedRequest);
 
-      // Cache the result
-      this.generatedWorkouts.set(cacheKey, enhancedWorkout);
-
-      logger.info('Workout generated successfully', {
+      logger.info('OpenAIWorkoutGenerator: Workout generated successfully', {
+        workoutId: enhancedWorkout.id,
         duration: enhancedWorkout.totalDuration,
-        exerciseCount: WorkoutValidator.countExercises(enhancedWorkout),
-        difficulty: enhancedWorkout.difficulty
+        exercises: enhancedWorkout.mainWorkout?.exercises?.length ?? 0
       });
 
       return enhancedWorkout;
 
     } catch (error) {
-      logger.error('Workout generation failed:', error);
-      throw this.createWorkoutGenerationError(error, request);
+      logger.error('OpenAIWorkoutGenerator: Failed to generate workout', error);
+      throw new Error(`Workout generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-  }
-
-  // Execute workout generation with OpenAI
-  private async executeWorkoutGeneration(request: WorkoutGenerationRequest): Promise<GeneratedWorkout> {
-    // Ensure request has AI enhancements, create defaults if missing
-    const enhancedRequest = request.preferences 
-      ? request 
-      : WorkoutRequestAdapter.enhanceRequest(request, WorkoutRequestAdapter.createDefaultEnhancements(request.userProfile, request.workoutFocusData));
-
-    // Select appropriate prompt based on request
-    const prompt = selectWorkoutPrompt(
-      request.userProfile.fitnessLevel,
-      enhancedRequest.preferences!.duration,
-      enhancedRequest.constraints?.sorenessAreas ?? [],
-      enhancedRequest.preferences!.focus
-    );
-
-    // Prepare variables for prompt using helper
-    const variables = WorkoutRequestConverter.preparePromptVariables(enhancedRequest);
-
-    // Generate workout using OpenAI
-    const result = await this.openAIService.generateFromTemplate(
-      prompt,
-      variables,
-      {
-        cacheKey: `workout_${this.generateCacheKey(enhancedRequest)}`,
-        timeout: 30000
-      }
-    );
-    
-    return result as GeneratedWorkout;
   }
 
   // Generate workout variations

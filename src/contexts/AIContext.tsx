@@ -39,6 +39,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { AIService } from '../services/ai/core/AIService';
 import { UserProfile, PerWorkoutOptions, AIAssistanceLevel } from '../types';
+import { WorkoutGenerationRequest } from '../types/workout-generation.types';
 import { featureFlagService, useFeatureFlags, FeatureFlag, ABTestResults, AnalyticsEvent } from '../services/ai/featureFlags/FeatureFlagService';
 import { openAIStrategy } from '../services/ai/external/OpenAIStrategy';
 import { openAIWorkoutGenerator } from '../services/ai/external/OpenAIWorkoutGenerator';
@@ -542,23 +543,19 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   };
 
   // External AI methods
-  const generateWorkout = useCallback(async (workoutData: PerWorkoutOptions | any) => {
+  const generateWorkout = useCallback(async (request: WorkoutGenerationRequest) => {
     if (!currentUserProfile) {
       throw new Error('User profile required for workout generation');
     }
     
-    // Create a complete WorkoutGenerationRequest object
-    const request = {
-      workoutType: 'quick' as const, // Default to quick, could be made configurable
-      profileData: {} as any, // This will be filled by the AI service from context
-      workoutFocusData: workoutData,
-      userProfile: currentUserProfile
-    };
-    
+    // Use the provided request directly - it already has all the data we need
     console.log('🔍 AIContext generateWorkout - request:', {
       hasUserProfile: !!request.userProfile,
+      hasProfileData: !!request.profileData,
+      experienceLevel: request.profileData?.experienceLevel,
+      primaryGoal: request.profileData?.primaryGoal,
       fitnessLevel: request.userProfile.fitnessLevel,
-      workoutDataKeys: Object.keys(workoutData)
+      workoutDataKeys: Object.keys(request.workoutFocusData || {})
     });
     
     return await aiService.generateWorkout(request);

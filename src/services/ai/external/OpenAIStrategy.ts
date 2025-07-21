@@ -10,9 +10,6 @@ import { PrioritizedRecommendation, GlobalAIContext } from '../core/types/AIServ
 import { AIInsight } from '../../../types/insights';
 import { OpenAIService } from './OpenAIService';
 import { 
-  selectWorkoutPrompt 
-} from './prompts/workout-generation.prompts';
-import { 
   selectRecommendationPrompt 
 } from './prompts/recommendation.prompts';
 import { isFeatureEnabled } from './config/openai.config';
@@ -28,6 +25,7 @@ import {
   createBasicUserAnalysis
 } from './helpers/AIAnalysisHelpers';
 import { enhanceGeneratedWorkout } from './helpers/WorkoutEnhancementHelpers';
+import { QUICK_WORKOUT_PROMPT_TEMPLATE } from './prompts/quick-workout-generation.prompts';
 
 
 export class OpenAIStrategy implements AIStrategy {
@@ -305,13 +303,8 @@ export class OpenAIStrategy implements AIStrategy {
       location: 'home' as const
     };
 
-    // Select appropriate workout prompt
-    const prompt = selectWorkoutPrompt(
-      request.userProfile.fitnessLevel,
-      preferences.duration,
-      request.constraints?.sorenessAreas ?? [],
-      preferences.focus
-    );
+    // ALWAYS use simplified quick workout prompt for consistency
+    const prompt = QUICK_WORKOUT_PROMPT_TEMPLATE;
 
     // Generate workout using OpenAI
     const result = await this.openAIService.generateFromTemplate(

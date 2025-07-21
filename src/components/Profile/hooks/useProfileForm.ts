@@ -2,11 +2,12 @@ import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useEnhancedPersistedState } from '../../../hooks/usePersistedState';
 import { ProfileData, ProfileFormHookReturn } from '../types/profile.types';
 import { logger } from '../../../utils/logger';
+import { defaultProfileData } from '../schemas/profileSchema';
 
 // Simplified MVP version - focus on core functionality
 export const useProfileForm = (): ProfileFormHookReturn => {
   const {
-    state: profileData,
+    state: profileDataRaw,
     setState: setProfileData,
     metadata,
     hasUnsavedChanges,
@@ -16,6 +17,12 @@ export const useProfileForm = (): ProfileFormHookReturn => {
     null,
     { debounceDelay: 500 }
   );
+
+  // Always provide a fully populated profileData object
+  const profileData: ProfileData = useMemo(() => {
+    if (!profileDataRaw) return { ...defaultProfileData };
+    return { ...defaultProfileData, ...profileDataRaw };
+  }, [profileDataRaw]);
 
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [touchedFields, setTouchedFields] = useState<string[]>([]);
@@ -28,15 +35,27 @@ export const useProfileForm = (): ProfileFormHookReturn => {
       setIsLoading(true);
       setError(null);
       
+      // 🔍 DEBUG: Log important profile updates
+      if (field === 'primaryGoal' || field === 'experienceLevel') {
+        console.log(`🔍 useProfileForm - ${field} update:`, value);
+      }
+      
       setProfileData(prev => {
-        if (!prev) {
-          // Initialize with just the field being set
-          return { [field]: value } as ProfileData;
-        }
-        return {
-          ...prev,
+        const base = prev ? { ...defaultProfileData, ...prev } : { ...defaultProfileData };
+        const newData = {
+          ...base,
           [field]: value
         };
+        
+        // 🔍 DEBUG: Verify data after update
+        if (field === 'primaryGoal' || field === 'experienceLevel') {
+          console.log(`🔍 useProfileForm - After ${field} update:`, {
+            primaryGoal: newData.primaryGoal,
+            experienceLevel: newData.experienceLevel
+          });
+        }
+        
+        return newData;
       });
       
       // Mark field as touched
@@ -60,26 +79,20 @@ export const useProfileForm = (): ProfileFormHookReturn => {
       setError(null);
 
       setProfileData(prev => {
-        if (!prev) {
-          logger.warn('Attempted to toggle array field when profileData is null:', { field, value });
-          return null;
-        }
-        
-        const currentValue = prev[field];
+        const base = prev ? { ...defaultProfileData, ...prev } : { ...defaultProfileData };
+        const currentValue = base[field];
         if (!Array.isArray(currentValue)) {
           return {
-            ...prev,
+            ...base,
             [field]: [value]
           };
         }
-        
         const stringArray = currentValue as string[];
         const newArray = stringArray.includes(value)
           ? stringArray.filter(item => item !== value)
           : [...stringArray, value];
-        
         return {
-          ...prev,
+          ...base,
           [field]: newArray
         };
       });
@@ -98,7 +111,7 @@ export const useProfileForm = (): ProfileFormHookReturn => {
   }, [setProfileData]);
 
   const resetForm = useCallback(() => {
-    setProfileData(null);
+    setProfileData({ ...defaultProfileData });
   }, [setProfileData]);
 
   // Simplified step validation - only check if required fields exist

@@ -27,6 +27,16 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
 
+  // 🔍 DEBUG: Log the profileData received by ReviewPage (key fields only)
+  React.useEffect(() => {
+    if (profileData) {
+      console.log('🔍 ReviewPage - Received data:', {
+        primaryGoal: profileData.primaryGoal,
+        experienceLevel: profileData.experienceLevel
+      });
+    }
+  }, [profileData]);
+
   // Convert workout focus data to display format
   const displayWorkoutFocus = convertWorkoutFocusToDisplay(workoutFocusData, workoutType);
 
@@ -38,6 +48,9 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
 
     setIsGenerating(true);
     setGenerationError(null);
+
+    // 🔍 DEBUG: Log validation and transformation consistency
+    ValidationService.debugValidationConsistency(profileData, workoutFocusData, workoutType);
 
     try {
       // Use the calculated workout intensity from TimeCommitmentStep, or calculate if not available
@@ -127,6 +140,13 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
         workoutIntensitySource: profileData.calculatedWorkoutIntensity ? 'calculated' : 'computed'
       });
 
+      // 🔍 CRITICAL DEBUG: Log what ReviewPage is sending to workout generation  
+      console.log('🔍 CRITICAL - ReviewPage data check:');
+      console.log('  hasProfileData:', !!profileData);
+      console.log('  experienceLevel:', profileData?.experienceLevel);
+      console.log('  primaryGoal:', profileData?.primaryGoal);
+      console.log('  userProfile fitnessLevel:', userProfile?.fitnessLevel);
+
       const request: WorkoutGenerationRequest = {
         workoutType,
         profileData,
@@ -134,6 +154,12 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
         workoutFocusData,
         userProfile
       };
+
+      // 🔍 CRITICAL DEBUG: Log the complete request object
+      console.log('🔍 CRITICAL - WorkoutGenerationRequest check:');
+      console.log('  request.profileData exists:', !!request.profileData);
+      console.log('  request.profileData.experienceLevel:', request.profileData?.experienceLevel);
+      console.log('  request.profileData.primaryGoal:', request.profileData?.primaryGoal);
 
       const generatedWorkout = await workoutGeneration.generateWorkout(request);
       
@@ -172,13 +198,36 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
     }
   }, [profileData, waiverData, workoutFocusData, workoutType, workoutGeneration, onWorkoutGenerated, onNavigate]);
 
+  // 🔍 DEBUG: Add delay to ensure data is loaded before validation
+  const [isDataReady, setIsDataReady] = React.useState(false);
+  
+  React.useEffect(() => {
+    // Give a small delay to ensure App.tsx has loaded data from localStorage
+    const timer = setTimeout(() => {
+      setIsDataReady(true);
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
   // Comprehensive validation using the new validation service
-  const validationResult = ValidationService.validateWorkoutData(
-    workoutFocusData,
-    profileData,
-    workoutType,
-    onNavigate
-  );
+  // But only run after data is ready to prevent race conditions
+  const validationResult = React.useMemo(() => {
+    if (!isDataReady) {
+      return {
+        isValid: false,
+        issues: [],
+        summary: { errors: 0, warnings: 0, info: 0 }
+      };
+    }
+    
+    return ValidationService.validateWorkoutData(
+      workoutFocusData,
+      profileData,
+      workoutType,
+      onNavigate
+    );
+  }, [workoutFocusData, profileData, workoutType, onNavigate, isDataReady]);
   
   // Legacy validation for backward compatibility
   const hasRequiredData = validationResult.isValid;
