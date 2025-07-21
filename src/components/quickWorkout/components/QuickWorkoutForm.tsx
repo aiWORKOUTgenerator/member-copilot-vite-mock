@@ -28,22 +28,40 @@ interface EnhancedQuickWorkoutFormProps extends QuickWorkoutFormProps {
 const mapToPerWorkoutOptions = (focusData: WorkoutFocusData): PerWorkoutOptions => {
   // Create soreness data in the correct format
   const sorenessData: CategoryRatingData = {};
-  if (focusData.currentSoreness.length > 0) {
-    focusData.currentSoreness.forEach(area => {
-      if (SORENESS_OPTIONS.includes(area)) {
-        sorenessData[area] = {
-          selected: true,
-          rating: focusData.sorenessLevel,
-          label: area,
-          description: `Soreness level ${focusData.sorenessLevel} in ${area}`,
-          metadata: {
-            severity: focusData.sorenessLevel >= 8 ? 'severe' :
-                     focusData.sorenessLevel >= 5 ? 'moderate' : 'mild',
-            affectedActivities: ['strength_training', 'cardio', 'flexibility']
-          }
-        };
-      }
-    });
+  
+  // If soreness level is set but no specific areas are selected, create a general soreness entry
+  if (focusData.sorenessLevel > 0) {
+    if (focusData.currentSoreness.length > 0) {
+      // Use specific areas if selected
+      focusData.currentSoreness.forEach(area => {
+        if (SORENESS_OPTIONS.includes(area)) {
+          sorenessData[area] = {
+            selected: true,
+            rating: focusData.sorenessLevel,
+            label: area,
+            description: `Soreness level ${focusData.sorenessLevel} in ${area}`,
+            metadata: {
+              severity: focusData.sorenessLevel >= 8 ? 'severe' :
+                       focusData.sorenessLevel >= 5 ? 'moderate' : 'mild',
+              affectedActivities: ['strength_training', 'cardio', 'flexibility']
+            }
+          };
+        }
+      });
+    } else {
+      // Create a general soreness entry if no specific areas are selected
+      sorenessData['general'] = {
+        selected: true,
+        rating: focusData.sorenessLevel,
+        label: 'General Soreness',
+        description: `General soreness level ${focusData.sorenessLevel}`,
+        metadata: {
+          severity: focusData.sorenessLevel >= 8 ? 'severe' :
+                   focusData.sorenessLevel >= 5 ? 'moderate' : 'mild',
+          affectedActivities: ['strength_training', 'cardio', 'flexibility']
+        }
+      };
+    }
   }
 
   return {
@@ -173,7 +191,7 @@ export const QuickWorkoutForm: React.FC<EnhancedQuickWorkoutFormProps> = ({
 
   // Create a default user profile if none provided
   const defaultUserProfile: UserProfile = userProfile || {
-    fitnessLevel: 'some experience',
+    fitnessLevel: 'beginner' as const,
     goals: ['general_fitness'],
     preferences: {
       workoutStyle: ['balanced'],

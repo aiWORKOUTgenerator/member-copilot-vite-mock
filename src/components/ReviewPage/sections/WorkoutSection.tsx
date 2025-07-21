@@ -9,16 +9,17 @@ import { DisplayWorkoutFocus } from '../types';
 import { getEnergyLevelDescription } from '../utils';
 
 interface WorkoutSectionProps {
-  workoutFocusData: PerWorkoutOptions;
   profileData: ProfileData;
   displayWorkoutFocus: DisplayWorkoutFocus;
 }
 
-export const WorkoutSection: React.FC<WorkoutSectionProps> = ({ 
-  workoutFocusData, 
+export const WorkoutSection: React.FC<Omit<WorkoutSectionProps, 'workoutFocusData'>> = ({ 
   profileData, 
   displayWorkoutFocus 
 }) => {
+  // Debug logs for troubleshooting Muscle Soreness and data flow
+  console.log('DEBUG: displayWorkoutFocus', displayWorkoutFocus);
+  console.log('DEBUG: displayWorkoutFocus.currentSoreness', displayWorkoutFocus?.currentSoreness);
   return (
     <div className="space-y-6">
       <div className="text-center lg:text-left">
@@ -51,7 +52,9 @@ export const WorkoutSection: React.FC<WorkoutSectionProps> = ({
                 return ['No reported soreness'];
               }
               return displayWorkoutFocus.currentSoreness.map(soreness => 
-                `${soreness.area} (Level ${soreness.level})`
+                soreness.area === 'General Soreness' 
+                  ? `Level ${soreness.level}/10 (General)`
+                  : `${soreness.area} (Level ${soreness.level})`
               );
             })()} 
             icon={AlertTriangle} 

@@ -31,7 +31,7 @@ export const convertWorkoutFocusToDisplay = (
       Object.keys(workoutFocusData.customization_soreness)
         .filter(key => workoutFocusData.customization_soreness?.[key]?.selected)
         .map(key => ({
-          area: key,
+          area: key === 'general' ? 'General Soreness' : key,
           level: workoutFocusData.customization_soreness?.[key]?.rating || 0
         })) : [],
     includeExercises: [],

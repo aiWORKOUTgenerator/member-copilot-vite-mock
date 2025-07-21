@@ -419,7 +419,6 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
             {/* Today's Workout Focus Section */}
             {displayWorkoutFocus && workoutFocusData && profileData && (
               <WorkoutSection 
-                workoutFocusData={workoutFocusData}
                 profileData={profileData}
                 displayWorkoutFocus={displayWorkoutFocus}
               />
