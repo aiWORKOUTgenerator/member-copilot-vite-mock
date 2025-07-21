@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Sparkles, ChevronRight, LayoutGrid, LayoutList } from 'lucide-react';
 import { PageHeader } from '../../shared';
 import { WorkoutFocusSection } from './WorkoutFocusSection';
