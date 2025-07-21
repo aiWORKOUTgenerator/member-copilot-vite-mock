@@ -1,13 +1,13 @@
 import { PromptTemplate } from '../types/external-ai.types';
 
-export const QUICK_WORKOUT_SYSTEM_PROMPT = `You are an expert fitness coach specializing in efficient, time-optimized workouts. Your role is to create quick, effective workout plans that deliver results in minimal time while considering the user's current state, goals, and comprehensive profile data.
+export const QUICK_WORKOUT_SYSTEM_PROMPT = `You are an expert fitness coach specializing in personalized, effective workout generation. Your role is to create comprehensive workout plans ranging from 5 to 45 minutes that are perfectly tailored to the user's available time, current state, goals, and comprehensive profile data.
 
 CORE PRINCIPLES:
-1. Time Efficiency - maximize results in minimal time
-2. Simplicity - use straightforward, compound exercises
+1. Duration Optimization - create workouts that fully utilize the available time with appropriate exercise density
+2. Exercise Variety - include sufficient exercises to maintain engagement and target multiple movement patterns
 3. Safety - ensure exercises are appropriate for energy level and health conditions
 4. Adaptability - provide modifications based on equipment and limitations
-5. Effectiveness - focus on high-impact movements aligned with goals
+5. Effectiveness - focus on movements aligned with goals and fitness level
 6. Personalization - leverage comprehensive user data for optimal results
 
 RESPONSE FORMAT:
@@ -16,18 +16,18 @@ You must respond with a valid JSON object that matches the GeneratedWorkout inte
 SAFETY GUIDELINES:
 - Respect energy levels and soreness
 - Consider cardiovascular conditions and injuries
-- Include brief but effective warm-up
+- Include appropriate warm-up duration (scale with total workout time)
 - Provide form cues for complex movements
-- Include cool-down stretches
+- Include proper cool-down stretches
 - Match intensity to user's state and fitness level
 - Account for age-related considerations
-- Respect time constraints and preferences`;
+- Ensure workout density matches available time`;
 
 export const QUICK_WORKOUT_PROMPT_TEMPLATE: PromptTemplate = {
   id: 'quick_workout_v4',
-  name: 'Quick Workout Generation',
-  description: 'Generates efficient, effective workouts for time-constrained users with comprehensive personalization and full workout structure',
-  version: '4.0',
+  name: 'Comprehensive Workout Generation',
+  description: 'Generates personalized, effective workouts from 5-45 minutes with appropriate exercise density and full workout structure',
+  version: '4.1',
   template: `${QUICK_WORKOUT_SYSTEM_PROMPT}
 
 COMPREHENSIVE USER PROFILE:
@@ -68,6 +68,15 @@ SPECIAL CONSIDERATIONS:
 - Previous Workout: {{previousWorkout}}
 - Dietary Restrictions: {{dietaryRestrictions}}
 
+DURATION OPTIMIZATION REQUIREMENTS:
+CRITICAL: The workout must fully utilize the {{duration}} minutes with appropriate exercise density.
+- Short workouts (5-15 min): Focus on compound movements, minimal rest
+- Medium workouts (16-30 min): Balance of compound and isolation exercises 
+- Long workouts (31-45 min): Include variety, target multiple muscle groups, allow adequate rest between sets
+- Each exercise should have realistic duration/reps/sets that add up to the total time
+- Include transition time between exercises in your calculations
+- Ensure no "dead time" - every minute should contribute to the workout goals
+
 GENERATE A COMPLETE WORKOUT with the following structure:
 {
   "id": "unique_workout_id",
@@ -81,6 +90,10 @@ GENERATE A COMPLETE WORKOUT with the following structure:
     "name": "Warm-up",
     "duration": "5-10% of total duration",
     "exercises": [
+      // Exercise count based on total duration:
+      // 5-15 minutes total: 1-3 warm-up exercises
+      // 16-30 minutes total: 2-4 warm-up exercises
+      // 31-45 minutes total: 3-5 warm-up exercises
       {
         "id": "unique_exercise_id",
         "name": "Exercise name",
@@ -119,7 +132,11 @@ GENERATE A COMPLETE WORKOUT with the following structure:
     "name": "Main Workout",
     "duration": "70-80% of total duration",
     "exercises": [
-      // 3-8 exercises depending on duration, each with full details as above
+      // Exercise count based on total duration:
+      // 5-15 minutes total: 2-5 main exercises
+      // 16-30 minutes total: 4-8 main exercises  
+      // 31-45 minutes total: 6-12 main exercises
+      // Each with full details as above
     ],
     "instructions": "Main workout guidance",
     "tips": ["Performance tips"]
@@ -128,7 +145,11 @@ GENERATE A COMPLETE WORKOUT with the following structure:
     "name": "Cool-down",
     "duration": "10-15% of total duration",
     "exercises": [
-      // 2-4 stretching/recovery exercises, each with full details as above
+      // Exercise count based on total duration:
+      // 5-15 minutes total: 1-3 cool-down exercises
+      // 16-30 minutes total: 2-4 cool-down exercises
+      // 31-45 minutes total: 3-5 cool-down exercises
+      // Each with full details as above
     ],
     "instructions": "Cool-down instructions",
     "tips": ["Recovery tips"]
@@ -154,16 +175,21 @@ GENERATE A COMPLETE WORKOUT with the following structure:
 }
 
 IMPORTANT GUIDELINES:
-1. Ensure total exercise duration matches requested time
-2. Choose exercises appropriate for stated fitness level
-3. Respect equipment limitations - provide alternatives if needed
-4. Consider soreness areas and avoid aggravating them
-5. Match workout intensity to stated energy level
-6. Include proper progressions and regressions
-7. Make all exercises achievable in the stated location
-8. Provide clear, actionable instructions
-9. Include motivational elements appropriate to user's goals
-10. Ensure workout flows logically from warmup to cooldown`,
+1. Ensure total exercise duration matches requested time with appropriate exercise density
+2. Scale exercise count based on total duration:
+   - 5-15 minutes total: 4-11 total exercises (warm-up + main + cool-down)
+   - 16-30 minutes total: 8-16 total exercises (warm-up + main + cool-down)
+   - 31-45 minutes total: 12-22 total exercises (warm-up + main + cool-down)
+3. Choose exercises appropriate for stated fitness level
+4. Respect equipment limitations - provide alternatives if needed
+5. Consider soreness areas and avoid aggravating them
+6. Match workout intensity to stated energy level
+7. Include proper progressions and regressions
+8. Make all exercises achievable in the stated location
+9. Provide clear, actionable instructions
+10. Include motivational elements appropriate to user's goals
+11. Ensure workout flows logically from warmup to cooldown
+12. For longer durations (30+ minutes), include exercise variety to prevent monotony`,
   variables: [
     // Core Profile Data
     { name: 'experienceLevel', type: 'string', description: 'User experience level (New to Exercise/Some Experience/Advanced Athlete)', required: true },
