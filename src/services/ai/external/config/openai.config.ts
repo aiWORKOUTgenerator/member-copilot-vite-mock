@@ -449,8 +449,8 @@ export const OPENAI_CONFIG = {
     openai_insight_enhancement: true,
     
     // ✅ NEW: Legacy System Control
-    disable_legacy_quickworkout: true, // Set to true to disable legacy system
-    force_new_quickworkout_feature: true, // Set to true to force new system only
+    disable_legacy_quickworkout: false, // Set to true to disable legacy system
+    force_new_quickworkout_feature: false, // Set to true to force new system only
     
     // Advanced Features
     openai_advanced_workout_optimization: true,
