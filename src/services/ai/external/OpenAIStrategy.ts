@@ -12,7 +12,13 @@ import { OpenAIService } from './OpenAIService';
 import { 
   selectRecommendationPrompt 
 } from './prompts/recommendation.prompts';
-import { isFeatureEnabled } from './config/openai.config';
+import { 
+  isFeatureEnabled, 
+  isLegacyQuickWorkoutDisabled, 
+  isNewQuickWorkoutFeatureForced,
+  getQuickWorkoutSystemPreference,
+  validateQuickWorkoutSetupConfig
+} from './config/openai.config';
 import { logger } from '../../../utils/logger';
 import { WorkoutVariableBuilder } from './helpers/WorkoutVariableBuilder';
 import { ErrorHandler } from './helpers/ErrorHandler';
@@ -203,9 +209,22 @@ export class OpenAIStrategy implements AIStrategy {
     return mapping[systemLevel] || 'some experience';
   }
 
-  // ✅ NEW: Check if QuickWorkoutSetup feature is applicable
+  // ✅ ENHANCED: Check if QuickWorkoutSetup feature is applicable with feature flags
   private isQuickWorkoutApplicable(request: WorkoutGenerationRequest): boolean {
-    // Feature is applicable for quick workouts (5-45 minutes)
+    // Check feature flags first
+    const systemPreference = getQuickWorkoutSystemPreference();
+    
+    if (systemPreference === 'new') {
+      console.log('🎯 OpenAIStrategy: New QuickWorkoutSetup feature forced via feature flag');
+      return true;
+    }
+    
+    if (systemPreference === 'legacy') {
+      console.log('🔄 OpenAIStrategy: Legacy system forced via feature flag');
+      return false;
+    }
+    
+    // Hybrid mode - check if feature is applicable for quick workouts (5-45 minutes)
     const duration = request.preferences?.duration ?? 30;
     const supportedDurations = [5, 10, 15, 20, 30, 45];
     
@@ -228,8 +247,13 @@ export class OpenAIStrategy implements AIStrategy {
     return applicable;
   }
 
-  // ✅ LEGACY: Original workout generation approach (preserved for compatibility)
+  // ✅ ENHANCED: Legacy workout generation approach with feature flag checks
   private async generateWorkoutLegacy(request: WorkoutGenerationRequest): Promise<GeneratedWorkout> {
+    // Check if legacy system is disabled
+    if (isLegacyQuickWorkoutDisabled()) {
+      throw new Error('Legacy QuickWorkoutSetup system is disabled. Please use the new feature-first system.');
+    }
+    
     // Validate request and configuration
     this.validateWorkoutRequest(request);
     
@@ -306,17 +330,34 @@ export class OpenAIStrategy implements AIStrategy {
     }
   }
 
-  // ✅ NEW: Get QuickWorkoutSetup feature metrics and capabilities
+  // ✅ ENHANCED: Get comprehensive QuickWorkoutSetup system information
   getQuickWorkoutFeatureInfo() {
-    if (!this.quickWorkoutFeature) {
-      return null;
-    }
-
+    const systemPreference = getQuickWorkoutSystemPreference();
+    const configValidation = validateQuickWorkoutSetupConfig();
+    
     return {
-      capabilities: this.quickWorkoutFeature.getCapabilities(),
-      metrics: this.quickWorkoutFeature.getMetrics(),
-      metadata: this.quickWorkoutFeature.getMetadata(),
-      isHealthy: true // Will be updated with actual health check
+      // Feature availability
+      hasFeature: !!this.quickWorkoutFeature,
+      isInitialized: !!this.quickWorkoutFeature,
+      
+      // System configuration
+      currentSystem: systemPreference,
+      configValidation,
+      
+      // Feature capabilities (if available)
+      capabilities: this.quickWorkoutFeature ? this.quickWorkoutFeature.getCapabilities() : null,
+      metrics: this.quickWorkoutFeature ? this.quickWorkoutFeature.getMetrics() : null,
+      metadata: this.quickWorkoutFeature ? this.quickWorkoutFeature.getMetadata() : null,
+      
+      // Feature flags
+      featureFlags: {
+        legacyDisabled: isLegacyQuickWorkoutDisabled(),
+        newSystemForced: isNewQuickWorkoutFeatureForced(),
+        hybridMode: systemPreference === 'hybrid'
+      },
+      
+      // Recommendations
+      recommendations: configValidation.recommendations
     };
   }
 

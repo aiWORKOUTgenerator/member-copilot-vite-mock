@@ -222,7 +222,207 @@ export class PromptDataTransformer {
       equipment: (result as any).equipment ? '✅' : '❌'
     });
     
-    return result;
+    // ✅ NEW: Compute derived variables required by QuickWorkoutSetup feature
+    const originalDuration = typeof workoutFocusData.customization_duration === 'number' 
+      ? workoutFocusData.customization_duration 
+      : (workoutFocusData.customization_duration as any)?.duration || (result as any).duration;
+    const derivedVariables = this.computeDerivedVariables(result, originalDuration);
+    
+    // 🔍 DEBUG: Log derived variables
+    console.log('🔍 PromptDataTransformer - Derived variables:', {
+      hasSoreness: derivedVariables.hasSoreness ? '✅' : '❌',
+      sorenessCount: `✅ (${derivedVariables.sorenessCount})`,
+      hasEquipment: derivedVariables.hasEquipment ? '✅' : '❌',
+      equipmentCount: `✅ (${derivedVariables.equipmentCount})`,
+      isMinimal: derivedVariables.isMinimal ? '✅' : '❌',
+      isSimple: derivedVariables.isSimple ? '✅' : '❌',
+      isStandard: derivedVariables.isStandard ? '✅' : '❌',
+      isAdvanced: derivedVariables.isAdvanced ? '✅' : '❌',
+      durationAdjusted: derivedVariables.durationAdjusted ? '✅' : '❌'
+    });
+    
+    return {
+      ...result,
+      ...derivedVariables
+    };
+  }
+
+  /**
+   * Compute derived variables required by QuickWorkoutSetup feature
+   * These variables are computed from base data and are required by new system prompts
+   */
+  static computeDerivedVariables(
+    variables: Record<string, any>,
+    originalDuration?: number
+  ): Record<string, any> {
+    try {
+      // 1. Compute soreness-derived variables
+      const sorenessVars = this.computeSorenessVariables(variables.sorenessAreas);
+      
+      // 2. Compute equipment-derived variables  
+      const equipmentVars = this.computeEquipmentVariables(variables.equipment);
+      
+      // 3. Compute experience level complexity flags
+      const experienceVars = this.computeExperienceLevelFlags(
+        variables.experienceLevel, 
+        variables.duration
+      );
+      
+      // 4. Compute duration adjustment flag
+      const durationVars = this.computeDurationAdjustment(
+        originalDuration || variables.duration,
+        variables.duration
+      );
+      
+      return {
+        ...sorenessVars,
+        ...equipmentVars, 
+        ...experienceVars,
+        ...durationVars
+      };
+      
+    } catch (error) {
+      console.warn('⚠️ PromptDataTransformer: Error computing derived variables, using defaults:', error);
+      
+      // Return safe defaults if computation fails
+      return {
+        hasSoreness: false,
+        sorenessCount: 0,
+        hasEquipment: false,
+        equipmentCount: 0,
+        isMinimal: true,  // Default to safest complexity
+        isSimple: false,
+        isStandard: false,
+        isAdvanced: false,
+        durationAdjusted: false
+      };
+    }
+  }
+
+  /**
+   * Compute soreness-related variables
+   */
+  static computeSorenessVariables(sorenessAreas: any): {
+    hasSoreness: boolean;
+    sorenessCount: number;
+  } {
+    // Handle both array and object formats from different data sources
+    let areas: string[] = [];
+    
+    if (Array.isArray(sorenessAreas)) {
+      areas = sorenessAreas;
+    } else if (typeof sorenessAreas === 'object' && sorenessAreas !== null) {
+      // Handle object format like { "lower back": { selected: true, rating: 3 } }
+      areas = Object.keys(sorenessAreas).filter(key => 
+        sorenessAreas[key]?.selected || sorenessAreas[key] === true
+      );
+    } else if (typeof sorenessAreas === 'string' && sorenessAreas.trim() !== '') {
+      areas = [sorenessAreas];
+    }
+    
+    return {
+      hasSoreness: areas.length > 0,
+      sorenessCount: areas.length
+    };
+  }
+
+  /**
+   * Compute equipment-related variables
+   */
+  static computeEquipmentVariables(equipment: any): {
+    hasEquipment: boolean;
+    equipmentCount: number;
+  } {
+    // Handle array or fallback to bodyweight
+    let equipmentArray: string[] = [];
+    
+    if (Array.isArray(equipment)) {
+      equipmentArray = equipment;
+    } else if (typeof equipment === 'string' && equipment.trim() !== '') {
+      equipmentArray = [equipment];
+    } else {
+      equipmentArray = ['Body Weight'];
+    }
+    
+    // Exclude 'Body Weight' from count since it's the default
+    const realEquipment = equipmentArray.filter(item => 
+      item && item.toLowerCase() !== 'body weight' && item.toLowerCase() !== 'bodyweight'
+    );
+    
+    return {
+      hasEquipment: realEquipment.length > 0,
+      equipmentCount: realEquipment.length
+    };
+  }
+
+  /**
+   * Compute experience level complexity flags
+   */
+  static computeExperienceLevelFlags(experienceLevel: any, duration: any): {
+    isMinimal: boolean;
+    isSimple: boolean; 
+    isStandard: boolean;
+    isAdvanced: boolean;
+  } {
+    // Safe defaults if inputs are invalid
+    const safeExperienceLevel = String(experienceLevel || 'new to exercise').toLowerCase();
+    const safeDuration = Number(duration) || 30;
+    
+    // Map duration to complexity level (based on duration-constants.ts patterns)
+    const getComplexityFromDuration = (dur: number): string => {
+      if (dur <= 5) return 'minimal';
+      if (dur <= 10) return 'simple'; 
+      if (dur <= 20) return 'standard';
+      if (dur <= 30) return 'comprehensive';
+      return 'advanced';
+    };
+    
+    // Map experience level to complexity preference
+    const mapExperienceToComplexity = (exp: string): string => {
+      if (exp.includes('new to exercise') || exp.includes('beginner')) return 'simple';
+      if (exp.includes('some experience') || exp.includes('intermediate')) return 'standard';
+      if (exp.includes('advanced athlete') || exp.includes('advanced')) return 'advanced';
+      return 'standard'; // Default to standard
+    };
+    
+    const durationComplexity = getComplexityFromDuration(safeDuration);
+    const experienceComplexity = mapExperienceToComplexity(safeExperienceLevel);
+    
+    // Use the more conservative of the two (lower complexity wins for safety)
+    const complexityOrder = ['minimal', 'simple', 'standard', 'comprehensive', 'advanced'];
+    const durationIndex = complexityOrder.indexOf(durationComplexity);
+    const experienceIndex = complexityOrder.indexOf(experienceComplexity);
+    
+    const finalComplexityIndex = Math.min(durationIndex, experienceIndex);
+    const finalComplexity = complexityOrder[finalComplexityIndex];
+    
+    return {
+      isMinimal: finalComplexity === 'minimal',
+      isSimple: finalComplexity === 'simple',
+      isStandard: finalComplexity === 'standard' || finalComplexity === 'comprehensive', 
+      isAdvanced: finalComplexity === 'advanced'
+    };
+  }
+
+  /**
+   * Compute duration adjustment flag
+   */
+  static computeDurationAdjustment(requestedDuration: any, actualDuration: any): {
+    durationAdjusted: boolean;
+    originalDuration?: number;
+    adjustmentReason?: string;
+  } {
+    const requested = Number(requestedDuration) || 30;
+    const actual = Number(actualDuration) || 30;
+    const isAdjusted = requested !== actual;
+    
+    return {
+      durationAdjusted: isAdjusted,
+      ...(isAdjusted && {
+        originalDuration: requested,
+        adjustmentReason: `Adjusted from ${requested} to ${actual} minutes for optimal workout structure`
+      })
+    };
   }
 
   /**

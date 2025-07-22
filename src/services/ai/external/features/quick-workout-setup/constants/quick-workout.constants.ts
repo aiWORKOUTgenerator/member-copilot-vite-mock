@@ -154,7 +154,7 @@ export const QUICK_WORKOUT_CONSTANTS = {
   DEFAULT_DURATION: 30,
   MIN_DURATION: 5,
   MAX_DURATION: 45,
-  REQUEST_TIMEOUT_MS: 30000,
+  REQUEST_TIMEOUT_MS: 90000, // 90 seconds for complex workout generation
   DURATION_CONFIGS,
   getDurationConfig,
   getExerciseCountForDuration,

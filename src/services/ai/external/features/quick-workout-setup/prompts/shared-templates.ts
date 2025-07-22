@@ -34,7 +34,17 @@ export const VARIABLE_SETS = {
     // Standard variables plus:
     { name: 'age', type: 'string' as const, description: 'User age range', required: false },
     { name: 'injuries', type: 'array' as const, description: 'Current injuries or limitations', required: false },
-    { name: 'spaceLimitations', type: 'array' as const, description: 'Space constraints', required: false }
+    { name: 'spaceLimitations', type: 'array' as const, description: 'Space constraints', required: false },
+    // ✅ SURGICAL FIX: Add derived variables that PromptSelector computes
+    { name: 'hasSoreness', type: 'boolean' as const, description: 'Whether user has any soreness', required: false },
+    { name: 'sorenessCount', type: 'number' as const, description: 'Number of sore areas', required: false },
+    { name: 'hasEquipment', type: 'boolean' as const, description: 'Whether user has equipment', required: false },
+    { name: 'equipmentCount', type: 'number' as const, description: 'Number of equipment items', required: false },
+    { name: 'isMinimal', type: 'boolean' as const, description: 'Whether workout is minimal complexity', required: false },
+    { name: 'isSimple', type: 'boolean' as const, description: 'Whether workout is simple complexity', required: false },
+    { name: 'isStandard', type: 'boolean' as const, description: 'Whether workout is standard complexity', required: false },
+    { name: 'isAdvanced', type: 'boolean' as const, description: 'Whether workout is advanced complexity', required: false },
+    { name: 'durationAdjusted', type: 'boolean' as const, description: 'Whether duration was adjusted', required: false }
   ],
   full: [
     // Enhanced variables plus:

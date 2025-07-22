@@ -148,21 +148,18 @@ export class QuickWorkoutFeature {
 
     // Step 3: AI Generation - Generate workout using OpenAI
     console.log('3️⃣ QuickWorkoutFeature: Executing AI generation');
+    
+    // ✅ FIXED: Use the actual pre-defined prompt template with correct variable requirements
+    // instead of dynamically creating one that marks all variables as required
+    const { DURATION_PROMPTS } = await import('./prompts');
+    const actualPromptTemplate = DURATION_PROMPTS[durationResult.adjustedDuration];
+    
+    if (!actualPromptTemplate) {
+      throw new Error(`No prompt template found for duration ${durationResult.adjustedDuration}min`);
+    }
+    
     const aiResponse = await this.openAIService.generateFromTemplate(
-      {
-        id: promptResult.promptId,
-        template: promptResult.promptTemplate,
-        name: `QuickWorkout ${durationResult.adjustedDuration}min`,
-        description: `Quick workout generation for ${durationResult.adjustedDuration} minutes`,
-        variables: Object.keys(promptResult.variables).map(key => ({
-          name: key,
-          type: typeof promptResult.variables[key] as any,
-          description: `Variable: ${key}`,
-          required: true
-        })),
-        examples: [],
-        version: '1.0.0'
-      },
+      actualPromptTemplate,
       promptResult.variables,
       {
         cacheKey: `quick_workout_${context.userProfile.fitnessLevel}_${durationResult.adjustedDuration}_${JSON.stringify(context.params)}`,

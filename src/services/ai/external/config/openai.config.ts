@@ -429,13 +429,133 @@ export const getConfigHealth = (config: ExternalAIServiceConfig): {
   };
 };
 
-// Feature flag helpers
-export const isFeatureEnabled = (
-  feature: keyof ExternalAIServiceConfig['features'],
-  config?: ExternalAIServiceConfig
-): boolean => {
-  const currentConfig = config ?? openAIConfig();
-  return currentConfig.features[feature] && !!currentConfig.openai.apiKey;
+// OpenAI Configuration and Feature Flags
+export const OPENAI_CONFIG = {
+  // API Configuration
+  apiKey: environmentAdapter.getApiKey(),
+  organizationId: environmentAdapter.getOrgId(),
+  baseURL: environmentAdapter.getBaseUrl(),
+  
+  // Model Configuration
+  defaultModel: 'gpt-4o',
+  fallbackModel: 'gpt-3.5-turbo',
+  
+  // Feature Flags
+  features: {
+    // Core AI Features
+    openai_workout_generation: true,
+    openai_enhanced_recommendations: true,
+    openai_user_analysis: true,
+    openai_insight_enhancement: true,
+    
+    // ✅ NEW: Legacy System Control
+    disable_legacy_quickworkout: true, // Set to true to disable legacy system
+    force_new_quickworkout_feature: true, // Set to true to force new system only
+    
+    // Advanced Features
+    openai_advanced_workout_optimization: true,
+    openai_personalized_coaching: true,
+    openai_workout_adaptation: true,
+    
+    // Performance Features
+    openai_caching: true,
+    openai_retry_logic: true,
+    openai_fallback_strategies: true,
+    
+    // Development Features
+    openai_debug_mode: environmentAdapter.isDevelopment(),
+    openai_detailed_logging: environmentAdapter.isDevelopment(),
+    openai_performance_monitoring: true
+  },
+  
+  // Timeout Configuration
+  timeouts: {
+    workout_generation: 30000, // 30 seconds
+    recommendations: 15000,    // 15 seconds
+    user_analysis: 20000,      // 20 seconds
+    insight_enhancement: 10000 // 10 seconds
+  },
+  
+  // Cache Configuration
+  cache: {
+    enabled: true,
+    ttl: 3600000, // 1 hour
+    maxSize: 1000 // Maximum cached items
+  },
+  
+  // Retry Configuration
+  retry: {
+    maxAttempts: 3,
+    baseDelay: 1000, // 1 second
+    maxDelay: 10000  // 10 seconds
+  }
+};
+
+/**
+ * Check if a specific feature is enabled
+ */
+export const isFeatureEnabled = (featureName: keyof typeof OPENAI_CONFIG.features): boolean => {
+  return OPENAI_CONFIG.features[featureName] === true;
+};
+
+/**
+ * ✅ NEW: Check if legacy QuickWorkoutSetup should be disabled
+ */
+export const isLegacyQuickWorkoutDisabled = (): boolean => {
+  return isFeatureEnabled('disable_legacy_quickworkout');
+};
+
+/**
+ * ✅ NEW: Check if new QuickWorkoutSetup feature should be forced
+ */
+export const isNewQuickWorkoutFeatureForced = (): boolean => {
+  return isFeatureEnabled('force_new_quickworkout_feature');
+};
+
+/**
+ * ✅ NEW: Get the current QuickWorkoutSetup system preference
+ */
+export const getQuickWorkoutSystemPreference = (): 'new' | 'legacy' | 'hybrid' => {
+  if (isNewQuickWorkoutFeatureForced()) {
+    return 'new';
+  }
+  if (isLegacyQuickWorkoutDisabled()) {
+    return 'new';
+  }
+  return 'hybrid';
+};
+
+/**
+ * ✅ NEW: Validate QuickWorkoutSetup system configuration
+ */
+export const validateQuickWorkoutSetupConfig = (): {
+  isValid: boolean;
+  currentSystem: 'new' | 'legacy' | 'hybrid';
+  warnings: string[];
+  recommendations: string[];
+} => {
+  const currentSystem = getQuickWorkoutSystemPreference();
+  const warnings: string[] = [];
+  const recommendations: string[] = [];
+
+  // Check for conflicting configurations
+  if (isLegacyQuickWorkoutDisabled() && !isNewQuickWorkoutFeatureForced()) {
+    warnings.push('Legacy system is disabled but new system is not forced - this may cause issues');
+    recommendations.push('Consider setting force_new_quickworkout_feature to true for consistency');
+  }
+
+  // Check for production safety
+  if (environmentAdapter.getMode() === 'production' && currentSystem === 'new') {
+    warnings.push('New QuickWorkoutSetup system is forced in production - ensure it is thoroughly tested');
+    recommendations.push('Monitor system performance and user feedback closely');
+  }
+
+  return {
+    isValid: warnings.length === 0,
+    currentSystem,
+    warnings,
+    recommendations
+  };
 };
 
 // Export the main configuration (lazy-loaded to ensure proper environment detection)
