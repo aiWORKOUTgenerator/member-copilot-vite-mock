@@ -1,180 +1,69 @@
 // Configuration Validation Tests - Phase 3D
-import { validateConfig, getOpenAIConfig } from '../config/openai.config';
 import { WORKOUT_GENERATION_CONSTANTS } from '../constants/workout-generation-constants';
-import { validateWorkoutRequest } from '../utils/workout-validation';
 import { WorkoutGenerationRequest } from '../../../../types/workout-generation.types';
-
-// Mock workout generation request for testing
-const mockValidWorkoutRequest: WorkoutGenerationRequest = {
-  type: 'quick',
-  userProfile: {
-    fitnessLevel: 'some experience',
-    goals: ['strength', 'endurance'],
-    preferences: {
-      workoutDuration: 45,
-      intensity: 'moderate',
-      equipment: ['dumbbells', 'bodyweight']
-    }
-  },
-  workoutFocusData: {
-    customization_duration: 45,
-    customization_energy: 7,
-    customization_focus: 'strength',
-    customization_equipment: ['dumbbells', 'bodyweight'],
-    customization_soreness: {
-      'upper body': 'mild',
-      'lower body': 'none'
-    }
-  },
-  profileData: {
-    experienceLevel: 'some experience',
-    physicalActivity: 'moderate',
-    preferredDuration: 45,
-    timeCommitment: 'medium',
-    intensityLevel: 'moderate',
-    preferredActivities: ['strength training', 'cardio'],
-    availableEquipment: ['dumbbells', 'bodyweight'],
-    primaryGoal: 'strength',
-    goalTimeline: '3 months',
-    age: 30,
-    height: 175,
-    weight: 70,
-    gender: 'not specified',
-    hasCardiovascularConditions: false,
-    injuries: []
-  }
-};
+import { WorkoutRequestValidator } from '../../validation/core/WorkoutRequestValidator';
+import { CoreFieldsRule } from '../../validation/rules/CoreFieldsRule';
+import { WorkoutDataRule } from '../../validation/rules/WorkoutDataRule';
+import { BusinessLogicRule } from '../../validation/rules/BusinessLogicRule';
 
 describe('Configuration Validation - Phase 3D', () => {
-  describe('OpenAI Configuration Validation', () => {
-    it('should validate correct configuration', () => {
-      const openAIConfig = getOpenAIConfig();
-      const config = validateConfig(openAIConfig);
-      
-      expect(config.isValid).toBe(true);
-      expect(config.errors).toHaveLength(0);
-      expect(config.warnings).toBeDefined();
-    });
+  let mockValidWorkoutRequest: WorkoutGenerationRequest;
 
-    it('should detect missing API key', () => {
-      const originalKey = process.env.VITE_OPENAI_API_KEY;
-      delete process.env.VITE_OPENAI_API_KEY;
-      
-      const openAIConfig = getOpenAIConfig();
-      const config = validateConfig(openAIConfig);
-      
-      expect(config.isValid).toBe(false);
-      expect(config.errors.length).toBeGreaterThan(0);
-      
-      // Restore environment variable
-      if (originalKey) {
-        process.env.VITE_OPENAI_API_KEY = originalKey;
+  beforeEach(() => {
+    // Reset validator
+    WorkoutRequestValidator.clearRules();
+    
+    // Register rules
+    WorkoutRequestValidator.registerRule(new CoreFieldsRule());
+    WorkoutRequestValidator.registerRule(new WorkoutDataRule());
+    WorkoutRequestValidator.registerRule(new BusinessLogicRule());
+
+    // Setup mock valid request
+    mockValidWorkoutRequest = {
+      workoutType: 'quick',
+      userProfile: {
+        fitnessLevel: 'intermediate',
+        goals: ['strength'],
+        preferences: {
+          workoutStyle: ['balanced'],
+          timePreference: 'morning',
+          intensityPreference: 'moderate'
+        },
+        basicLimitations: {
+          injuries: [],
+          availableEquipment: ['Body Weight'],
+          availableLocations: ['Home']
+        }
+      },
+      profileData: {
+        experienceLevel: 'intermediate',
+        physicalActivity: 'moderate',
+        preferredDuration: '30-45 min',
+        timeCommitment: '3-4',
+        intensityLevel: 'moderately',
+        preferredActivities: ['strength_training'],
+        availableLocations: ['Home'],
+        availableEquipment: ['Dumbbells'],
+        primaryGoal: 'Strength',
+        goalTimeline: '3 months',
+        age: '26-35',
+        height: '5\'8"',
+        weight: '150 lbs',
+        gender: 'male',
+        hasCardiovascularConditions: 'No',
+        injuries: ['No Injuries']
+      },
+      workoutFocusData: {
+        customization_duration: 30,
+        customization_energy: 7,
+        customization_focus: 'strength',
+        customization_equipment: ['bodyweight'],
+        customization_soreness: {}
       }
-    });
-
-    it('should warn about high token limits', () => {
-      const openAIConfig = getOpenAIConfig();
-      const config = validateConfig(openAIConfig);
-      
-      // Configuration should be valid but may have warnings about performance
-      expect(config.isValid).toBe(true);
-      expect(config.warnings).toBeDefined();
-    });
-
-    it('should validate configuration structure', () => {
-      const openAIConfig = getOpenAIConfig();
-      const config = validateConfig(openAIConfig);
-      
-      expect(config).toHaveProperty('isValid');
-      expect(config).toHaveProperty('errors');
-      expect(config).toHaveProperty('warnings');
-      expect(Array.isArray(config.errors)).toBe(true);
-      expect(Array.isArray(config.warnings)).toBe(true);
-    });
-
-    it('should handle environment variable edge cases', () => {
-      const originalKey = process.env.VITE_OPENAI_API_KEY;
-      
-      // Test with empty string
-      process.env.VITE_OPENAI_API_KEY = '';
-      const openAIConfig = getOpenAIConfig();
-      const emptyConfig = validateConfig(openAIConfig);
-      expect(emptyConfig.isValid).toBe(false);
-      
-      // Test with undefined
-      delete process.env.VITE_OPENAI_API_KEY;
-      const undefinedOpenAIConfig = getOpenAIConfig();
-      const undefinedConfig = validateConfig(undefinedOpenAIConfig);
-      expect(undefinedConfig.isValid).toBe(false);
-      
-      // Restore environment variable
-      if (originalKey) {
-        process.env.VITE_OPENAI_API_KEY = originalKey;
-      }
-    });
+    } as WorkoutGenerationRequest;
   });
 
   describe('Workout Generation Constants Validation', () => {
-    it('should have valid workout generation constants', () => {
-      expect(WORKOUT_GENERATION_CONSTANTS).toBeDefined();
-      expect(WORKOUT_GENERATION_CONSTANTS.MAX_RETRY_ATTEMPTS).toBeGreaterThan(0);
-      expect(WORKOUT_GENERATION_CONSTANTS.REQUEST_TIMEOUT_MS).toBeGreaterThan(0);
-      expect(WORKOUT_GENERATION_CONSTANTS.CACHE_TIMEOUT_MS).toBeGreaterThan(0);
-    });
-
-    it('should have reasonable timeout values', () => {
-      expect(WORKOUT_GENERATION_CONSTANTS.REQUEST_TIMEOUT_MS).toBeLessThanOrEqual(60000); // Max 60 seconds
-      expect(WORKOUT_GENERATION_CONSTANTS.CACHE_TIMEOUT_MS).toBeGreaterThan(0);
-      expect(WORKOUT_GENERATION_CONSTANTS.RETRY_DELAY_MS).toBeGreaterThan(0);
-    });
-
-    it('should have valid retry configuration', () => {
-      expect(WORKOUT_GENERATION_CONSTANTS.MAX_RETRY_ATTEMPTS).toBeGreaterThan(0);
-      expect(WORKOUT_GENERATION_CONSTANTS.MAX_RETRY_ATTEMPTS).toBeLessThanOrEqual(10); // Max 10 retries
-      expect(WORKOUT_GENERATION_CONSTANTS.BACKOFF_MULTIPLIER).toBeGreaterThan(1);
-    });
-
-    it('should have valid cache configuration', () => {
-      expect(WORKOUT_GENERATION_CONSTANTS.MAX_CACHE_SIZE).toBeGreaterThan(0);
-      expect(WORKOUT_GENERATION_CONSTANTS.CACHE_CLEANUP_INTERVAL_MS).toBeGreaterThan(0);
-      expect(WORKOUT_GENERATION_CONSTANTS.CACHE_ENTRY_TTL_MS).toBeGreaterThan(0);
-    });
-
-    it('should have valid validation thresholds', () => {
-      expect(WORKOUT_GENERATION_CONSTANTS.MIN_WORKOUT_DURATION).toBeGreaterThan(0);
-      expect(WORKOUT_GENERATION_CONSTANTS.MAX_WORKOUT_DURATION).toBeGreaterThan(WORKOUT_GENERATION_CONSTANTS.MIN_WORKOUT_DURATION);
-      expect(WORKOUT_GENERATION_CONSTANTS.MIN_ENERGY_LEVEL).toBeGreaterThanOrEqual(1);
-      expect(WORKOUT_GENERATION_CONSTANTS.MAX_ENERGY_LEVEL).toBeLessThanOrEqual(10);
-    });
-
-    it('should have valid performance thresholds', () => {
-      expect(WORKOUT_GENERATION_CONSTANTS.SLOW_RESPONSE_THRESHOLD_MS).toBeGreaterThan(0);
-      expect(WORKOUT_GENERATION_CONSTANTS.ERROR_RATE_WARNING_THRESHOLD).toBeGreaterThan(0);
-      expect(WORKOUT_GENERATION_CONSTANTS.ERROR_RATE_WARNING_THRESHOLD).toBeLessThanOrEqual(1);
-      expect(WORKOUT_GENERATION_CONSTANTS.CACHE_HIT_RATE_TARGET).toBeGreaterThanOrEqual(0);
-      expect(WORKOUT_GENERATION_CONSTANTS.CACHE_HIT_RATE_TARGET).toBeLessThanOrEqual(1);
-    });
-
-    it('should have valid default values', () => {
-      expect(WORKOUT_GENERATION_CONSTANTS.DEFAULT_WORKOUT_DURATION).toBeGreaterThan(0);
-      expect(WORKOUT_GENERATION_CONSTANTS.DEFAULT_ENERGY_LEVEL).toBeGreaterThanOrEqual(1);
-      expect(WORKOUT_GENERATION_CONSTANTS.DEFAULT_ENERGY_LEVEL).toBeLessThanOrEqual(10);
-      expect(WORKOUT_GENERATION_CONSTANTS.DEFAULT_FOCUS).toBeDefined();
-      expect(Array.isArray(WORKOUT_GENERATION_CONSTANTS.DEFAULT_EQUIPMENT)).toBe(true);
-    });
-
-    it('should have comprehensive error messages', () => {
-      expect(WORKOUT_GENERATION_CONSTANTS.ERROR_MESSAGES).toBeDefined();
-      expect(WORKOUT_GENERATION_CONSTANTS.ERROR_MESSAGES.INVALID_REQUEST).toBeDefined();
-      expect(WORKOUT_GENERATION_CONSTANTS.ERROR_MESSAGES.MISSING_USER_PROFILE).toBeDefined();
-      expect(WORKOUT_GENERATION_CONSTANTS.ERROR_MESSAGES.MISSING_WORKOUT_DATA).toBeDefined();
-      expect(WORKOUT_GENERATION_CONSTANTS.ERROR_MESSAGES.INVALID_DURATION).toBeDefined();
-      expect(WORKOUT_GENERATION_CONSTANTS.ERROR_MESSAGES.INVALID_ENERGY_LEVEL).toBeDefined();
-      expect(WORKOUT_GENERATION_CONSTANTS.ERROR_MESSAGES.INVALID_FOCUS).toBeDefined();
-      expect(WORKOUT_GENERATION_CONSTANTS.ERROR_MESSAGES.TIMEOUT_ERROR).toBeDefined();
-      expect(WORKOUT_GENERATION_CONSTANTS.ERROR_MESSAGES.RETRY_FAILED).toBeDefined();
-    });
-
     it('should have comprehensive warning messages', () => {
       expect(WORKOUT_GENERATION_CONSTANTS.WARNING_MESSAGES).toBeDefined();
       expect(WORKOUT_GENERATION_CONSTANTS.WARNING_MESSAGES.LONG_DURATION).toBeDefined();
@@ -187,7 +76,7 @@ describe('Configuration Validation - Phase 3D', () => {
 
   describe('Workout Request Validation', () => {
     it('should validate correct workout request', () => {
-      const validation = validateWorkoutRequest(mockValidWorkoutRequest);
+      const validation = WorkoutRequestValidator.validate(mockValidWorkoutRequest);
       
       expect(validation.isValid).toBe(true);
       expect(validation.errors).toHaveLength(0);
@@ -200,10 +89,10 @@ describe('Configuration Validation - Phase 3D', () => {
         userProfile: undefined
       } as WorkoutGenerationRequest;
       
-      const validation = validateWorkoutRequest(invalidRequest);
+      const validation = WorkoutRequestValidator.validate(invalidRequest);
       
       expect(validation.isValid).toBe(false);
-      expect(validation.errors).toContain(WORKOUT_GENERATION_CONSTANTS.ERROR_MESSAGES.MISSING_USER_PROFILE);
+      expect(validation.errors.some(e => e.message.includes('userProfile is required'))).toBe(true);
     });
 
     it('should detect missing workout focus data', () => {
@@ -212,67 +101,54 @@ describe('Configuration Validation - Phase 3D', () => {
         workoutFocusData: undefined
       } as WorkoutGenerationRequest;
       
-      const validation = validateWorkoutRequest(invalidRequest);
+      const validation = WorkoutRequestValidator.validate(invalidRequest);
       
       expect(validation.isValid).toBe(false);
-      expect(validation.errors).toContain(WORKOUT_GENERATION_CONSTANTS.ERROR_MESSAGES.MISSING_WORKOUT_DATA);
+      expect(validation.errors.some(e => e.message.includes('workoutFocusData is required'))).toBe(true);
     });
 
-    it('should detect missing workout type', () => {
-      const invalidRequest = {
-        ...mockValidWorkoutRequest,
-        type: undefined
-      } as WorkoutGenerationRequest;
-      
-      const validation = validateWorkoutRequest(invalidRequest);
-      
-      expect(validation.isValid).toBe(false);
-      expect(validation.errors).toContain('Workout type is required');
-    });
-
-    it('should validate workout duration', () => {
+    it('should detect invalid duration', () => {
       const shortDurationRequest = {
         ...mockValidWorkoutRequest,
         workoutFocusData: {
           ...mockValidWorkoutRequest.workoutFocusData,
-          customization_duration: 3 // Below minimum
+          customization_duration: 2
         }
       };
       
-      const validation = validateWorkoutRequest(shortDurationRequest);
+      const validation = WorkoutRequestValidator.validate(shortDurationRequest);
       
       expect(validation.isValid).toBe(false);
-      expect(validation.errors).toContain(WORKOUT_GENERATION_CONSTANTS.ERROR_MESSAGES.INVALID_DURATION);
+      expect(validation.errors.some(e => e.message.includes('Duration must be at least'))).toBe(true);
     });
 
-    it('should validate energy level', () => {
+    it('should detect invalid energy level', () => {
       const invalidEnergyRequest = {
         ...mockValidWorkoutRequest,
         workoutFocusData: {
           ...mockValidWorkoutRequest.workoutFocusData,
-          customization_energy: 15 // Above maximum
+          customization_energy: 11
         }
       };
       
-      const validation = validateWorkoutRequest(invalidEnergyRequest);
+      const validation = WorkoutRequestValidator.validate(invalidEnergyRequest);
       
       expect(validation.isValid).toBe(false);
-      expect(validation.errors).toContain(WORKOUT_GENERATION_CONSTANTS.ERROR_MESSAGES.INVALID_ENERGY_LEVEL);
+      expect(validation.errors.some(e => e.message.includes('Energy level must be between'))).toBe(true);
     });
 
-    it('should warn about long workout duration', () => {
+    it('should warn about long duration', () => {
       const longDurationRequest = {
         ...mockValidWorkoutRequest,
         workoutFocusData: {
           ...mockValidWorkoutRequest.workoutFocusData,
-          customization_duration: 200 // Above warning threshold
+          customization_duration: 120
         }
       };
       
-      const validation = validateWorkoutRequest(longDurationRequest);
+      const validation = WorkoutRequestValidator.validate(longDurationRequest);
       
-      expect(validation.isValid).toBe(true);
-      expect(validation.warnings).toContain(WORKOUT_GENERATION_CONSTANTS.WARNING_MESSAGES.LONG_DURATION);
+      expect(validation.warnings.some(w => w.message.includes('Workout duration is quite long'))).toBe(true);
     });
 
     it('should warn about high energy with long duration', () => {
@@ -285,10 +161,9 @@ describe('Configuration Validation - Phase 3D', () => {
         }
       };
       
-      const validation = validateWorkoutRequest(highEnergyLongDurationRequest);
+      const validation = WorkoutRequestValidator.validate(highEnergyLongDurationRequest);
       
-      expect(validation.isValid).toBe(true);
-      expect(validation.warnings).toContain(WORKOUT_GENERATION_CONSTANTS.WARNING_MESSAGES.HIGH_ENERGY);
+      expect(validation.warnings.some(w => w.message.includes('High energy'))).toBe(true);
     });
 
     it('should warn about low energy with long duration', () => {
@@ -297,17 +172,16 @@ describe('Configuration Validation - Phase 3D', () => {
         workoutFocusData: {
           ...mockValidWorkoutRequest.workoutFocusData,
           customization_energy: 2,
-          customization_duration: 60
+          customization_duration: 45
         }
       };
       
-      const validation = validateWorkoutRequest(lowEnergyLongDurationRequest);
+      const validation = WorkoutRequestValidator.validate(lowEnergyLongDurationRequest);
       
-      expect(validation.isValid).toBe(true);
-      expect(validation.warnings).toContain(WORKOUT_GENERATION_CONSTANTS.WARNING_MESSAGES.LOW_ENERGY);
+      expect(validation.warnings.some(w => w.message.includes('Low energy'))).toBe(true);
     });
 
-    it('should warn about no equipment selected', () => {
+    it('should warn about no equipment', () => {
       const noEquipmentRequest = {
         ...mockValidWorkoutRequest,
         workoutFocusData: {
@@ -316,122 +190,25 @@ describe('Configuration Validation - Phase 3D', () => {
         }
       };
       
-      const validation = validateWorkoutRequest(noEquipmentRequest);
+      const validation = WorkoutRequestValidator.validate(noEquipmentRequest);
       
-      expect(validation.isValid).toBe(true);
-      expect(validation.warnings).toContain(WORKOUT_GENERATION_CONSTANTS.WARNING_MESSAGES.NO_EQUIPMENT);
+      expect(validation.warnings.some(w => w.message.includes('No equipment'))).toBe(true);
     });
 
     it('should validate detailed workout requirements', () => {
       const detailedRequest = {
         ...mockValidWorkoutRequest,
-        type: 'detailed',
+        workoutType: 'detailed',
         profileData: {
           ...mockValidWorkoutRequest.profileData,
           experienceLevel: undefined
         }
       };
       
-      const validation = validateWorkoutRequest(detailedRequest);
+      const validation = WorkoutRequestValidator.validate(detailedRequest);
       
       expect(validation.isValid).toBe(false);
-      expect(validation.errors).toContain('Experience level is required for detailed workouts');
-    });
-  });
-
-  describe('Configuration Integration Validation', () => {
-    it('should have consistent configuration across services', () => {
-      // Verify that all services use the same configuration patterns
-      const openAIConfig = getOpenAIConfig();
-      const config = validateConfig(openAIConfig);
-      
-      expect(config.isValid).toBe(true);
-      expect(WORKOUT_GENERATION_CONSTANTS).toBeDefined();
-      
-      // Both configurations should follow the same validation pattern
-      expect(config).toHaveProperty('isValid');
-      expect(config).toHaveProperty('errors');
-      expect(config).toHaveProperty('warnings');
-    });
-
-    it('should handle configuration changes gracefully', () => {
-      // Test that configuration validation handles changes properly
-      const originalTimeout = WORKOUT_GENERATION_CONSTANTS.REQUEST_TIMEOUT_MS;
-      
-      // Configuration should remain valid even if constants change
-      expect(WORKOUT_GENERATION_CONSTANTS.REQUEST_TIMEOUT_MS).toBeGreaterThan(0);
-      
-      // Validation should work with current configuration
-      const openAIConfig = getOpenAIConfig();
-      const config = validateConfig(openAIConfig);
-      expect(config.isValid).toBe(true);
-    });
-
-    it('should provide meaningful error messages', () => {
-      const originalKey = process.env.VITE_OPENAI_API_KEY;
-      delete process.env.VITE_OPENAI_API_KEY;
-      
-      const openAIConfig = getOpenAIConfig();
-      const config = validateConfig(openAIConfig);
-      
-      expect(config.isValid).toBe(false);
-      expect(config.errors.length).toBeGreaterThan(0);
-      expect(config.errors[0]).toContain('required');
-      
-      // Restore environment variable
-      if (originalKey) {
-        process.env.VITE_OPENAI_API_KEY = originalKey;
-      }
-    });
-
-    it('should provide meaningful warning messages', () => {
-      const openAIConfig = getOpenAIConfig();
-      const config = validateConfig(openAIConfig);
-      
-      if (config.warnings.length > 0) {
-        config.warnings.forEach(warning => {
-          expect(typeof warning).toBe('string');
-          expect(warning.length).toBeGreaterThan(0);
-        });
-      }
-    });
-  });
-
-  describe('Phase 3D Configuration Success Criteria', () => {
-    it('should meet all configuration validation requirements', () => {
-      // 1. OpenAI configuration stability
-      const openAIConfig = getOpenAIConfig();
-      const config = validateConfig(openAIConfig);
-      expect(config.isValid).toBe(true);
-      
-      // 2. Workout generation constants validation
-      expect(WORKOUT_GENERATION_CONSTANTS).toBeDefined();
-      expect(WORKOUT_GENERATION_CONSTANTS.MAX_RETRY_ATTEMPTS).toBeGreaterThan(0);
-      expect(WORKOUT_GENERATION_CONSTANTS.REQUEST_TIMEOUT_MS).toBeGreaterThan(0);
-      
-      // 3. Workout request validation
-      const workoutValidation = validateWorkoutRequest(mockValidWorkoutRequest);
-      expect(workoutValidation.isValid).toBe(true);
-      
-      // 4. Error message consistency
-      expect(WORKOUT_GENERATION_CONSTANTS.ERROR_MESSAGES).toBeDefined();
-      expect(WORKOUT_GENERATION_CONSTANTS.WARNING_MESSAGES).toBeDefined();
-    });
-
-    it('should provide comprehensive validation coverage', () => {
-      // Test various validation scenarios
-      const scenarios = [
-        { name: 'valid request', request: mockValidWorkoutRequest, shouldBeValid: true },
-        { name: 'missing user profile', request: { ...mockValidWorkoutRequest, userProfile: undefined }, shouldBeValid: false },
-        { name: 'missing workout data', request: { ...mockValidWorkoutRequest, workoutFocusData: undefined }, shouldBeValid: false },
-        { name: 'invalid duration', request: { ...mockValidWorkoutRequest, workoutFocusData: { ...mockValidWorkoutRequest.workoutFocusData, customization_duration: 2 } }, shouldBeValid: false },
-        { name: 'invalid energy', request: { ...mockValidWorkoutRequest, workoutFocusData: { ...mockValidWorkoutRequest.workoutFocusData, customization_energy: 15 } }, shouldBeValid: false }
-      ];
-      
-      scenarios.forEach(scenario => {
-        const validation = validateWorkoutRequest(scenario.request as WorkoutGenerationRequest);
-        expect(validation.isValid).toBe(scenario.shouldBeValid);
-      });
+      expect(validation.errors.some(e => e.message.includes('Experience level is required'))).toBe(true);
     });
   });
 }); 

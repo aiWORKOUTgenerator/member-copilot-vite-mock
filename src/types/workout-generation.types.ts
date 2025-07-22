@@ -130,46 +130,6 @@ export class WorkoutRequestAdapter {
   }
 
   /**
-   * Validate request structure and completeness
-   */
-  static validateRequest(request: WorkoutGenerationRequest): {
-    isValid: boolean;
-    errors: string[];
-    warnings: string[];
-  } {
-    const errors: string[] = [];
-    const warnings: string[] = [];
-
-    // Required fields validation
-    if (!request.workoutType) {
-      errors.push('workoutType is required');
-    }
-    if (!request.profileData) {
-      errors.push('profileData is required');
-    }
-    if (!request.workoutFocusData) {
-      errors.push('workoutFocusData is required');
-    }
-    if (!request.userProfile) {
-      errors.push('userProfile is required');
-    }
-
-    // Enhanced data warnings (optional but recommended)
-    if (!request.preferences) {
-      warnings.push('preferences not provided - using defaults');
-    }
-    if (!request.constraints) {
-      warnings.push('constraints not provided - using defaults');
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-      warnings
-    };
-  }
-
-  /**
    * Create default AI enhancements based on user profile and workout data
    */
   static createDefaultEnhancements(

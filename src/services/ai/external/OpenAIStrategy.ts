@@ -35,6 +35,7 @@ import { QUICK_WORKOUT_PROMPT_TEMPLATE } from './prompts/quick-workout-generatio
 
 // ✅ NEW: Import QuickWorkoutSetup feature
 import { QuickWorkoutFeature, QuickWorkoutParams } from './features/quick-workout-setup/index';
+import { WorkoutRequestValidator } from '../validation/core/WorkoutRequestValidator';
 
 
 export class OpenAIStrategy implements AIStrategy {
@@ -445,19 +446,16 @@ export class OpenAIStrategy implements AIStrategy {
       throw new Error(OPENAI_STRATEGY_CONSTANTS.ERROR_MESSAGES.WORKOUT_GENERATION_DISABLED);
     }
     
-    // Validate userProfile exists and has required fields
-    if (!request.userProfile) {
-      throw new Error('OpenAIStrategy: userProfile is required for workout generation. Please ensure the user profile is complete.');
+    // Use new validation system
+    const validation = WorkoutRequestValidator.validate(request);
+    if (!validation.isValid) {
+      throw new Error(`OpenAIStrategy: Invalid workout request - ${validation.errors.join(', ')}`);
     }
-    
-    if (!request.userProfile.fitnessLevel) {
-      throw new Error(`OpenAIStrategy: userProfile.fitnessLevel is required but missing. Available userProfile fields: ${Object.keys(request.userProfile).join(', ')}`);
-    }
-    
+
     // Log validation success for debugging
     console.log('✅ Workout request validation passed:', {
       hasUserProfile: !!request.userProfile,
-      fitnessLevel: request.userProfile.fitnessLevel,
+      fitnessLevel: request.userProfile?.fitnessLevel,
       hasPreferences: !!request.preferences,
       requestKeys: Object.keys(request)
     });

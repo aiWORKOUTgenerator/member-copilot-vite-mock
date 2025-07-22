@@ -8,8 +8,8 @@ import {
   HierarchicalSelectionData
 } from './enhanced-workout-types';
 import { dataTransformers } from '../utils/dataTransformers';
+import { FitnessLevel, PreferredActivity, UserProfile } from './user';
 import { ProfileData } from '../components/Profile/types/profile.types';
-import { UserProfile, FitnessLevel } from './user';
 
 // ============================================================================
 // PROFILE DATA TYPE GUARDS
@@ -18,87 +18,92 @@ import { UserProfile, FitnessLevel } from './user';
 /**
  * Type guard for ProfileData experience level
  */
-export const isValidExperienceLevel = (level: any): level is ProfileData['experienceLevel'] => {
-  return ['New to Exercise', 'Some Experience', 'Advanced Athlete'].includes(level);
+export const isValidExperienceLevel = (level: string): boolean => {
+  return ['beginner', 'intermediate', 'advanced'].includes(level);
 };
 
 /**
  * Type guard for ProfileData physical activity
  */
-export const isValidPhysicalActivity = (activity: any): activity is ProfileData['physicalActivity'] => {
-  return ['sedentary', 'light', 'moderate', 'very', 'extremely', 'varies'].includes(activity);
+export const isValidPhysicalActivity = (activity: string): boolean => {
+  return ['sedentary', 'light', 'moderate', 'active', 'very_active'].includes(activity);
 };
 
 /**
  * Type guard for ProfileData preferred duration
  */
-export const isValidPreferredDuration = (duration: any): duration is ProfileData['preferredDuration'] => {
+export const isValidPreferredDuration = (duration: string): boolean => {
   return ['15-30 min', '30-45 min', '45-60 min', '60+ min'].includes(duration);
 };
 
 /**
  * Type guard for ProfileData time commitment
  */
-export const isValidTimeCommitment = (commitment: any): commitment is ProfileData['timeCommitment'] => {
-  return ['2-3', '3-4', '4-5', '6-7'].includes(commitment);
+export const isValidTimeCommitment = (commitment: string): boolean => {
+  return ['1-2', '3-4', '5-6', '7+'].includes(commitment);
 };
 
 /**
  * Type guard for ProfileData intensity level
  */
-export const isValidIntensityLevel = (intensity: any): intensity is ProfileData['intensityLevel'] => {
-  return ['lightly', 'light-moderate', 'moderately', 'active', 'very', 'extremely'].includes(intensity);
+export const isValidIntensityLevel = (level: string): boolean => {
+  return ['light', 'moderately', 'challenging', 'very_challenging'].includes(level);
 };
 
 /**
  * Type guard for ProfileData primary goal
  */
-export const isValidPrimaryGoal = (goal: any): goal is ProfileData['primaryGoal'] => {
+export const isValidPrimaryGoal = (goal: string): boolean => {
   return [
-    'Weight Loss', 'Strength', 'Cardio Health', 'Flexibility & Mobility',
-    'General Health', 'Muscle Gain', 'Athletic Performance', 'Energy Levels',
-    'Body Toning', 'Sleep Quality', 'Stress Reduction', 'Functional Fitness'
+    'Strength',
+    'Endurance',
+    'Weight Loss',
+    'Muscle Gain',
+    'General Fitness',
+    'Flexibility'
   ].includes(goal);
 };
 
 /**
  * Type guard for ProfileData goal timeline
  */
-export const isValidGoalTimeline = (timeline: any): timeline is ProfileData['goalTimeline'] => {
-  return ['1 month', '3 months', '6 months', '1 year+'].includes(timeline);
+export const isValidGoalTimeline = (timeline: string): boolean => {
+  return ['1 month', '3 months', '6 months', '1 year', 'ongoing'].includes(timeline);
 };
 
 /**
  * Type guard for ProfileData age
  */
-export const isValidAge = (age: any): age is ProfileData['age'] => {
-  return ['18-25', '26-35', '36-45', '46-55', '56-65', '65+'].includes(age);
+export const isValidAge = (age: string): boolean => {
+  return ['18-25', '26-35', '36-45', '46-55', '56+'].includes(age);
 };
 
 /**
  * Type guard for ProfileData gender
  */
-export const isValidGender = (gender: any): gender is ProfileData['gender'] => {
-  return ['male', 'female', 'other', 'prefer-not-to-say'].includes(gender);
+export const isValidGender = (gender: string): boolean => {
+  return ['male', 'female', 'non-binary', 'prefer not to say'].includes(gender);
 };
 
 /**
  * Type guard for ProfileData cardiovascular conditions
  */
-export const isValidCardiovascularConditions = (conditions: any): conditions is ProfileData['hasCardiovascularConditions'] => {
-  return [
-    'No', 'Yes - but cleared for exercise', 'Yes - and need medical clearance', 'Prefer not to answer'
-  ].includes(conditions);
+export const isValidCardiovascularConditions = (conditions: string): boolean => {
+  return ['Yes', 'No', 'Unsure'].includes(conditions);
 };
 
 /**
  * Type guard for ProfileData injuries
  */
-export const isValidInjuries = (injuries: any): injuries is ProfileData['injuries'] => {
-  if (!Array.isArray(injuries)) return false;
+export const isValidInjuries = (injuries: string[]): boolean => {
   const validInjuries = [
-    'No Injuries', 'Lower Back', 'Knee', 'Shoulder', 'Neck',
-    'Ankle', 'Wrist or Elbow', 'Hip', 'Foot or Arch'
+    'No Injuries',
+    'Back',
+    'Knee',
+    'Shoulder',
+    'Hip',
+    'Ankle',
+    'Other'
   ];
   return injuries.every(injury => validInjuries.includes(injury));
 };
@@ -106,7 +111,7 @@ export const isValidInjuries = (injuries: any): injuries is ProfileData['injurie
 /**
  * Type guard for ProfileData preferred activities
  */
-export const isValidPreferredActivities = (activities: any): activities is ProfileData['preferredActivities'] => {
+export const isValidPreferredActivities = (activities: string[]): boolean => {
   if (!Array.isArray(activities)) return false;
   const validActivities = [
     'Walking/Power Walking', 'Running/Jogging', 'Swimming', 'Cycling/Mountain Biking',
@@ -119,165 +124,115 @@ export const isValidPreferredActivities = (activities: any): activities is Profi
 /**
  * Type guard for ProfileData available locations
  */
-export const isValidAvailableLocations = (locations: any): locations is ProfileData['availableLocations'] => {
-  if (!Array.isArray(locations)) return false;
-  const validLocations = [
-    'Gym', 'Home Gym', 'Home', 'Parks/Outdoor Spaces', 'Swimming Pool', 'Running Track'
-  ];
+export const isValidAvailableLocations = (locations: string[]): boolean => {
+  const validLocations = ['Home', 'Gym', 'Outdoors', 'Office'];
   return locations.every(location => validLocations.includes(location));
 };
 
 /**
  * Type guard for ProfileData available equipment
  */
-export const isValidAvailableEquipment = (equipment: any): equipment is ProfileData['availableEquipment'] => {
-  if (!Array.isArray(equipment)) return false;
+export const isValidAvailableEquipment = (equipment: string[]): boolean => {
   const validEquipment = [
-    'Barbells & Weight Plates', 'Strength Machines',
-    'Cardio Machines (Treadmill, Elliptical, Bike)', 'Functional Training Area (Kettlebells, Resistance Bands, TRX)',
-    'Stretching & Mobility Zone (Yoga Mats, Foam Rollers)', 'Pool (If available)',
-    'Dumbbells', 'Resistance Bands', 'Kettlebells',
-    'Cardio Machine (Treadmill, Bike)', 'Yoga Mat & Stretching Space',
-    'Body Weight', 'Yoga Mat', 'Suspension Trainer/TRX', 'No equipment required'
+    'None',
+    'Dumbbells',
+    'Resistance Bands',
+    'Yoga Mat',
+    'Pull-up Bar',
+    'Kettlebell',
+    'Full Gym'
   ];
-  return equipment.every(eq => validEquipment.includes(eq));
+  return equipment.every(item => validEquipment.includes(item));
 };
 
 /**
  * Comprehensive type guard for ProfileData - More lenient for partial data
  */
-export const isValidProfileData = (data: any): data is ProfileData => {
-  if (!data || typeof data !== 'object') return false;
-  
-  // Check that all required fields exist (but allow empty/undefined values)
+export const isValidProfileData = (data: unknown): data is ProfileData => {
+  if (!data || typeof data !== 'object') {
+    return false;
+  }
+
+  // Required fields
   const requiredFields = [
-    'experienceLevel', 'physicalActivity', 'preferredDuration', 'timeCommitment',
-    'intensityLevel', 'preferredActivities', 'availableLocations', 'availableEquipment',
-    'primaryGoal', 'goalTimeline', 'age', 'height', 'weight', 'gender',
-    'hasCardiovascularConditions', 'injuries'
+    'experienceLevel',
+    'physicalActivity',
+    'preferredDuration',
+    'timeCommitment',
+    'intensityLevel',
+    'preferredActivities',
+    'availableLocations',
+    'availableEquipment',
+    'primaryGoal',
+    'goalTimeline',
+    'age',
+    'height',
+    'weight',
+    'gender',
+    'hasCardiovascularConditions',
+    'injuries'
   ];
-  
-  // Ensure all required fields exist
+
+  // Check required fields exist
   for (const field of requiredFields) {
     if (!(field in data)) {
       console.warn(`ProfileData missing required field: ${field}`);
       return false;
     }
   }
-  
-  // Validate experience level if present
-  if (data.experienceLevel && !isValidExperienceLevel(data.experienceLevel)) {
-    console.warn(`Invalid experience level: ${data.experienceLevel}`);
-    return false;
+
+  // Type checks
+  const typedData = data as Record<string, unknown>;
+
+  // String fields
+  const stringFields = [
+    'experienceLevel',
+    'physicalActivity',
+    'preferredDuration',
+    'timeCommitment',
+    'intensityLevel',
+    'primaryGoal',
+    'goalTimeline',
+    'age',
+    'height',
+    'weight',
+    'gender',
+    'hasCardiovascularConditions'
+  ];
+
+  for (const field of stringFields) {
+    if (typeof typedData[field] !== 'string') {
+      console.warn(`ProfileData field ${field} must be a string`);
+      return false;
+    }
   }
-  
-  // Validate physical activity if present
-  if (data.physicalActivity && !isValidPhysicalActivity(data.physicalActivity)) {
-    console.warn(`Invalid physical activity: ${data.physicalActivity}`);
-    return false;
+
+  // Array fields
+  const arrayFields = [
+    'preferredActivities',
+    'availableLocations',
+    'availableEquipment',
+    'injuries'
+  ];
+
+  for (const field of arrayFields) {
+    if (!Array.isArray(typedData[field])) {
+      console.warn(`ProfileData field ${field} must be an array`);
+      return false;
+    }
   }
-  
-  // Validate preferred duration if present
-  if (data.preferredDuration && !isValidPreferredDuration(data.preferredDuration)) {
-    console.warn(`Invalid preferred duration: ${data.preferredDuration}`);
-    return false;
-  }
-  
-  // Validate time commitment if present
-  if (data.timeCommitment && !isValidTimeCommitment(data.timeCommitment)) {
-    console.warn(`Invalid time commitment: ${data.timeCommitment}`);
-    return false;
-  }
-  
-  // Validate intensity level if present
-  if (data.intensityLevel && !isValidIntensityLevel(data.intensityLevel)) {
-    console.warn(`Invalid intensity level: ${data.intensityLevel}`);
-    return false;
-  }
-  
-  // Validate primary goal if present
-  if (data.primaryGoal && !isValidPrimaryGoal(data.primaryGoal)) {
-    console.warn(`Invalid primary goal: ${data.primaryGoal}`);
-    return false;
-  }
-  
-  // Validate goal timeline if present
-  if (data.goalTimeline && !isValidGoalTimeline(data.goalTimeline)) {
-    console.warn(`Invalid goal timeline: ${data.goalTimeline}`);
-    return false;
-  }
-  
-  // Validate age if present
-  if (data.age && !isValidAge(data.age)) {
-    console.warn(`Invalid age: ${data.age}`);
-    return false;
-  }
-  
-  // Validate gender if present
-  if (data.gender && !isValidGender(data.gender)) {
-    console.warn(`Invalid gender: ${data.gender}`);
-    return false;
-  }
-  
-  // Validate cardiovascular conditions if present
-  if (data.hasCardiovascularConditions && !isValidCardiovascularConditions(data.hasCardiovascularConditions)) {
-    console.warn(`Invalid cardiovascular conditions: ${data.hasCardiovascularConditions}`);
-    return false;
-  }
-  
-  // Validate string fields are strings
-  if (data.height !== undefined && typeof data.height !== 'string') {
-    console.warn(`Height must be a string, got: ${typeof data.height}`);
-    return false;
-  }
-  
-  if (data.weight !== undefined && typeof data.weight !== 'string') {
-    console.warn(`Weight must be a string, got: ${typeof data.weight}`);
-    return false;
-  }
-  
-  // Validate array fields are arrays (but allow empty arrays)
-  if (data.preferredActivities !== undefined && !Array.isArray(data.preferredActivities)) {
-    console.warn(`Preferred activities must be an array, got: ${typeof data.preferredActivities}`);
-    return false;
-  }
-  
-  if (data.availableLocations !== undefined && !Array.isArray(data.availableLocations)) {
-    console.warn(`Available locations must be an array, got: ${typeof data.availableLocations}`);
-    return false;
-  }
-  
-  if (data.availableEquipment !== undefined && !Array.isArray(data.availableEquipment)) {
-    console.warn(`Available equipment must be an array, got: ${typeof data.availableEquipment}`);
-    return false;
-  }
-  
-  if (data.injuries !== undefined && !Array.isArray(data.injuries)) {
-    console.warn(`Injuries must be an array, got: ${typeof data.injuries}`);
-    return false;
-  }
-  
+
   // If arrays have content, validate the content
-  if (data.preferredActivities && data.preferredActivities.length > 0 && !isValidPreferredActivities(data.preferredActivities)) {
-    console.warn(`Invalid preferred activities: ${data.preferredActivities}`);
-    return false;
+  if (typedData.preferredActivities && Array.isArray(typedData.preferredActivities)) {
+    const activities = typedData.preferredActivities.map(activity => 
+      typeof activity === 'string' ? activity.toLowerCase().replace(/\s+/g, '_') : activity
+    );
+    if (!activities.every(activity => isValidPreferredActivity(activity))) {
+      console.warn(`Invalid preferred activities: ${typedData.preferredActivities}`);
+      return false;
+    }
   }
-  
-  if (data.availableLocations && data.availableLocations.length > 0 && !isValidAvailableLocations(data.availableLocations)) {
-    console.warn(`Invalid available locations: ${data.availableLocations}`);
-    return false;
-  }
-  
-  if (data.availableEquipment && data.availableEquipment.length > 0 && !isValidAvailableEquipment(data.availableEquipment)) {
-    console.warn(`Invalid available equipment: ${data.availableEquipment}`);
-    return false;
-  }
-  
-  if (data.injuries && data.injuries.length > 0 && !isValidInjuries(data.injuries)) {
-    console.warn(`Invalid injuries: ${data.injuries}`);
-    return false;
-  }
-  
+
   return true;
 };
 
@@ -288,9 +243,21 @@ export const isValidProfileData = (data: any): data is ProfileData => {
 /**
  * Type guard for UserProfile fitness level
  */
-export const isValidFitnessLevel = (level: any): level is FitnessLevel => {
-  return ['beginner', 'novice', 'intermediate', 'advanced', 'adaptive'].includes(level);
-};
+export const isValidFitnessLevel = (level: unknown): level is FitnessLevel => {
+  if (typeof level !== 'string') {
+    return false;
+  }
+
+  const validLevels: FitnessLevel[] = [
+    'beginner',
+    'novice',
+    'intermediate',
+    'advanced',
+    'adaptive'
+  ];
+
+  return validLevels.includes(level as FitnessLevel);
+}
 
 /**
  * Type guard for UserProfile
@@ -345,6 +312,30 @@ export const isValidUserProfile = (profile: any): profile is UserProfile => {
     (profile.gender === undefined || ['male', 'female', 'other', 'prefer-not-to-say'].includes(profile.gender))
   );
 };
+
+export function isValidPreferredActivity(activity: unknown): activity is PreferredActivity {
+  if (typeof activity !== 'string') {
+    return false;
+  }
+
+  // Convert to lowercase for case-insensitive comparison
+  const normalizedActivity = activity.toLowerCase().replace(/\s+/g, '_');
+
+  const validActivities: PreferredActivity[] = [
+    'strength_training',
+    'cardio',
+    'hiit',
+    'yoga',
+    'pilates',
+    'bodyweight',
+    'crossfit',
+    'running',
+    'cycling',
+    'swimming'
+  ];
+
+  return validActivities.includes(normalizedActivity as PreferredActivity);
+}
 
 // ============================================================================
 // CONVERSION VALIDATION UTILITIES

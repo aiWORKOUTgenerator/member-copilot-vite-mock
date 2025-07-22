@@ -8,6 +8,18 @@ export type RecoveryStatus = 'minimal' | 'partial' | 'full';
 export type ExplorationTendency = 'low' | 'moderate' | 'high';
 export type FeedbackPreference = 'simple' | 'detailed';
 
+export type PreferredActivity = 
+  | 'strength_training'
+  | 'cardio'
+  | 'hiit'
+  | 'yoga'
+  | 'pilates'
+  | 'bodyweight'
+  | 'crossfit'
+  | 'running'
+  | 'cycling'
+  | 'swimming';
+
 // User-provided preferences
 export interface UserPreferences {
   workoutStyle: string[];
