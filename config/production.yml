@@ -1,0 +1,482 @@
+# Production Configuration for AI Service Feature-First Architecture
+# Part of Phase 4: Production Configuration
+
+# ===== APPLICATION CONFIGURATION =====
+application:
+  name: "AI Service Feature-First Architecture"
+  version: "1.0.0"
+  environment: "production"
+  
+  # Server Configuration
+  server:
+    port: 3000
+    host: "0.0.0.0"
+    timezone: "UTC"
+    gracefulShutdownTimeout: 30000 # 30 seconds
+    
+  # Request Configuration
+  request:
+    maxBodySize: "10mb"
+    maxParameterLimit: 100
+    maxUploadSize: "50mb"
+    timeout: 30000 # 30 seconds
+    
+  # Security Configuration
+  security:
+    cors:
+      enabled: true
+      origin: ["https://yourdomain.com", "https://app.yourdomain.com"]
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+      allowedHeaders: ["Content-Type", "Authorization", "X-API-Key"]
+      credentials: true
+      maxAge: 86400 # 24 hours
+      
+    helmet:
+      enabled: true
+      contentSecurityPolicy:
+        directives:
+          defaultSrc: ["'self'"]
+          scriptSrc: ["'self'", "'unsafe-inline'"]
+          styleSrc: ["'self'", "'unsafe-inline'"]
+          imgSrc: ["'self'", "data:", "https:"]
+      hsts:
+        maxAge: 31536000 # 1 year
+        includeSubDomains: true
+        preload: true
+        
+    rateLimit:
+      windowMs: 900000 # 15 minutes
+      max: 100 # requests per window
+      standardHeaders: true
+      legacyHeaders: false
+      skipFailedRequests: false
+      skipSuccessfulRequests: false
+      
+    authentication:
+      jwt:
+        issuer: "ai-service"
+        audience: "ai-service-users"
+        accessTokenExpiry: "15m"
+        refreshTokenExpiry: "7d"
+        algorithm: "HS256"
+        
+    encryption:
+      algorithm: "aes-256-gcm"
+      keyRotationInterval: "30d"
+
+# ===== DATABASE CONFIGURATION =====
+database:
+  primary:
+    type: "postgresql"
+    host: "postgres"
+    port: 5432
+    database: "aiservice"
+    username: "aiservice"
+    # password loaded from environment
+    
+    # Connection Pool
+    pool:
+      min: 2
+      max: 20
+      acquireTimeoutMillis: 30000
+      idleTimeoutMillis: 600000
+      createTimeoutMillis: 30000
+      destroyTimeoutMillis: 5000
+      createRetryIntervalMillis: 200
+      
+    # Performance
+    query:
+      timeout: 30000
+      maxExecutionTime: 60000
+      
+    # Backup
+    backup:
+      enabled: true
+      schedule: "0 2 * * *" # Daily at 2 AM
+      retention: "30d"
+      compression: true
+      
+  # Read Replicas (if applicable)
+  replicas:
+    - host: "postgres-read-1"
+      port: 5432
+      database: "aiservice"
+      username: "aiservice_read"
+      weight: 1
+    - host: "postgres-read-2"
+      port: 5432
+      database: "aiservice"
+      username: "aiservice_read"
+      weight: 1
+
+# ===== CACHE CONFIGURATION =====
+cache:
+  redis:
+    host: "redis"
+    port: 6379
+    # password loaded from environment
+    database: 0
+    keyPrefix: "ai-service:"
+    
+    # Connection
+    maxRetriesPerRequest: 3
+    retryDelayOnFailover: 100
+    enableReadyCheck: true
+    maxRetriesPerRequest: 3
+    lazyConnect: true
+    
+    # Performance
+    compression:
+      enabled: true
+      algorithm: "gzip"
+      threshold: 1024 # bytes
+      
+    # TTL Settings
+    defaultTTL: 3600 # 1 hour
+    maxTTL: 86400 # 24 hours
+    
+    # Memory Management
+    maxMemoryPolicy: "allkeys-lru"
+    maxMemory: "256mb"
+    
+  # Application Cache
+  application:
+    enabled: true
+    maxSize: 1000
+    ttl: 300000 # 5 minutes
+    
+  # Feature Cache
+  features:
+    enabled: true
+    defaultTTL: 1800 # 30 minutes
+    maxEntries: 10000
+
+# ===== AI SERVICE CONFIGURATION =====
+ai:
+  # OpenAI Configuration
+  openai:
+    # apiKey loaded from environment
+    baseURL: "https://api.openai.com/v1"
+    organization: "your-org-id"
+    timeout: 120000 # 2 minutes
+    maxRetries: 3
+    retryDelay: 1000
+    
+    # Models
+    defaultModel: "gpt-3.5-turbo"
+    models:
+      fast: "gpt-3.5-turbo"
+      balanced: "gpt-3.5-turbo"
+      creative: "gpt-4"
+      
+    # Rate Limiting
+    rateLimit:
+      requestsPerMinute: 3500
+      tokensPerMinute: 90000
+      
+  # Feature Configuration
+  features:
+    quickWorkoutSetup:
+      enabled: true
+      timeout: 30000
+      maxRetries: 2
+      caching:
+        enabled: true
+        ttl: 1800
+        
+    comprehensiveWorkoutGeneration:
+      enabled: true
+      timeout: 60000
+      maxRetries: 2
+      caching:
+        enabled: true
+        ttl: 3600
+        
+    realTimeAdaptation:
+      enabled: true
+      timeout: 45000
+      maxRetries: 1
+      caching:
+        enabled: false
+        
+  # Workflow Configuration
+  workflows:
+    defaultTimeout: 300000 # 5 minutes
+    maxConcurrentWorkflows: 50
+    maxStepsPerWorkflow: 20
+    
+    # Performance Optimization
+    optimization:
+      enabled: true
+      parallelizationThreshold: 3
+      cachingThreshold: 0.7
+      
+    # Error Handling
+    errorHandling:
+      maxRetries: 3
+      retryDelay: 5000
+      circuitBreakerThreshold: 5
+      circuitBreakerTimeout: 60000
+
+# ===== LOGGING CONFIGURATION =====
+logging:
+  level: "info"
+  format: "json"
+  
+  # Console Logging
+  console:
+    enabled: true
+    colorize: false
+    timestamp: true
+    
+  # File Logging
+  file:
+    enabled: true
+    filename: "/app/logs/application.log"
+    maxSize: "100MB"
+    maxFiles: 10
+    compress: true
+    
+  # Error Logging
+  error:
+    enabled: true
+    filename: "/app/logs/error.log"
+    maxSize: "100MB"
+    maxFiles: 5
+    
+  # Audit Logging
+  audit:
+    enabled: true
+    filename: "/app/logs/audit.log"
+    maxSize: "100MB"
+    maxFiles: 30
+    
+  # Request Logging
+  request:
+    enabled: true
+    includeBody: false
+    includeResponse: false
+    sensitiveFields: ["password", "token", "apiKey", "secret"]
+
+# ===== MONITORING CONFIGURATION =====
+monitoring:
+  # Health Checks
+  health:
+    enabled: true
+    endpoint: "/health"
+    timeout: 5000
+    checks:
+      database: true
+      redis: true
+      externalAPIs: true
+      
+  # Metrics
+  metrics:
+    enabled: true
+    endpoint: "/metrics"
+    port: 9090
+    
+    # Prometheus
+    prometheus:
+      enabled: true
+      defaultLabels:
+        service: "ai-service"
+        version: "1.0.0"
+        environment: "production"
+        
+    # Custom Metrics
+    custom:
+      - name: "ai_requests_total"
+        type: "counter"
+        description: "Total AI requests"
+        labels: ["feature", "model", "status"]
+        
+      - name: "ai_request_duration_seconds"
+        type: "histogram"
+        description: "AI request duration"
+        labels: ["feature", "model"]
+        buckets: [0.1, 0.5, 1, 2, 5, 10, 30, 60]
+        
+      - name: "workflow_execution_duration_seconds"
+        type: "histogram"
+        description: "Workflow execution duration"
+        labels: ["workflow_type"]
+        buckets: [1, 5, 10, 30, 60, 120, 300]
+        
+  # Tracing
+  tracing:
+    enabled: true
+    serviceName: "ai-service"
+    jaeger:
+      endpoint: "http://jaeger:14268/api/traces"
+      samplingRate: 0.1 # 10% sampling
+      
+  # Alerting
+  alerting:
+    enabled: true
+    channels:
+      slack:
+        enabled: true
+        # webhook loaded from environment
+        channel: "#alerts"
+        username: "AI Service Monitor"
+        
+      email:
+        enabled: true
+        # smtp config loaded from environment
+        from: "alerts@yourdomain.com"
+        to: ["devops@yourdomain.com", "dev-team@yourdomain.com"]
+        
+    rules:
+      - name: "high_error_rate"
+        condition: "error_rate > 0.05"
+        severity: "critical"
+        description: "Error rate above 5%"
+        
+      - name: "high_response_time"
+        condition: "avg_response_time > 10000"
+        severity: "warning"
+        description: "Average response time above 10 seconds"
+        
+      - name: "low_cache_hit_rate"
+        condition: "cache_hit_rate < 0.8"
+        severity: "warning"
+        description: "Cache hit rate below 80%"
+
+# ===== PERFORMANCE CONFIGURATION =====
+performance:
+  # Resource Limits
+  resources:
+    memory:
+      max: "2GB"
+      warning: "1.5GB"
+      
+    cpu:
+      max: "2000m" # 2 CPU cores
+      warning: "1500m"
+      
+    disk:
+      max: "10GB"
+      warning: "8GB"
+      
+  # Optimization
+  optimization:
+    enabled: true
+    
+    # Caching
+    caching:
+      intelligentCaching: true
+      predictiveCaching: false
+      cacheWarmup: true
+      
+    # Parallelization
+    parallelization:
+      enabled: true
+      maxConcurrency: 10
+      
+    # Compression
+    compression:
+      enabled: true
+      algorithm: "gzip"
+      level: 6
+      
+  # Auto-scaling
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    
+    metrics:
+      - type: "cpu"
+        target: 70 # 70% CPU utilization
+      - type: "memory"
+        target: 80 # 80% memory utilization
+      - type: "custom"
+        name: "requests_per_second"
+        target: 100
+
+# ===== BACKUP CONFIGURATION =====
+backup:
+  enabled: true
+  
+  # Schedule
+  schedule:
+    database: "0 2 * * *" # Daily at 2 AM
+    logs: "0 4 * * 0" # Weekly on Sunday at 4 AM
+    configuration: "0 3 * * 0" # Weekly on Sunday at 3 AM
+    
+  # Retention
+  retention:
+    database: "30d"
+    logs: "90d"
+    configuration: "365d"
+    
+  # Storage
+  storage:
+    type: "s3"
+    # s3 config loaded from environment
+    compression: true
+    encryption: true
+    
+  # Verification
+  verification:
+    enabled: true
+    schedule: "0 6 * * 1" # Weekly on Monday at 6 AM
+    
+# ===== FEATURE FLAGS =====
+featureFlags:
+  enabled: true
+  
+  flags:
+    enhancedAIRecommendations:
+      enabled: true
+      rolloutPercentage: 100
+      
+    advancedAnalytics:
+      enabled: true
+      rolloutPercentage: 50
+      
+    experimentalFeatures:
+      enabled: false
+      rolloutPercentage: 0
+      
+    performanceOptimizations:
+      enabled: true
+      rolloutPercentage: 100
+      
+# ===== EXTERNAL SERVICES =====
+external:
+  # API Gateways
+  apiGateway:
+    enabled: false
+    
+  # Message Queues
+  messageQueue:
+    enabled: false
+    
+  # Search Services
+  search:
+    enabled: false
+    
+  # Analytics
+  analytics:
+    enabled: true
+    provider: "google-analytics"
+    # trackingId loaded from environment
+
+# ===== DEVELOPMENT OVERRIDES =====
+# These settings are ignored in production but useful for other environments
+development:
+  hotReload: false
+  debugMode: false
+  mockExternalServices: false
+  seedDatabase: false
+  
+# ===== EXPERIMENTAL FEATURES =====
+experimental:
+  enabled: false
+  
+  features:
+    aiModelRouting: false
+    adaptiveCaching: false
+    predictiveScaling: false 

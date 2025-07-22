@@ -4,19 +4,19 @@ import {
   GeneratedWorkout, 
   EnhancedRecommendation, 
   UserPreferenceAnalysis
-} from './types/external-ai.types';
-import { WorkoutGenerationRequest } from '../../../types/workout-generation.types';
-import { PrioritizedRecommendation, GlobalAIContext } from '../core/types/AIServiceTypes';
-import { AIInsight } from '../../../types/insights';
+} from '../types/external-ai.types';
+import { WorkoutGenerationRequest } from '../../../../types/workout-generation.types';
+import { PrioritizedRecommendation, GlobalAIContext } from '../../../../services/ai/core/types/AIServiceTypes';
+import { AIInsight } from '../../../../types/insights';
 import { OpenAIService } from './OpenAIService';
 import { 
   selectRecommendationPrompt 
-} from './prompts/recommendation.prompts';
-import { isFeatureEnabled } from './config/openai.config';
-import { logger } from '../../../utils/logger';
-import { WorkoutVariableBuilder } from './helpers/WorkoutVariableBuilder';
-import { ErrorHandler } from './helpers/ErrorHandler';
-import { OPENAI_STRATEGY_CONSTANTS } from './constants/openai-constants';
+} from '../../prompts/recommendation.prompts';
+import { isFeatureEnabled } from '../infrastructure/config/openai.config';
+import { logger } from '../../../../utils/logger';
+import { WorkoutVariableBuilder } from '../../helpers/WorkoutVariableBuilder';
+import { ErrorHandler } from '../infrastructure/error-handling/ErrorHandler';
+import { OPENAI_STRATEGY_CONSTANTS } from '../constants/openai-constants';
 import { 
   createInsightEnhancementPrompt,
   createUserAnalysisPrompt,

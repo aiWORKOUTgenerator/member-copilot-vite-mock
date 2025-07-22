@@ -4,6 +4,8 @@
 
 This guide explains how to integrate and use the external AI services with your existing AI service layer. The integration provides enhanced workout generation, recommendations, and user analysis using OpenAI's API.
 
+**🎯 NEW: Feature-First Architecture** - The service now includes self-contained features like QuickWorkoutSetup that provide complete workflows with intelligent duration optimization, context-aware prompts, and advanced response processing.
+
 ## 🚀 Quick Start
 
 ### 1. Environment Setup
@@ -69,6 +71,38 @@ function MyComponent() {
 ```
 
 ## 📋 Features
+
+### 🎯 NEW: QuickWorkoutSetup Feature
+
+The QuickWorkoutSetup feature provides intelligent, context-aware quick workout generation with duration-specific optimization:
+
+```typescript
+import { QuickWorkoutFeature } from '@/services/ai/external';
+
+const feature = new QuickWorkoutFeature({ openAIService });
+
+const result = await feature.generateWorkout({
+  duration: 30,
+  fitnessLevel: 'some experience',
+  focus: 'Quick Sweat',
+  energyLevel: 7,
+  sorenessAreas: ['legs'],
+  equipment: ['Dumbbells']
+}, userProfile);
+
+// Returns comprehensive result with:
+// - Generated workout with normalized durations
+// - Duration optimization analysis
+// - Personalized notes and safety reminders
+// - Detailed metadata about the generation process
+```
+
+**Feature Capabilities:**
+- ✅ **Duration Intelligence**: Automatic adjustment based on energy, soreness, fitness level
+- ✅ **Smart Prompt Selection**: Context-aware prompts with 40+ variables
+- ✅ **Response Normalization**: Fixes duration calculation issues (minutes→seconds)
+- ✅ **Comprehensive Validation**: Structure, completeness, and consistency scoring
+- ✅ **Rich Metadata**: Detailed tracking of generation process and optimizations
 
 ### 1. AI-Powered Workout Generation
 
@@ -543,3 +577,56 @@ For issues or questions:
 ---
 
 **Note**: This integration requires an OpenAI API key and may incur costs based on usage. Monitor your usage and adjust rate limits accordingly. 
+
+## 🏗️ Architecture - Feature-First with Shared Components
+
+This service follows a **feature-first architecture** with **atomic shared components** for maximum maintainability and reusability.
+
+### 📁 Directory Structure (Post-Phase 2)
+
+```
+src/services/ai/external/
+├── features/                    # 🔥 FEATURE-FIRST ORGANIZATION
+│   └── quick-workout-setup/     # Complete QuickWorkout feature
+│       ├── QuickWorkoutFeature.ts # Main orchestrator
+│       ├── workflow/           # Feature workflow logic
+│       ├── prompts/           # Feature-specific prompts
+│       ├── types/             # Feature-specific types
+│       ├── helpers/           # Feature-specific helpers
+│       ├── constants/         # Feature-specific constants
+│       └── __tests__/         # Feature-specific tests
+│
+├── shared/                     # 🔧 SHARED ATOMIC COMPONENTS
+│   ├── core/                  # Core AI service components
+│   │   ├── OpenAIService.ts   # Main service
+│   │   ├── OpenAIStrategy.ts  # Strategy implementation
+│   │   ├── OpenAIWorkoutGenerator.ts
+│   │   └── OpenAIRecommendationEngine.ts
+│   ├── infrastructure/        # Infrastructure concerns
+│   │   ├── config/           # Configuration management
+│   │   ├── cache/            # Caching services
+│   │   ├── metrics/          # Performance monitoring
+│   │   ├── error-handling/   # Error handling & recovery
+│   │   └── request-handling/ # Request processing
+│   ├── utils/                # Truly shared utilities
+│   ├── types/                # Shared types
+│   └── constants/            # Shared constants
+│
+├── __tests__/                # Cross-feature integration tests
+├── index.ts                  # Clean main export (feature registry)
+└── README.md                 # This documentation
+```
+
+### ✅ Benefits of This Architecture
+
+1. **Feature Isolation**: Each feature is self-contained with clear boundaries
+2. **Workflow Visibility**: Complete feature workflows are easy to trace and understand
+3. **Shared Component Reuse**: Infrastructure components are shared without duplication
+4. **Intuitive Navigation**: Developers can easily find and modify code
+5. **Scalable Growth**: New features can be added without touching existing code
+
+### 🎯 Migration Status
+
+- ✅ **Phase 1 Complete**: QuickWorkoutSetup feature extracted and structured
+- ✅ **Phase 2 Complete**: Shared components extracted and organized
+- 🔮 **Phase 3 Ready**: Architecture supports additional feature extraction 

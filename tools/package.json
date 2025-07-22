@@ -1,0 +1,89 @@
+{
+  "name": "ai-service-dev-tools",
+  "version": "1.0.0",
+  "description": "Developer tools for AI Service Feature-First Architecture",
+  "main": "index.js",
+  "bin": {
+    "ai-feature": "./cli/ai-feature-cli.js",
+    "ai-workflow": "./cli/ai-feature-cli.js",
+    "ai-debug": "./debug/debug-cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest",
+    "lint": "eslint . --ext .ts,.js",
+    "format": "prettier --write .",
+    
+    "ai:help": "node cli/ai-feature-cli.js --help",
+    "ai:feature": "node cli/ai-feature-cli.js generate feature",
+    "ai:workflow": "node cli/ai-feature-cli.js workflow create",
+    "ai:debug": "node cli/ai-feature-cli.js debug",
+    "ai:validate": "node cli/ai-feature-cli.js validate",
+    "ai:health": "node cli/ai-feature-cli.js health check",
+    
+    "examples:all": "npm run examples:basic && npm run examples:advanced && npm run examples:workflow",
+    "examples:basic": "node examples/basic-examples.js",
+    "examples:advanced": "node examples/advanced-examples.js",
+    "examples:workflow": "node examples/workflow-examples.js",
+    
+    "docs:serve": "http-server ../docs -p 3001 -o",
+    "docs:generate": "typedoc --out ../docs/api-generated .",
+    
+    "benchmark:performance": "node benchmarks/performance-benchmark.js",
+    "benchmark:memory": "node benchmarks/memory-benchmark.js",
+    "benchmark:all": "npm run benchmark:performance && npm run benchmark:memory"
+  },
+  "keywords": [
+    "ai",
+    "workflow",
+    "orchestration",
+    "feature-first",
+    "developer-tools",
+    "cli",
+    "debugging",
+    "performance"
+  ],
+  "author": "AI Service Team",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^9.4.1",
+    "inquirer": "^9.1.4",
+    "chalk": "^5.2.0",
+    "ora": "^6.1.2",
+    "table": "^6.8.1",
+    "lodash": "^4.17.21",
+    "fs-extra": "^11.1.0",
+    "glob": "^8.0.3",
+    "yaml": "^2.2.1",
+    "semver": "^7.3.8"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.18",
+    "@types/lodash": "^4.14.191",
+    "@types/fs-extra": "^11.0.1",
+    "@types/inquirer": "^9.0.3",
+    "typescript": "^4.9.4",
+    "ts-node": "^10.9.1",
+    "jest": "^29.3.1",
+    "@types/jest": "^29.2.5",
+    "eslint": "^8.32.0",
+    "@typescript-eslint/eslint-plugin": "^5.48.1",
+    "@typescript-eslint/parser": "^5.48.1",
+    "prettier": "^2.8.3",
+    "typedoc": "^0.23.24",
+    "http-server": "^14.1.1"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/ai-service-dev-tools.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/ai-service-dev-tools/issues"
+  },
+  "homepage": "https://github.com/your-org/ai-service-dev-tools#readme"
+} 

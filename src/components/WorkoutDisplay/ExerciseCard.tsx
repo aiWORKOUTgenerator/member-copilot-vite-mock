@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Clock, Repeat, Target, AlertTriangle, Info, User } from 'lucide-react';
+import { ChevronDown, ChevronUp, Clock, Repeat, Target, AlertTriangle, Info, User, Play } from 'lucide-react';
 import { Exercise, ExerciseDisplayProps } from '../../types/workout-results.types';
 
 export const ExerciseCard: React.FC<ExerciseDisplayProps> = ({ 
@@ -9,7 +9,7 @@ export const ExerciseCard: React.FC<ExerciseDisplayProps> = ({
   compact = false 
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [activeTab, setActiveTab] = useState<'details' | 'form' | 'modifications'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'form' | 'modifications' | 'demo'>('details');
 
   const getDurationDisplay = () => {
     if (exercise.duration) {
@@ -173,7 +173,8 @@ export const ExerciseCard: React.FC<ExerciseDisplayProps> = ({
               { id: 'details', label: 'Details', icon: Info },
               { id: 'form', label: 'Form & Safety', icon: Target },
               ...(showModifications && exercise.modifications && exercise.modifications.length > 0 ? 
-                [{ id: 'modifications', label: 'Modifications', icon: User }] : [])
+                [{ id: 'modifications', label: 'Modifications', icon: User }] : []),
+              { id: 'demo', label: 'Demo', icon: Play }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -293,6 +294,43 @@ export const ExerciseCard: React.FC<ExerciseDisplayProps> = ({
                     <p className="text-sm text-gray-600">{modification.instructions}</p>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {activeTab === 'demo' && (
+              <div className="space-y-4">
+                <div className="text-center p-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                  <Play className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h4 className="font-medium text-gray-900 mb-2">Exercise Demo</h4>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Visual demonstration of proper form and technique
+                  </p>
+                  <div className="space-y-3">
+                    {/* Placeholder for demo content */}
+                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">Demo Image/GIF</span>
+                        <span className="text-xs text-gray-500">Coming Soon</span>
+                      </div>
+                      <div className="aspect-video bg-gray-100 rounded flex items-center justify-center">
+                        <span className="text-gray-400 text-sm">Demo content will appear here</span>
+                      </div>
+                    </div>
+                    
+                    {/* Additional demo content can be added here */}
+                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">Step-by-Step Guide</span>
+                        <span className="text-xs text-gray-500">Coming Soon</span>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="h-3 bg-gray-100 rounded"></div>
+                        <div className="h-3 bg-gray-100 rounded w-3/4"></div>
+                        <div className="h-3 bg-gray-100 rounded w-1/2"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
