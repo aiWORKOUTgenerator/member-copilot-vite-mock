@@ -2,7 +2,7 @@
 // Coordinates the complete quick workout generation workflow
 
 import { OpenAIService } from '../../OpenAIService';
-import { UserProfile } from '../../../types';
+import { UserProfile } from '../../../../../types';
 import { 
   QuickWorkoutParams, 
   QuickWorkoutResult, 
@@ -363,7 +363,7 @@ export class QuickWorkoutFeature {
    */
   getCapabilities(): FeatureCapabilities {
     return {
-      supportedDurations: QUICK_WORKOUT_CONSTANTS.SUPPORTED_DURATIONS,
+      supportedDurations: [...QUICK_WORKOUT_CONSTANTS.SUPPORTED_DURATIONS],
       supportedFitnessLevels: ['new to exercise', 'some experience', 'advanced athlete'],
       supportedFocusAreas: ['Quick Sweat', 'Strength Building', 'Core & Abs Focus', 'Flexibility & Mobility', 'Cardio Blast'],
       supportedEquipment: ['Body Weight', 'Dumbbells', 'Resistance Bands', 'Kettlebell', 'Pull-up Bar'],
@@ -408,13 +408,50 @@ export class QuickWorkoutFeature {
       };
 
       const testProfile: UserProfile = {
-        fitnessLevel: 'some experience',
+        fitnessLevel: 'intermediate',
         goals: ['general fitness'],
+        preferences: {
+          workoutStyle: ['strength_training'],
+          timePreference: 'morning',
+          intensityPreference: 'moderate',
+          advancedFeatures: false,
+          aiAssistanceLevel: 'moderate'
+        },
         basicLimitations: {
           availableEquipment: [],
-          timeConstraints: 10
+          availableLocations: ['home'],
+          injuries: []
+        },
+        enhancedLimitations: {
+          timeConstraints: 10,
+          equipmentConstraints: [],
+          locationConstraints: ['home'],
+          recoveryNeeds: {
+            restDays: 2,
+            sleepHours: 8,
+            hydrationLevel: 'moderate'
+          },
+          mobilityLimitations: [],
+          progressionRate: 'moderate'
+        },
+        workoutHistory: {
+          estimatedCompletedWorkouts: 0,
+          averageDuration: 10,
+          preferredFocusAreas: ['general fitness'],
+          progressiveEnhancementUsage: {},
+          aiRecommendationAcceptance: 0.5,
+          consistencyScore: 0.5,
+          plateauRisk: 'low'
+        },
+        learningProfile: {
+          prefersSimplicity: true,
+          explorationTendency: 'moderate',
+          feedbackPreference: 'simple',
+          learningStyle: 'mixed',
+          motivationType: 'intrinsic',
+          adaptationSpeed: 'moderate'
         }
-      } as UserProfile;
+      };
 
       // Test duration strategy
       const durationResult = this.durationStrategy.selectStrategy(testParams, testProfile);

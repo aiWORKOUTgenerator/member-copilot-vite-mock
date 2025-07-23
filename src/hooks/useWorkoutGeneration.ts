@@ -5,12 +5,25 @@ import {
   WorkoutGenerationRequest,
 } from '../types/workout-generation.types';
 import { GeneratedWorkout } from '../services/ai/external/types/external-ai.types';
-import { UserProfile, FitnessLevel } from '../types/user';
-import { PerWorkoutOptions } from '../types/core';
-import { ProfileData } from '../components/Profile/types/profile.types';
-import { LiabilityWaiverData } from '../components/LiabilityWaiver/types/liability-waiver.types';
+import { FitnessLevel } from '../types/user';
 import { logger } from '../utils/logger';
 import { PromptVariableComposer } from '../services/ai/external/DataTransformer';
+
+// Helper function to map FitnessLevel to GeneratedWorkout difficulty
+const mapFitnessLevelToDifficulty = (fitnessLevel: FitnessLevel): 'new to exercise' | 'some experience' | 'advanced athlete' => {
+  switch (fitnessLevel) {
+    case 'beginner':
+    case 'novice':
+      return 'new to exercise';
+    case 'intermediate':
+      return 'some experience';
+    case 'advanced':
+    case 'adaptive':
+      return 'advanced athlete';
+    default:
+      return 'some experience'; // fallback
+  }
+};
 
 // Define missing types
 interface WorkoutGenerationState {
@@ -75,7 +88,6 @@ const generateFallbackWorkout = (userProfile: { fitnessLevel: FitnessLevel; goal
   console.log('🔄 Generating fallback workout due to AI service unavailability');
   
   const focusArea = workoutOptions.customization_focus || 'strength';
-  const energyLevel = workoutOptions.customization_energy || 3;
   const duration = workoutOptions.customization_duration || 45;
   
   // Create a basic workout structure
@@ -83,61 +95,149 @@ const generateFallbackWorkout = (userProfile: { fitnessLevel: FitnessLevel; goal
     {
       id: 'fallback-1',
       name: 'Bodyweight Squats',
-      sets: 3,
-      reps: 12,
+      description: 'Stand with feet shoulder-width apart, lower into a squat position, then return to standing.',
       duration: 60,
-      rest: 90,
-      difficulty: userProfile.fitnessLevel,
+      repetitions: 12,
+      sets: 3,
+      restTime: 90,
       equipment: ['body_weight'],
-      focusAreas: ['legs', 'glutes'],
-      instructions: 'Stand with feet shoulder-width apart, lower into a squat position, then return to standing.'
+      form: 'Keep your chest up, knees in line with toes, and lower until thighs are parallel to ground.',
+      modifications: [
+        {
+          type: 'easier' as const,
+          description: 'Chair squats',
+          instructions: 'Sit down and stand up from a chair to build strength.'
+        }
+      ],
+      commonMistakes: ['Knees caving inward', 'Not going deep enough'],
+      primaryMuscles: ['quadriceps', 'glutes'],
+      secondaryMuscles: ['hamstrings', 'core'],
+      movementType: 'strength' as const
     },
     {
       id: 'fallback-2',
       name: 'Push-ups',
-      sets: 3,
-      reps: 8,
+      description: 'Start in plank position, lower body to ground, then push back up.',
       duration: 45,
-      rest: 90,
-      difficulty: userProfile.fitnessLevel,
+      repetitions: 8,
+      sets: 3,
+      restTime: 90,
       equipment: ['body_weight'],
-      focusAreas: ['chest', 'arms'],
-      instructions: 'Start in plank position, lower body to ground, then push back up.'
+      form: 'Keep your body in a straight line from head to heels.',
+      modifications: [
+        {
+          type: 'easier' as const,
+          description: 'Knee push-ups',
+          instructions: 'Perform push-ups on your knees instead of toes.'
+        }
+      ],
+      commonMistakes: ['Sagging hips', 'Not going low enough'],
+      primaryMuscles: ['chest', 'triceps'],
+      secondaryMuscles: ['shoulders', 'core'],
+      movementType: 'strength' as const
     },
     {
       id: 'fallback-3',
       name: 'Plank Hold',
-      sets: 3,
-      reps: 1,
+      description: 'Hold plank position with straight body from head to heels.',
       duration: 30,
-      rest: 60,
-      difficulty: userProfile.fitnessLevel,
+      repetitions: 1,
+      sets: 3,
+      restTime: 60,
       equipment: ['body_weight'],
-      focusAreas: ['core'],
-      instructions: 'Hold plank position with straight body from head to heels.'
+      form: 'Engage your core and keep your body in a straight line.',
+      modifications: [
+        {
+          type: 'easier' as const,
+          description: 'Knee plank',
+          instructions: 'Hold plank position on your knees instead of toes.'
+        }
+      ],
+      commonMistakes: ['Sagging hips', 'Raising hips too high'],
+      primaryMuscles: ['core'],
+      secondaryMuscles: ['shoulders', 'back'],
+      movementType: 'strength' as const
     }
   ];
 
   return {
     id: `fallback-${Date.now()}`,
-    name: `Basic ${focusArea} Workout`,
+    title: `Basic ${focusArea} Workout`,
     description: 'A simple, effective workout using bodyweight exercises.',
-    exercises,
     totalDuration: duration,
-    difficulty: userProfile.fitnessLevel,
-    focusAreas: [focusArea],
+    estimatedCalories: Math.round(duration * 8), // Rough estimate
+    difficulty: mapFitnessLevelToDifficulty(userProfile.fitnessLevel),
     equipment: ['body_weight'],
-    tags: ['fallback', 'bodyweight', focusArea],
-    confidence: 0.6, // Lower confidence for fallback
+    warmup: {
+      name: 'Warm-up',
+      duration: Math.round(duration * 0.1),
+      exercises: [
+        {
+          id: 'warmup-1',
+          name: 'Light Jogging in Place',
+          description: 'Gentle jogging to warm up your muscles',
+          duration: 60,
+          equipment: ['body_weight'],
+          form: 'Light, bouncy steps in place',
+          modifications: [],
+          commonMistakes: ['Going too fast'],
+          primaryMuscles: ['legs'],
+          secondaryMuscles: ['core'],
+          movementType: 'cardio' as const
+        }
+      ],
+      instructions: 'Start with light movement to prepare your body for exercise.',
+      tips: ['Focus on breathing', 'Start slow and gradually increase intensity']
+    },
+    mainWorkout: {
+      name: 'Main Workout',
+      duration: Math.round(duration * 0.8),
+      exercises,
+      instructions: 'Perform each exercise with proper form and controlled movements.',
+      tips: ['Take breaks as needed', 'Focus on form over speed', 'Listen to your body']
+    },
+    cooldown: {
+      name: 'Cool-down',
+      duration: Math.round(duration * 0.1),
+      exercises: [
+        {
+          id: 'cooldown-1',
+          name: 'Gentle Stretching',
+          description: 'Light stretching to cool down your muscles',
+          duration: 60,
+          equipment: ['body_weight'],
+          form: 'Hold each stretch for 15-30 seconds',
+          modifications: [],
+          commonMistakes: ['Bouncing during stretches'],
+          primaryMuscles: ['full_body'],
+          secondaryMuscles: [],
+          movementType: 'flexibility' as const
+        }
+      ],
+      instructions: 'End with gentle stretching to help your muscles recover.',
+      tips: ['Hold stretches gently', 'Don\'t force any movements', 'Focus on breathing']
+    },
+    reasoning: 'Fallback workout generated due to AI service unavailability. This workout focuses on fundamental bodyweight exercises that are safe and effective for most fitness levels.',
+    personalizedNotes: [
+      'This is a fallback workout using basic bodyweight exercises',
+      'Focus on proper form and controlled movements',
+      'Take breaks as needed and listen to your body'
+    ],
+    progressionTips: [
+      'Gradually increase repetitions or sets as you get stronger',
+      'Add more challenging variations once you master the basics',
+      'Consider adding resistance bands or light weights for progression'
+    ],
+    safetyReminders: [
+      'Stop if you experience any pain or discomfort',
+      'Stay hydrated throughout your workout',
+      'Warm up properly before starting',
+      'Cool down and stretch after your workout'
+    ],
     generatedAt: new Date(),
-    metadata: {
-      isFallback: true,
-      reason: 'AI service unavailable',
-      userProfile: {
-        fitnessLevel: userProfile.fitnessLevel,
-        goals: userProfile.goals
-      }
-    }
+    aiModel: 'fallback',
+    confidence: 0.6, // Lower confidence for fallback
+    tags: ['fallback', 'bodyweight', focusArea, 'basic']
   };
 };
 
@@ -269,10 +369,6 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
     lastError: null
   });
   
-  // Separate retry tracking state
-  const [retryCount, setRetryCount] = useState(0);
-  const [lastError, setLastError] = useState<WorkoutGenerationError | null>(null);
-  
   const [status, setStatus] = useState<WorkoutGenerationStatus>('idle');
   
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -361,8 +457,6 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
         error: null,
         generationProgress: 0
       }));
-      setRetryCount(0);
-      setLastError(null);
 
       setStatus('generating');
       updateProgress(10);
