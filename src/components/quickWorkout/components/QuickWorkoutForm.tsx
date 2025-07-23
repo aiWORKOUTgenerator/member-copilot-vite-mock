@@ -181,9 +181,21 @@ export const QuickWorkoutForm: React.FC<EnhancedQuickWorkoutFormProps> = ({
 
   const handleSubmit = () => {
     if (isFormValid) {
+      // 🔍 DEBUG: Log the form data before conversion
+      console.log('🔍 DEBUG: QuickWorkoutForm - Form data before conversion:', {
+        focusData,
+        workoutDuration: focusData.workoutDuration,
+        isFormValid
+      });
+      
       // Save final data before navigating
       if (onDataUpdate) {
-        onDataUpdate(mapToPerWorkoutOptions(focusData), 'quick');
+        const perWorkoutOptions = mapToPerWorkoutOptions(focusData);
+        console.log('🔍 DEBUG: QuickWorkoutForm - Converted to PerWorkoutOptions:', {
+          perWorkoutOptions,
+          customization_duration: perWorkoutOptions.customization_duration
+        });
+        onDataUpdate(perWorkoutOptions, 'quick');
       }
       onNavigate('review');
     }

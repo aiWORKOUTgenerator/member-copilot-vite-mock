@@ -55,10 +55,25 @@ export class WorkoutRequestFactory {
    * Create default preferences from workout focus data
    */
   private static createDefaultPreferences(workoutFocusData: PerWorkoutOptions): WorkoutPreferences {
+    // 🔍 DEBUG: Log the workout focus data
+    console.log('🔍 DEBUG: WorkoutRequestFactory - workoutFocusData:', {
+      workoutFocusData,
+      customization_duration: workoutFocusData.customization_duration,
+      durationType: typeof workoutFocusData.customization_duration,
+      isNumber: typeof workoutFocusData.customization_duration === 'number',
+      hasDuration: workoutFocusData.customization_duration?.duration
+    });
+    
+    const duration = typeof workoutFocusData.customization_duration === 'number' 
+      ? workoutFocusData.customization_duration 
+      : (workoutFocusData.customization_duration && typeof workoutFocusData.customization_duration === 'object' && 'duration' in workoutFocusData.customization_duration) 
+        ? (workoutFocusData.customization_duration as { duration: number }).duration 
+        : WORKOUT_GENERATION_CONSTANTS.DEFAULT_WORKOUT_DURATION;
+    
+    console.log('🔍 DEBUG: WorkoutRequestFactory - Extracted duration:', duration);
+    
     return {
-      duration: typeof workoutFocusData.customization_duration === 'number' 
-        ? workoutFocusData.customization_duration 
-        : workoutFocusData.customization_duration?.duration ?? WORKOUT_GENERATION_CONSTANTS.DEFAULT_WORKOUT_DURATION,
+      duration,
       focus: typeof workoutFocusData.customization_focus === 'string'
         ? workoutFocusData.customization_focus
         : workoutFocusData.customization_focus?.focus ?? WORKOUT_GENERATION_CONSTANTS.DEFAULT_FOCUS,

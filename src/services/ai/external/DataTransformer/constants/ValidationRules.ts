@@ -141,7 +141,7 @@ export const VALIDATION_RULES = {
 // Core required fields for basic functionality
 export const CORE_REQUIRED_FIELDS = ['experienceLevel', 'primaryGoal'] as const;
 
-// All required fields for complete functionality
+// All Required Fields for Complete Functionality
 export const ALL_REQUIRED_FIELDS = [
   'experienceLevel',
   'physicalActivity',
@@ -159,4 +159,109 @@ export const ALL_REQUIRED_FIELDS = [
   'weight',
   'hasCardiovascularConditions',
   'injuries'
-] as const; 
+] as const;
+
+// UserProfile validation rules
+export const USER_PROFILE_VALIDATION = {
+  fitnessLevel: { 
+    required: true,
+    validValues: ['beginner', 'novice', 'intermediate', 'advanced', 'adaptive'] as const
+  },
+  goals: { 
+    required: true, 
+    minLength: 1,
+    maxLength: 10
+  },
+  preferences: { 
+    required: true,
+    nestedValidation: {
+      workoutStyle: { required: true, minLength: 1 },
+      timePreference: { 
+        required: true,
+        validValues: ['morning', 'afternoon', 'evening', 'night'] as const
+      },
+      intensityPreference: { 
+        required: true,
+        validValues: ['low', 'moderate', 'high'] as const
+      },
+      advancedFeatures: { required: true, type: 'boolean' },
+      aiAssistanceLevel: { 
+        required: true,
+        validValues: ['minimal', 'moderate', 'high'] as const
+      }
+    }
+  },
+  basicLimitations: { 
+    required: true,
+    nestedValidation: {
+      injuries: { required: true, type: 'array' },
+      availableEquipment: { required: true, minLength: 1 },
+      availableLocations: { required: true, minLength: 1 }
+    }
+  },
+  enhancedLimitations: { 
+    required: true,
+    nestedValidation: {
+      timeConstraints: { required: true, type: 'number', min: 0 },
+      equipmentConstraints: { required: true, type: 'array' },
+      locationConstraints: { required: true, type: 'array' },
+      recoveryNeeds: { 
+        required: true,
+        nestedValidation: {
+          restDays: { required: true, type: 'number', min: 0, max: 7 },
+          sleepHours: { required: true, type: 'number', min: 4, max: 12 },
+          hydrationLevel: { 
+            required: true,
+            validValues: ['low', 'moderate', 'high'] as const
+          }
+        }
+      },
+      mobilityLimitations: { required: true, type: 'array' },
+      progressionRate: { 
+        required: true,
+        validValues: ['conservative', 'moderate', 'aggressive'] as const
+      }
+    }
+  },
+  workoutHistory: { 
+    required: true,
+    nestedValidation: {
+      estimatedCompletedWorkouts: { required: true, type: 'number', min: 0 },
+      averageDuration: { required: true, type: 'number', min: 0 },
+      preferredFocusAreas: { required: true, type: 'array' },
+      progressiveEnhancementUsage: { required: true, type: 'object' },
+      aiRecommendationAcceptance: { required: true, type: 'number', min: 0, max: 1 },
+      consistencyScore: { required: true, type: 'number', min: 0, max: 1 },
+      plateauRisk: { 
+        required: true,
+        validValues: ['low', 'moderate', 'high'] as const
+      }
+    }
+  },
+  learningProfile: { 
+    required: true,
+    nestedValidation: {
+      prefersSimplicity: { required: true, type: 'boolean' },
+      explorationTendency: { 
+        required: true,
+        validValues: ['low', 'moderate', 'high'] as const
+      },
+      feedbackPreference: { 
+        required: true,
+        validValues: ['simple', 'detailed'] as const
+      },
+      learningStyle: { 
+        required: true,
+        validValues: ['visual', 'auditory', 'kinesthetic', 'mixed'] as const
+      },
+      motivationType: { 
+        required: true,
+        validValues: ['intrinsic', 'extrinsic', 'social'] as const
+      },
+      adaptationSpeed: { 
+        required: true,
+        validValues: ['slow', 'moderate', 'fast'] as const
+      }
+    }
+  }
+} as const; 

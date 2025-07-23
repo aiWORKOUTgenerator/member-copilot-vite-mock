@@ -2,7 +2,7 @@
 // Handles context-aware prompt selection and template variable injection
 
 import { PromptTemplate } from '../../../types/external-ai.types';
-import { UserProfile } from '../../../../types';
+import { UserProfile } from '../../../../../../types/user';
 import { 
   QuickWorkoutParams, 
   DurationStrategyResult, 
@@ -134,7 +134,7 @@ export class PromptSelector {
       // Add limitations if available
       if (userProfile.basicLimitations) {
         variables.availableEquipment = userProfile.basicLimitations.availableEquipment || [];
-        variables.timeConstraints = userProfile.basicLimitations.timeConstraints || params.duration;
+        variables.timeConstraints = params.duration; // Use requested duration as time constraint
       }
     }
 

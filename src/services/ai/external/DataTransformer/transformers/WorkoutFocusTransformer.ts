@@ -72,6 +72,14 @@ export class WorkoutFocusTransformer extends DataTransformerBase<WorkoutFocusDat
           .map(key => `${key} (Level ${input.customization_soreness?.[key]?.rating || 0})`) :
         [];
 
+      // 🔍 DEBUG: Log duration extraction
+      console.log('🔍 DEBUG: WorkoutFocusTransformer - Duration extraction:', {
+        inputCustomizationDuration: input.customization_duration,
+        inputCustomizationDurationType: typeof input.customization_duration,
+        defaultDuration: DEFAULT_VALUES.workout.customization_duration,
+        finalDuration: input.customization_duration || DEFAULT_VALUES.workout.customization_duration
+      });
+
       // Use default values for missing fields
       const result: TransformedWorkoutData = {
         focus,

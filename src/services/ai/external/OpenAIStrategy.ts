@@ -49,14 +49,31 @@ export class OpenAIStrategy implements AIStrategy {
     fallbackStrategy?: AIStrategy
   ) {
     try {
+      console.log('🔍 DEBUG: OpenAIStrategy constructor called');
       this.openAIService = openAIService ?? new OpenAIService();
       
       // ✅ NEW: Initialize QuickWorkoutSetup feature
       if (this.openAIService) {
-        this.quickWorkoutFeature = new QuickWorkoutFeature({
-          openAIService: this.openAIService
-        });
-        console.log('🎯 OpenAIStrategy: QuickWorkoutSetup feature initialized');
+        console.log('🔍 DEBUG: Initializing QuickWorkoutFeature...');
+        try {
+          console.log('🔍 DEBUG: Creating QuickWorkoutFeature with dependencies...');
+          this.quickWorkoutFeature = new QuickWorkoutFeature({
+            openAIService: this.openAIService
+          });
+          console.log('✅ OpenAIStrategy: QuickWorkoutSetup feature initialized successfully');
+          console.log('🔍 DEBUG: QuickWorkoutFeature type:', this.quickWorkoutFeature?.constructor?.name);
+          console.log('🔍 DEBUG: QuickWorkoutFeature methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(this.quickWorkoutFeature)));
+        } catch (featureError) {
+          console.error('❌ OpenAIStrategy: QuickWorkoutFeature initialization failed:', featureError);
+          console.error('❌ Error details:', {
+            message: featureError instanceof Error ? featureError.message : 'Unknown error',
+            stack: featureError instanceof Error ? featureError.stack : 'No stack trace',
+            name: featureError instanceof Error ? featureError.name : 'Unknown error type'
+          });
+          this.quickWorkoutFeature = undefined;
+        }
+      } else {
+        console.log('⚠️ OpenAIStrategy: OpenAIService not available, skipping QuickWorkoutFeature initialization');
       }
     } catch (error) {
       console.warn('⚠️  Failed to create OpenAIService, using fallback strategy:', error);
@@ -64,6 +81,12 @@ export class OpenAIStrategy implements AIStrategy {
       this.quickWorkoutFeature = undefined;
     }
     this.fallbackStrategy = fallbackStrategy;
+    
+    console.log('🔍 DEBUG: OpenAIStrategy constructor completed:', {
+      hasOpenAIService: !!this.openAIService,
+      hasQuickWorkoutFeature: !!this.quickWorkoutFeature,
+      hasFallbackStrategy: !!this.fallbackStrategy
+    });
   }
 
   // Generate AI-powered recommendations
@@ -114,6 +137,26 @@ export class OpenAIStrategy implements AIStrategy {
   // ✅ ENHANCED: Generate AI-powered workout with feature-first approach
   async generateWorkout(request: WorkoutGenerationRequest): Promise<GeneratedWorkout> {
     try {
+      // 🔍 DEBUG: Comprehensive system selection debugging
+      console.log('🔍 DEBUG: OpenAIStrategy.generateWorkout() called');
+      console.log('🔍 DEBUG: Request details:', {
+        hasUserProfile: !!request.userProfile,
+        fitnessLevel: request.userProfile?.fitnessLevel,
+        hasPreferences: !!request.preferences,
+        duration: request.preferences?.duration,
+        hasConstraints: !!request.constraints,
+        workoutFocusData: !!request.workoutFocusData,
+        workoutType: request.workoutType
+      });
+
+      console.log('🔍 DEBUG: Feature availability:', {
+        hasQuickWorkoutFeature: !!this.quickWorkoutFeature,
+        quickWorkoutFeatureType: this.quickWorkoutFeature?.constructor?.name,
+        systemPreference: getQuickWorkoutSystemPreference(),
+        forceNewFeature: isNewQuickWorkoutFeatureForced(),
+        legacyDisabled: isLegacyQuickWorkoutDisabled()
+      });
+
       // Check if OpenAIService is available
       if (!this.openAIService) {
         throw new Error('OpenAI service not available. Please configure VITE_OPENAI_API_KEY for AI-powered workouts.');
@@ -130,10 +173,24 @@ export class OpenAIStrategy implements AIStrategy {
         logger.warn(`Workout request warnings: ${validation.warnings.join(', ')}`);
       }
 
-      // ✅ NEW: Try to use QuickWorkoutSetup feature if available and applicable
-      if (this.quickWorkoutFeature && this.isQuickWorkoutApplicable(request)) {
-        console.log('🎯 OpenAIStrategy: Using QuickWorkoutSetup feature for workout generation');
-        return await this.generateWorkoutUsingFeature(request);
+      // 🔍 DEBUG: QuickWorkoutSetup feature applicability check
+      if (this.quickWorkoutFeature) {
+        const applicabilityDetails = this.debugQuickWorkoutApplicability(request);
+        console.log('🔍 DEBUG: Applicability check details:', applicabilityDetails);
+        
+        const isApplicable = this.isQuickWorkoutApplicable(request);
+        console.log('🔍 DEBUG: Final applicability result:', isApplicable);
+        
+        // 🔧 TEMPORARY: Force new system while debugging
+        console.log('🎯 OpenAIStrategy: FORCED - Using QuickWorkoutSetup feature (temporary bypass)');
+        try {
+          return await this.generateWorkoutUsingFeature(request);
+        } catch (error) {
+          console.error('❌ OpenAIStrategy: QuickWorkoutSetup feature failed:', error);
+          console.log('⚠️ OpenAIStrategy: Falling back to legacy due to feature error');
+        }
+      } else {
+        console.log('❌ OpenAIStrategy: QuickWorkoutSetup feature not available');
       }
 
       // ✅ FALLBACK: Use legacy approach if feature not available or not applicable
@@ -176,29 +233,84 @@ export class OpenAIStrategy implements AIStrategy {
 
   // ✅ NEW: Convert WorkoutGenerationRequest to QuickWorkoutParams
   private convertToQuickWorkoutParams(request: WorkoutGenerationRequest): QuickWorkoutParams {
-    const preferences = request.preferences ?? {
-      duration: 30,
-      focus: 'general',
-      intensity: 'moderate' as const,
-      equipment: [],
-      location: 'home' as const
-    };
+    // 🔍 DEBUG: Log the request structure
+    console.log('🔍 DEBUG: OpenAIStrategy.convertToQuickWorkoutParams - Request structure:', {
+      hasPreferences: !!request.preferences,
+      preferencesKeys: request.preferences ? Object.keys(request.preferences) : 'undefined',
+      preferencesDuration: request.preferences?.duration,
+      hasWorkoutFocusData: !!request.workoutFocusData,
+      workoutFocusDataKeys: request.workoutFocusData ? Object.keys(request.workoutFocusData) : 'undefined',
+      workoutFocusDataDuration: request.workoutFocusData?.customization_duration,
+      workoutFocusDataDurationType: typeof request.workoutFocusData?.customization_duration
+    });
 
-    const constraints = request.constraints ?? {
-      energyLevel: 5,
-      sorenessAreas: []
-    };
+    // ✅ FIX: Extract duration from correct source with proper fallback logic
+    const extractedDuration = 
+      request.preferences?.duration ||
+      (typeof request.workoutFocusData?.customization_duration === 'number' 
+        ? request.workoutFocusData.customization_duration 
+        : request.workoutFocusData?.customization_duration?.duration) ||
+      30;
 
-    return {
-      duration: preferences.duration,
+    // ✅ FIX: Extract focus from correct source with proper fallback logic
+    const extractedFocus = 
+      request.preferences?.focus ||
+      (typeof request.workoutFocusData?.customization_focus === 'string' 
+        ? request.workoutFocusData.customization_focus 
+        : request.workoutFocusData?.customization_focus?.focus) ||
+      'general';
+
+    // ✅ FIX: Extract equipment from correct source with proper fallback logic
+    const extractedEquipment = 
+      request.preferences?.equipment ||
+      request.workoutFocusData?.customization_equipment ||
+      [];
+
+    // ✅ FIX: Extract location from correct source with proper fallback logic
+    const extractedLocation = 
+      request.preferences?.location ||
+      'home' as const;
+
+    // ✅ FIX: Extract intensity from correct source with proper fallback logic
+    const extractedIntensity = 
+      request.preferences?.intensity ||
+      'moderate' as const;
+
+    // Extract energy level and soreness from workoutFocusData if available
+    const energyLevel = request.workoutFocusData?.customization_energy ?? 5;
+    const sorenessAreas = request.workoutFocusData?.customization_soreness ? 
+      Object.keys(request.workoutFocusData.customization_soreness) : [];
+
+    // 🔍 DEBUG: Log the extracted values
+    console.log('🔍 DEBUG: OpenAIStrategy.convertToQuickWorkoutParams - Extracted values:', {
+      extractedDuration,
+      extractedFocus,
+      extractedEquipment,
+      extractedLocation,
+      extractedIntensity,
+      energyLevel,
+      sorenessAreasCount: sorenessAreas.length
+    });
+
+    // ✅ FIX: Build parameters with extracted values
+    const params = {
+      duration: extractedDuration,
       fitnessLevel: this.mapFitnessLevel(request.userProfile.fitnessLevel),
-      focus: preferences.focus,
-      energyLevel: constraints.energyLevel,
-      sorenessAreas: constraints.sorenessAreas,
-      equipment: preferences.equipment,
-      location: preferences.location,
-      intensity: preferences.intensity
+      focus: extractedFocus,
+      energyLevel,
+      sorenessAreas,
+      equipment: extractedEquipment,
+      location: extractedLocation,
+      intensity: extractedIntensity
     };
+
+    console.log('🔍 DEBUG: OpenAIStrategy.convertToQuickWorkoutParams - Final params:', {
+      duration: params.duration,
+      focus: params.focus,
+      energyLevel: params.energyLevel
+    });
+
+    return params;
   }
 
   // ✅ NEW: Map system fitness levels to QuickWorkout fitness levels
@@ -212,6 +324,35 @@ export class OpenAIStrategy implements AIStrategy {
     };
     
     return mapping[systemLevel] || 'some experience';
+  }
+
+  // 🔍 DEBUG: Debug method for QuickWorkout applicability
+  private debugQuickWorkoutApplicability(request: WorkoutGenerationRequest): any {
+    const systemPreference = getQuickWorkoutSystemPreference();
+    const duration = request.preferences?.duration ?? 30;
+    const supportedDurations = [5, 10, 15, 20, 30, 45];
+    const isSupported = supportedDurations.some(d => Math.abs(d - duration) <= 5);
+    
+    const hasRequiredData = !!(
+      request.userProfile &&
+      request.userProfile.fitnessLevel &&
+      request.preferences
+    );
+
+    return {
+      systemPreference,
+      duration,
+      supportedDurations,
+      isSupported,
+      hasRequiredData,
+      hasUserProfile: !!request.userProfile,
+      hasFitnessLevel: !!request.userProfile?.fitnessLevel,
+      hasPreferences: !!request.preferences,
+      durationDifferences: supportedDurations.map(d => ({ 
+        duration: d, 
+        difference: Math.abs(d - duration) 
+      }))
+    };
   }
 
   // ✅ ENHANCED: Check if QuickWorkoutSetup feature is applicable with feature flags

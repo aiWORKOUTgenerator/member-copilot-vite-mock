@@ -16,6 +16,16 @@ import type {
   WorkoutIntensity
 } from '../types/profile.types';
 
+import type {
+  UserProfile,
+  UserPreferences,
+  UserBasicLimitations,
+  AIEnhancedLimitations,
+  AIWorkoutHistory,
+  AILearningProfile,
+  RecoveryNeeds
+} from '../types/user.types';
+
 export const DEFAULT_VALUES = {
   profile: {
     // Experience & Activity
@@ -52,6 +62,50 @@ export const DEFAULT_VALUES = {
     customization_duration: 30,
     customization_energy: 7,
     customization_equipment: ['Body Weight']
+  },
+
+  userProfile: {
+    preferences: {
+      workoutStyle: ['strength_training'],
+      timePreference: 'morning' as const,
+      intensityPreference: 'moderate' as const,
+      advancedFeatures: false,
+      aiAssistanceLevel: 'moderate' as const
+    },
+    basicLimitations: {
+      injuries: [],
+      availableEquipment: ['body_weight'],
+      availableLocations: ['home']
+    },
+    enhancedLimitations: {
+      timeConstraints: 30,
+      equipmentConstraints: ['body_weight'],
+      locationConstraints: ['home'],
+      recoveryNeeds: {
+        restDays: 2,
+        sleepHours: 7,
+        hydrationLevel: 'moderate' as const
+      },
+      mobilityLimitations: [],
+      progressionRate: 'moderate' as const
+    },
+    workoutHistory: {
+      estimatedCompletedWorkouts: 0,
+      averageDuration: 30,
+      preferredFocusAreas: ['general fitness'],
+      progressiveEnhancementUsage: {},
+      aiRecommendationAcceptance: 0.7,
+      consistencyScore: 0.5,
+      plateauRisk: 'moderate' as const
+    },
+    learningProfile: {
+      prefersSimplicity: true,
+      explorationTendency: 'moderate' as const,
+      feedbackPreference: 'simple' as const,
+      learningStyle: 'mixed' as const,
+      motivationType: 'intrinsic' as const,
+      adaptationSpeed: 'moderate' as const
+    }
   }
 } as const;
 
@@ -107,5 +161,136 @@ export const DERIVED_VALUE_MAPS = {
 
     // Default to moderate
     return 'moderate';
+  },
+
+  // Map experience level string to FitnessLevel type
+  mapExperienceToFitness: (experienceLevel?: string): FitnessLevel => {
+    if (!experienceLevel) return 'intermediate';
+    
+    const levelMap: Record<string, FitnessLevel> = {
+      'new to exercise': 'beginner',
+      'some experience': 'intermediate', 
+      'advanced athlete': 'advanced'
+    };
+    
+    return levelMap[experienceLevel.toLowerCase()] || 'intermediate';
+  },
+
+  // Map intensity level to WorkoutIntensity type
+  mapIntensityLevel: (intensityLevel?: string): WorkoutIntensity => {
+    if (!intensityLevel) return 'moderate';
+    
+    const intensityMap: Record<string, WorkoutIntensity> = {
+      'low': 'low',
+      'moderate': 'moderate',
+      'high': 'high'
+    };
+    
+    return intensityMap[intensityLevel.toLowerCase()] || 'moderate';
+  },
+
+  // Parse age range string to number (use middle of range)
+  parseAgeRange: (ageRange: string): number => {
+    const ageMap: Record<string, number> = {
+      '18-25': 22,
+      '26-35': 31,
+      '36-45': 41,
+      '46-55': 51,
+      '56-65': 61,
+      '65+': 70
+    };
+    
+    return ageMap[ageRange] || 30; // Default to 30 if unknown
+  },
+
+  // Calculate recovery needs based on fitness level
+  calculateRecoveryNeeds: (fitnessLevel: FitnessLevel): RecoveryNeeds => {
+    const recoveryMap = {
+      'beginner': { restDays: 3, sleepHours: 8, hydrationLevel: 'moderate' as const },
+      'novice': { restDays: 2, sleepHours: 8, hydrationLevel: 'moderate' as const },
+      'intermediate': { restDays: 2, sleepHours: 7, hydrationLevel: 'high' as const },
+      'advanced': { restDays: 1, sleepHours: 7, hydrationLevel: 'high' as const },
+      'adaptive': { restDays: 1, sleepHours: 7, hydrationLevel: 'high' as const }
+    };
+    
+    return recoveryMap[fitnessLevel] || recoveryMap.intermediate;
+  },
+
+  // Determine progression rate based on fitness level
+  determineProgressionRate: (fitnessLevel: FitnessLevel): 'conservative' | 'moderate' | 'aggressive' => {
+    const progressionMap = {
+      'beginner': 'conservative' as const,
+      'novice': 'conservative' as const,
+      'intermediate': 'moderate' as const,
+      'advanced': 'aggressive' as const,
+      'adaptive': 'moderate' as const
+    };
+    
+    return progressionMap[fitnessLevel] || 'moderate';
+  },
+
+  // Estimate completed workouts based on fitness level
+  estimateCompletedWorkouts: (fitnessLevel: FitnessLevel): number => {
+    const workoutMap = {
+      'beginner': 0,
+      'novice': 5,
+      'intermediate': 20,
+      'advanced': 100,
+      'adaptive': 50
+    };
+    
+    return workoutMap[fitnessLevel] || 0;
+  },
+
+  // Calculate consistency score based on fitness level
+  calculateConsistencyScore: (fitnessLevel: FitnessLevel): number => {
+    const consistencyMap = {
+      'beginner': 0.3,
+      'novice': 0.5,
+      'intermediate': 0.7,
+      'advanced': 0.9,
+      'adaptive': 0.8
+    };
+    
+    return consistencyMap[fitnessLevel] || 0.5;
+  },
+
+  // Assess plateau risk based on fitness level
+  assessPlateauRisk: (fitnessLevel: FitnessLevel): 'low' | 'moderate' | 'high' => {
+    const riskMap = {
+      'beginner': 'low' as const,
+      'novice': 'low' as const,
+      'intermediate': 'moderate' as const,
+      'advanced': 'high' as const,
+      'adaptive': 'moderate' as const
+    };
+    
+    return riskMap[fitnessLevel] || 'moderate';
+  },
+
+  // Determine exploration tendency based on fitness level
+  determineExplorationTendency: (fitnessLevel: FitnessLevel): 'low' | 'moderate' | 'high' => {
+    const tendencyMap = {
+      'beginner': 'low' as const,
+      'novice': 'low' as const,
+      'intermediate': 'moderate' as const,
+      'advanced': 'high' as const,
+      'adaptive': 'moderate' as const
+    };
+    
+    return tendencyMap[fitnessLevel] || 'moderate';
+  },
+
+  // Determine adaptation speed based on fitness level
+  determineAdaptationSpeed: (fitnessLevel: FitnessLevel): 'slow' | 'moderate' | 'fast' => {
+    const speedMap = {
+      'beginner': 'slow' as const,
+      'novice': 'slow' as const,
+      'intermediate': 'moderate' as const,
+      'advanced': 'fast' as const,
+      'adaptive': 'moderate' as const
+    };
+    
+    return speedMap[fitnessLevel] || 'moderate';
   }
 } as const; 
