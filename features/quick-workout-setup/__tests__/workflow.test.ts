@@ -3,12 +3,12 @@ import { QuickWorkoutFeature } from '../QuickWorkoutFeature';
 import { DurationStrategy } from '../workflow/DurationStrategy';
 import { PromptSelector } from '../workflow/PromptSelector';
 import { ResponseProcessor } from '../workflow/ResponseProcessor';
-import { OpenAIService } from '../../OpenAIService';
+import { OpenAIService } from '../../../src/services/ai/external/OpenAIService';
 import { QuickWorkoutParams } from '../types/quick-workout.types';
-import { UserProfile } from '../../../../types';
+import { UserProfile } from '../../../src/types';
 
 // Mock OpenAI Service for workflow testing
-jest.mock('../../OpenAIService');
+jest.mock('../../../src/services/ai/external/OpenAIService');
 
 describe('QuickWorkoutSetup Workflow E2E', () => {
   let mockOpenAIService: jest.Mocked<OpenAIService>;
@@ -72,13 +72,50 @@ describe('QuickWorkoutSetup Workflow E2E', () => {
       };
 
       const userProfile: UserProfile = {
-        fitnessLevel: 'new to exercise',
+        fitnessLevel: 'beginner',
         goals: ['cardiovascular_health'],
+        preferences: {
+          workoutStyle: ['cardio'],
+          timePreference: 'morning',
+          intensityPreference: 'low',
+          advancedFeatures: false,
+          aiAssistanceLevel: 'comprehensive'
+        },
         basicLimitations: {
+          injuries: [],
           availableEquipment: [],
-          timeConstraints: 15
+          availableLocations: ['home']
+        },
+        enhancedLimitations: {
+          timeConstraints: 15,
+          equipmentConstraints: [],
+          locationConstraints: ['home'],
+          recoveryNeeds: {
+            restDays: 3,
+            sleepHours: 8,
+            hydrationLevel: 'high'
+          },
+          mobilityLimitations: [],
+          progressionRate: 'conservative'
+        },
+        workoutHistory: {
+          estimatedCompletedWorkouts: 0,
+          averageDuration: 0,
+          preferredFocusAreas: [],
+          progressiveEnhancementUsage: {},
+          aiRecommendationAcceptance: 0.5,
+          consistencyScore: 0.3,
+          plateauRisk: 'low'
+        },
+        learningProfile: {
+          prefersSimplicity: true,
+          explorationTendency: 'low',
+          feedbackPreference: 'simple',
+          learningStyle: 'visual',
+          motivationType: 'intrinsic',
+          adaptationSpeed: 'slow'
         }
-      } as UserProfile;
+      };
 
       const result = await feature.generateWorkout(params, userProfile);
 
@@ -147,13 +184,50 @@ describe('QuickWorkoutSetup Workflow E2E', () => {
       };
 
       const userProfile: UserProfile = {
-        fitnessLevel: 'advanced athlete',
+        fitnessLevel: 'advanced',
         goals: ['muscle_building', 'strength'],
+        preferences: {
+          workoutStyle: ['strength_training', 'hiit'],
+          timePreference: 'morning',
+          intensityPreference: 'high',
+          advancedFeatures: true,
+          aiAssistanceLevel: 'minimal'
+        },
         basicLimitations: {
+          injuries: [],
           availableEquipment: ['Dumbbells', 'Kettlebell'],
-          timeConstraints: 45
+          availableLocations: ['home']
+        },
+        enhancedLimitations: {
+          timeConstraints: 45,
+          equipmentConstraints: ['Dumbbells', 'Kettlebell'],
+          locationConstraints: ['home'],
+          recoveryNeeds: {
+            restDays: 1,
+            sleepHours: 6,
+            hydrationLevel: 'high'
+          },
+          mobilityLimitations: [],
+          progressionRate: 'aggressive'
+        },
+        workoutHistory: {
+          estimatedCompletedWorkouts: 50,
+          averageDuration: 45,
+          preferredFocusAreas: ['upper_body', 'lower_body', 'core'],
+          progressiveEnhancementUsage: {},
+          aiRecommendationAcceptance: 0.3,
+          consistencyScore: 0.9,
+          plateauRisk: 'moderate'
+        },
+        learningProfile: {
+          prefersSimplicity: false,
+          explorationTendency: 'high',
+          feedbackPreference: 'detailed',
+          learningStyle: 'kinesthetic',
+          motivationType: 'achievement',
+          adaptationSpeed: 'fast'
         }
-      } as UserProfile;
+      };
 
       const result = await feature.generateWorkout(params, userProfile);
 
@@ -220,13 +294,50 @@ describe('QuickWorkoutSetup Workflow E2E', () => {
       };
 
       const userProfile: UserProfile = {
-        fitnessLevel: 'some experience',
+        fitnessLevel: 'intermediate',
         goals: ['flexibility'],
+        preferences: {
+          workoutStyle: ['yoga', 'pilates'],
+          timePreference: 'evening',
+          intensityPreference: 'low',
+          advancedFeatures: false,
+          aiAssistanceLevel: 'moderate'
+        },
         basicLimitations: {
+          injuries: [],
           availableEquipment: [],
-          timeConstraints: 30
+          availableLocations: ['home']
+        },
+        enhancedLimitations: {
+          timeConstraints: 30,
+          equipmentConstraints: [],
+          locationConstraints: ['home'],
+          recoveryNeeds: {
+            restDays: 2,
+            sleepHours: 7,
+            hydrationLevel: 'moderate'
+          },
+          mobilityLimitations: ['legs', 'back'],
+          progressionRate: 'conservative'
+        },
+        workoutHistory: {
+          estimatedCompletedWorkouts: 25,
+          averageDuration: 30,
+          preferredFocusAreas: ['flexibility', 'mobility'],
+          progressiveEnhancementUsage: {},
+          aiRecommendationAcceptance: 0.6,
+          consistencyScore: 0.7,
+          plateauRisk: 'low'
+        },
+        learningProfile: {
+          prefersSimplicity: true,
+          explorationTendency: 'moderate',
+          feedbackPreference: 'simple',
+          learningStyle: 'kinesthetic',
+          motivationType: 'intrinsic',
+          adaptationSpeed: 'moderate'
         }
-      } as UserProfile;
+      };
 
       const result = await feature.generateWorkout(params, userProfile);
 
@@ -265,13 +376,50 @@ describe('QuickWorkoutSetup Workflow E2E', () => {
       };
 
       const userProfile: UserProfile = {
-        fitnessLevel: 'some experience',
+        fitnessLevel: 'intermediate',
         goals: ['general fitness'],
+        preferences: {
+          workoutStyle: ['cardio', 'bodyweight'],
+          timePreference: 'morning',
+          intensityPreference: 'moderate',
+          advancedFeatures: false,
+          aiAssistanceLevel: 'moderate'
+        },
         basicLimitations: {
+          injuries: [],
           availableEquipment: [],
-          timeConstraints: 22
+          availableLocations: ['home']
+        },
+        enhancedLimitations: {
+          timeConstraints: 22,
+          equipmentConstraints: [],
+          locationConstraints: ['home'],
+          recoveryNeeds: {
+            restDays: 2,
+            sleepHours: 7,
+            hydrationLevel: 'moderate'
+          },
+          mobilityLimitations: [],
+          progressionRate: 'moderate'
+        },
+        workoutHistory: {
+          estimatedCompletedWorkouts: 20,
+          averageDuration: 25,
+          preferredFocusAreas: ['full_body'],
+          progressiveEnhancementUsage: {},
+          aiRecommendationAcceptance: 0.6,
+          consistencyScore: 0.7,
+          plateauRisk: 'low'
+        },
+        learningProfile: {
+          prefersSimplicity: true,
+          explorationTendency: 'moderate',
+          feedbackPreference: 'simple',
+          learningStyle: 'mixed',
+          motivationType: 'achievement',
+          adaptationSpeed: 'moderate'
         }
-      } as UserProfile;
+      };
 
       const result = await feature.generateWorkout(params, userProfile);
 
@@ -317,13 +465,50 @@ describe('QuickWorkoutSetup Workflow E2E', () => {
       };
 
       const userProfile: UserProfile = {
-        fitnessLevel: 'some experience',
+        fitnessLevel: 'intermediate',
         goals: ['general fitness'],
+        preferences: {
+          workoutStyle: ['strength_training', 'cardio'],
+          timePreference: 'morning',
+          intensityPreference: 'moderate',
+          advancedFeatures: false,
+          aiAssistanceLevel: 'moderate'
+        },
         basicLimitations: {
+          injuries: [],
           availableEquipment: ['Dumbbells'],
-          timeConstraints: 30
+          availableLocations: ['home']
+        },
+        enhancedLimitations: {
+          timeConstraints: 30,
+          equipmentConstraints: ['Dumbbells'],
+          locationConstraints: ['home'],
+          recoveryNeeds: {
+            restDays: 2,
+            sleepHours: 7,
+            hydrationLevel: 'moderate'
+          },
+          mobilityLimitations: [],
+          progressionRate: 'moderate'
+        },
+        workoutHistory: {
+          estimatedCompletedWorkouts: 30,
+          averageDuration: 30,
+          preferredFocusAreas: ['full_body'],
+          progressiveEnhancementUsage: {},
+          aiRecommendationAcceptance: 0.6,
+          consistencyScore: 0.8,
+          plateauRisk: 'low'
+        },
+        learningProfile: {
+          prefersSimplicity: true,
+          explorationTendency: 'moderate',
+          feedbackPreference: 'simple',
+          learningStyle: 'mixed',
+          motivationType: 'achievement',
+          adaptationSpeed: 'moderate'
         }
-      } as UserProfile;
+      };
 
       const result = await feature.generateWorkout(params, userProfile);
 
@@ -366,9 +551,50 @@ describe('QuickWorkoutSetup Workflow E2E', () => {
       };
 
       const userProfile: UserProfile = {
-        fitnessLevel: 'some experience',
-        goals: ['general fitness']
-      } as UserProfile;
+        fitnessLevel: 'intermediate',
+        goals: ['general fitness'],
+        preferences: {
+          workoutStyle: ['cardio'],
+          timePreference: 'morning',
+          intensityPreference: 'moderate',
+          advancedFeatures: false,
+          aiAssistanceLevel: 'moderate'
+        },
+        basicLimitations: {
+          injuries: [],
+          availableEquipment: [],
+          availableLocations: ['home']
+        },
+        enhancedLimitations: {
+          timeConstraints: 30,
+          equipmentConstraints: [],
+          locationConstraints: ['home'],
+          recoveryNeeds: {
+            restDays: 2,
+            sleepHours: 7,
+            hydrationLevel: 'moderate'
+          },
+          mobilityLimitations: [],
+          progressionRate: 'moderate'
+        },
+        workoutHistory: {
+          estimatedCompletedWorkouts: 20,
+          averageDuration: 30,
+          preferredFocusAreas: ['full_body'],
+          progressiveEnhancementUsage: {},
+          aiRecommendationAcceptance: 0.5,
+          consistencyScore: 0.6,
+          plateauRisk: 'low'
+        },
+        learningProfile: {
+          prefersSimplicity: true,
+          explorationTendency: 'moderate',
+          feedbackPreference: 'simple',
+          learningStyle: 'mixed',
+          motivationType: 'achievement',
+          adaptationSpeed: 'moderate'
+        }
+      };
 
       await expect(
         feature.generateWorkout(params, userProfile)

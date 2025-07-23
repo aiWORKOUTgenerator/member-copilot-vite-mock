@@ -31,7 +31,6 @@ import {
   createBasicUserAnalysis
 } from './helpers/AIAnalysisHelpers';
 import { enhanceGeneratedWorkout } from './helpers/WorkoutEnhancementHelpers';
-import { QUICK_WORKOUT_PROMPT_TEMPLATE } from './prompts/quick-workout-generation.prompts';
 
 // ✅ NEW: Import QuickWorkoutSetup feature
 import { QuickWorkoutFeature, QuickWorkoutParams } from './features/quick-workout-setup/index';
@@ -137,26 +136,8 @@ export class OpenAIStrategy implements AIStrategy {
   // ✅ ENHANCED: Generate AI-powered workout with feature-first approach
   async generateWorkout(request: WorkoutGenerationRequest): Promise<GeneratedWorkout> {
     try {
-      // 🔍 DEBUG: Comprehensive system selection debugging
-      console.log('🔍 DEBUG: OpenAIStrategy.generateWorkout() called');
-      console.log('🔍 DEBUG: Request details:', {
-        hasUserProfile: !!request.userProfile,
-        fitnessLevel: request.userProfile?.fitnessLevel,
-        hasPreferences: !!request.preferences,
-        duration: request.preferences?.duration,
-        hasConstraints: !!request.constraints,
-        workoutFocusData: !!request.workoutFocusData,
-        workoutType: request.workoutType
-      });
-
-      console.log('🔍 DEBUG: Feature availability:', {
-        hasQuickWorkoutFeature: !!this.quickWorkoutFeature,
-        quickWorkoutFeatureType: this.quickWorkoutFeature?.constructor?.name,
-        systemPreference: getQuickWorkoutSystemPreference(),
-        forceNewFeature: isNewQuickWorkoutFeatureForced(),
-        legacyDisabled: isLegacyQuickWorkoutDisabled()
-      });
-
+      console.log('🎯 OpenAIStrategy: Using QuickWorkoutSetup feature for workout generation');
+      
       // Check if OpenAIService is available
       if (!this.openAIService) {
         throw new Error('OpenAI service not available. Please configure VITE_OPENAI_API_KEY for AI-powered workouts.');
@@ -173,29 +154,17 @@ export class OpenAIStrategy implements AIStrategy {
         logger.warn(`Workout request warnings: ${validation.warnings.join(', ')}`);
       }
 
-      // 🔍 DEBUG: QuickWorkoutSetup feature applicability check
-      if (this.quickWorkoutFeature) {
-        const applicabilityDetails = this.debugQuickWorkoutApplicability(request);
-        console.log('🔍 DEBUG: Applicability check details:', applicabilityDetails);
-        
-        const isApplicable = this.isQuickWorkoutApplicable(request);
-        console.log('🔍 DEBUG: Final applicability result:', isApplicable);
-        
-        // 🔧 TEMPORARY: Force new system while debugging
-        console.log('🎯 OpenAIStrategy: FORCED - Using QuickWorkoutSetup feature (temporary bypass)');
-        try {
-          return await this.generateWorkoutUsingFeature(request);
-        } catch (error) {
-          console.error('❌ OpenAIStrategy: QuickWorkoutSetup feature failed:', error);
-          console.log('⚠️ OpenAIStrategy: Falling back to legacy due to feature error');
-        }
-      } else {
-        console.log('❌ OpenAIStrategy: QuickWorkoutSetup feature not available');
+      // ✅ SIMPLIFIED: Always use QuickWorkoutSetup feature (no fallback)
+      if (!this.quickWorkoutFeature) {
+        throw new Error('QuickWorkoutSetup feature is required but not available');
       }
 
-      // ✅ FALLBACK: Use legacy approach if feature not available or not applicable
-      console.log('🔄 OpenAIStrategy: Using legacy workout generation approach');
-      return await this.generateWorkoutLegacy(request);
+      if (!this.isQuickWorkoutApplicable(request)) {
+        throw new Error('Request not suitable for QuickWorkoutSetup feature');
+      }
+
+      console.log('🎯 OpenAIStrategy: Using QuickWorkoutSetup feature for workout generation');
+      return await this.generateWorkoutUsingFeature(request);
 
     } catch (error) {
       // Enhanced error logging with actionable information
@@ -393,25 +362,7 @@ export class OpenAIStrategy implements AIStrategy {
     return applicable;
   }
 
-  // ✅ ENHANCED: Legacy workout generation approach with feature flag checks
-  private async generateWorkoutLegacy(request: WorkoutGenerationRequest): Promise<GeneratedWorkout> {
-    // Check if legacy system is disabled
-    if (isLegacyQuickWorkoutDisabled()) {
-      throw new Error('Legacy QuickWorkoutSetup system is disabled. Please use the new feature-first system.');
-    }
-    
-    // Validate request and configuration
-    this.validateWorkoutRequest(request);
-    
-    // Prepare variables using helper
-    const variables = WorkoutVariableBuilder.buildWorkoutVariables(request);
-    
-    // Execute workout generation
-    const workout = await this.executeWorkoutGeneration(request, variables);
-    
-    // Enhance and validate the generated workout
-    return this.enhanceGeneratedWorkout(workout, request);
-  }
+
 
   // Enhance existing insights with AI
   async enhanceInsights(insights: AIInsight[], context: GlobalAIContext): Promise<AIInsight[]> {
@@ -607,42 +558,7 @@ export class OpenAIStrategy implements AIStrategy {
   }
 
   // Execute workout generation with OpenAI
-  private async executeWorkoutGeneration(
-    request: WorkoutGenerationRequest, 
-    variables: Record<string, string | number | string[] | boolean>
-  ): Promise<GeneratedWorkout> {
-    // Check if OpenAIService is available
-    if (!this.openAIService) {
-      throw new Error('OpenAI service not available for workout generation');
-    }
 
-    // Ensure request has preferences, use defaults if missing
-    const preferences = request.preferences ?? {
-      duration: 30,
-      focus: 'general',
-      intensity: 'moderate' as const,
-      equipment: [],
-      location: 'home' as const
-    };
-
-    // ALWAYS use simplified quick workout prompt for consistency
-    const prompt = QUICK_WORKOUT_PROMPT_TEMPLATE;
-
-    // Generate workout using OpenAI
-    const result = await this.openAIService.generateFromTemplate(
-      prompt,
-      variables,
-      {
-        cacheKey: `workout_${request.userProfile.fitnessLevel}_${JSON.stringify(variables)}`,
-        timeout: OPENAI_STRATEGY_CONSTANTS.WORKOUT_GENERATION_TIMEOUT
-      }
-    );
-    
-    // ✅ FIXED: Normalize the workout to fix duration calculation issues
-    const normalizedWorkout = this.normalizeWorkoutStructure(result as any);
-    
-    return normalizedWorkout;
-  }
 
   // Enhance and validate generated workout
   private enhanceGeneratedWorkout(

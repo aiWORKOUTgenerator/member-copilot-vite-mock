@@ -42,7 +42,6 @@ import { UserProfile, PerWorkoutOptions, AIAssistanceLevel } from '../types';
 import { WorkoutGenerationRequest } from '../types/workout-generation.types';
 import { featureFlagService, useFeatureFlags, FeatureFlag, ABTestResults, AnalyticsEvent } from '../services/ai/featureFlags/FeatureFlagService';
 import { openAIStrategy } from '../services/ai/external/OpenAIStrategy';
-import { openAIWorkoutGenerator } from '../services/ai/external/OpenAIWorkoutGenerator';
 import { openAIConfig, isFeatureEnabled, checkEnvironmentConfiguration } from '../services/ai/external/config/openai.config';
 
 // Enhanced AI Context with Feature Flag Support

@@ -1,11 +1,11 @@
 // QuickWorkoutSetup Feature - Integration Tests
-import { QuickWorkoutFeature } from '../../QuickWorkoutFeature';
-import { OpenAIService } from '../../../OpenAIService';
-import { QuickWorkoutParams } from '../../types/quick-workout.types';
-import { UserProfile } from '../../../../../types';
+import { QuickWorkoutFeature } from '../../../../src/services/ai/external/features/quick-workout-setup/QuickWorkoutFeature';
+import { OpenAIService } from '../../../../src/services/ai/external/OpenAIService';
+import { QuickWorkoutParams } from '../../../../src/services/ai/external/features/quick-workout-setup/types/quick-workout.types';
+import { UserProfile } from '../../../../src/types';
 
 // Mock OpenAI Service
-jest.mock('../../../OpenAIService');
+jest.mock('../../../../src/services/ai/external/OpenAIService');
 
 describe('QuickWorkoutFeature Integration', () => {
   let feature: QuickWorkoutFeature;
@@ -60,15 +60,52 @@ describe('QuickWorkoutFeature Integration', () => {
       openAIService: mockOpenAIService
     });
 
-    mockUserProfile = {
-      fitnessLevel: 'some experience',
-      goals: ['weight_loss', 'cardiovascular_health'],
-      basicLimitations: {
-        availableEquipment: ['Dumbbells'],
-        timeConstraints: 30
-      }
-    } as UserProfile;
-  });
+      mockUserProfile = {
+        fitnessLevel: 'intermediate',
+        goals: ['weight_loss', 'cardiovascular_health'],
+        preferences: {
+          workoutStyle: ['strength_training', 'cardio'],
+          timePreference: 'morning',
+          intensityPreference: 'moderate',
+          advancedFeatures: false,
+          aiAssistanceLevel: 'moderate'
+        },
+        basicLimitations: {
+          injuries: [],
+          availableEquipment: ['Dumbbells'],
+          availableLocations: ['home']
+        },
+        enhancedLimitations: {
+          timeConstraints: 30,
+          equipmentConstraints: ['Dumbbells'],
+          locationConstraints: ['home'],
+          recoveryNeeds: {
+            restDays: 2,
+            sleepHours: 7,
+            hydrationLevel: 'moderate'
+          },
+          mobilityLimitations: [],
+          progressionRate: 'moderate'
+        },
+        workoutHistory: {
+          estimatedCompletedWorkouts: 15,
+          averageDuration: 30,
+          preferredFocusAreas: ['upper_body', 'core'],
+          progressiveEnhancementUsage: {},
+          aiRecommendationAcceptance: 0.7,
+          consistencyScore: 0.8,
+          plateauRisk: 'low'
+        },
+        learningProfile: {
+          prefersSimplicity: false,
+          explorationTendency: 'moderate',
+          feedbackPreference: 'detailed',
+          learningStyle: 'mixed',
+          motivationType: 'achievement',
+          adaptationSpeed: 'moderate'
+        }
+      };
+    });
 
   describe('generateWorkout', () => {
     it('should complete full workflow successfully', async () => {

@@ -17,7 +17,6 @@ import {
   StreamOptions
 } from './helpers';
 import { logger } from '../../../utils/logger';
-import { WorkoutPromptBuilder } from './prompts/WorkoutPromptBuilder';
 import { WorkoutGenerationRequest } from '../../../types/workout-generation.types';
 
 export class OpenAIService {
@@ -26,7 +25,6 @@ export class OpenAIService {
   private cacheManager: OpenAICacheManager;
   private metricsTracker: OpenAIMetricsTracker;
   private errorHandler: OpenAIErrorHandler;
-  private promptBuilder: WorkoutPromptBuilder;
   private requestCount = 0;
   private lastRequestTime = 0;
 
@@ -38,7 +36,6 @@ export class OpenAIService {
     this.cacheManager = new OpenAICacheManager();
     this.metricsTracker = new OpenAIMetricsTracker();
     this.errorHandler = new OpenAIErrorHandler();
-    this.promptBuilder = new WorkoutPromptBuilder(true); // Enable debug mode
   }
 
   // Main method to send requests to OpenAI
@@ -170,16 +167,8 @@ export class OpenAIService {
   // Generate workout using the new prompt builder
   async generateWorkout(request: WorkoutGenerationRequest): Promise<unknown> {
     try {
-      // Build prompt using the new WorkoutPromptBuilder
-      const { template, variables } = this.promptBuilder.buildWorkoutPrompt(request);
-
-      // Validate variables
-      this.promptBuilder.validatePromptVariables(variables);
-
-      // Generate response using the template
-      return await this.generateFromTemplate(template, variables, {
-        cacheKey: this.cacheManager.generateCacheKey('workout', variables)
-      });
+      // This method is no longer used - workout generation is handled by QuickWorkoutFeature
+      throw new Error('Workout generation is now handled by QuickWorkoutFeature. Use generateFromTemplate() for custom prompts.');
 
     } catch (error: any) {
       logger.error('Workout generation failed:', error);
