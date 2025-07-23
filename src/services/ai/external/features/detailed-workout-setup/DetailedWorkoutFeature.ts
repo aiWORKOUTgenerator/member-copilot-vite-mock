@@ -1,6 +1,7 @@
 import { DetailedWorkoutParams, DetailedWorkoutResult, DetailedWorkoutDependencies } from './types/detailed-workout.types';
 import { DetailedWorkoutStrategy } from './workflow/DetailedWorkoutStrategy';
-import { LegacyPromptBridge } from './prompts/legacy-bridge';
+import { selectDetailedWorkoutPrompt } from './prompts/detailed-workout-generation.prompts';
+import { DURATION_CONFIGS, SupportedDuration } from './prompts/duration-configs';
 
 export class DetailedWorkoutFeature {
   private strategy: DetailedWorkoutStrategy;
@@ -18,8 +19,8 @@ export class DetailedWorkoutFeature {
       // Get strategy for this workout
       const strategyResult = this.strategy.selectStrategy(params);
 
-      // Get prompt from legacy system
-      const promptTemplate = LegacyPromptBridge.getPromptTemplate(params);
+      // Get prompt template based on duration
+      const promptTemplate = this.selectPromptTemplate(params);
 
       // Generate workout using OpenAI
       const response = await this.openAIService.generateFromTemplate(promptTemplate, {
@@ -56,6 +57,22 @@ export class DetailedWorkoutFeature {
       this.logger.error('Failed to generate detailed workout:', error);
       throw error;
     }
+  }
+
+  private selectPromptTemplate(params: DetailedWorkoutParams) {
+    // First try to use duration-specific template if available
+    const duration = params.duration as SupportedDuration;
+    if (duration in DURATION_CONFIGS) {
+      return DURATION_CONFIGS[duration];
+    }
+
+    // Fall back to general template selection
+    return selectDetailedWorkoutPrompt(
+      params.fitnessLevel,
+      params.duration,
+      params.sorenessAreas,
+      params.focus
+    );
   }
 
   private calculateEstimatedCalories(params: DetailedWorkoutParams): number {

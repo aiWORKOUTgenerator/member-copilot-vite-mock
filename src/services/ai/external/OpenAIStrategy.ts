@@ -35,6 +35,8 @@ import { enhanceGeneratedWorkout } from './helpers/WorkoutEnhancementHelpers';
 // ✅ NEW: Import QuickWorkoutSetup feature
 import { QuickWorkoutFeature, QuickWorkoutParams } from './features/quick-workout-setup/index';
 import { WorkoutRequestValidator } from '../validation/core/WorkoutRequestValidator';
+import { DetailedWorkoutFeature } from './features/detailed-workout-setup/DetailedWorkoutFeature';
+import { DetailedWorkoutServiceAdapter } from './features/detailed-workout-setup/helpers/DetailedWorkoutServiceAdapter';
 
 
 export class OpenAIStrategy implements AIStrategy {
@@ -42,6 +44,7 @@ export class OpenAIStrategy implements AIStrategy {
   private fallbackStrategy?: AIStrategy;
   // ✅ NEW: QuickWorkoutSetup feature instance
   private quickWorkoutFeature?: QuickWorkoutFeature;
+  private detailedWorkoutFeature!: DetailedWorkoutFeature;
 
   constructor(
     openAIService?: OpenAIService,
@@ -74,10 +77,25 @@ export class OpenAIStrategy implements AIStrategy {
       } else {
         console.log('⚠️ OpenAIStrategy: OpenAIService not available, skipping QuickWorkoutFeature initialization');
       }
+
+      // Initialize DetailedWorkoutFeature
+      if (this.openAIService) {
+        this.detailedWorkoutFeature = new DetailedWorkoutFeature({
+          openAIService: this.openAIService,
+          logger: logger
+        });
+        console.log('✅ OpenAIStrategy: DetailedWorkoutSetup feature initialized successfully');
+      } else {
+        console.log('⚠️ OpenAIStrategy: OpenAIService not available, skipping DetailedWorkoutSetup feature initialization');
+      }
     } catch (error) {
       console.warn('⚠️  Failed to create OpenAIService, using fallback strategy:', error);
       this.openAIService = undefined;
       this.quickWorkoutFeature = undefined;
+      this.detailedWorkoutFeature = new DetailedWorkoutFeature({
+        openAIService: undefined,
+        logger: logger
+      });
     }
     this.fallbackStrategy = fallbackStrategy;
     
@@ -190,6 +208,12 @@ export class OpenAIStrategy implements AIStrategy {
       throw new Error('QuickWorkoutSetup feature not available');
     }
 
+    // Check if this should use detailed workout feature
+    if (this.shouldUseDetailedWorkout(request)) {
+      console.log('🎯 OpenAIStrategy: Using DetailedWorkoutSetup feature');
+      return await this.generateDetailedWorkout(request);
+    }
+
     // Convert WorkoutGenerationRequest to QuickWorkoutParams
     const quickWorkoutParams = this.convertToQuickWorkoutParams(request);
     
@@ -198,6 +222,36 @@ export class OpenAIStrategy implements AIStrategy {
     
     // Return the generated workout
     return result.workout;
+  }
+
+  private shouldUseDetailedWorkout(request: WorkoutGenerationRequest): boolean {
+    const duration = request.preferences?.duration ?? 30;
+    const hasComplexRequirements = request.preferences?.intensity === 'high';
+    
+    return duration > 45 || hasComplexRequirements;
+  }
+
+  private async generateDetailedWorkout(request: WorkoutGenerationRequest): Promise<GeneratedWorkout> {
+    try {
+      // Convert request to detailed workout params
+      const detailedParams = DetailedWorkoutServiceAdapter.adaptQuickWorkoutRequest(request);
+
+      // Generate workout using detailed feature
+      const result = await this.detailedWorkoutFeature.generateWorkout(detailedParams);
+
+      // Convert back to legacy format
+      return DetailedWorkoutServiceAdapter.adaptToLegacyFormat(result);
+    } catch (error) {
+      console.error('Failed to generate detailed workout:', error);
+      // Fall back to quick workout if detailed generation fails
+      console.log('Falling back to QuickWorkoutSetup feature');
+      const quickWorkoutParams = this.convertToQuickWorkoutParams(request);
+      const result = await this.quickWorkoutFeature?.generateWorkout(quickWorkoutParams, request.userProfile);
+      if (!result) {
+        throw new Error('Failed to generate workout using QuickWorkoutSetup feature');
+      }
+      return result.workout;
+    }
   }
 
   // ✅ NEW: Convert WorkoutGenerationRequest to QuickWorkoutParams
