@@ -11,7 +11,7 @@ import { AIInsight } from '../../../types/insights';
 import { OpenAIService } from './OpenAIService';
 import { 
   selectRecommendationPrompt 
-} from './prompts/recommendation.prompts';
+} from './features/recommendation-system';
 import { 
   isFeatureEnabled, 
   isLegacyQuickWorkoutDisabled, 

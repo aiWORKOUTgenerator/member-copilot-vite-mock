@@ -4,7 +4,7 @@
 export { OpenAIService } from './OpenAIService';
 export { OpenAIStrategy } from './OpenAIStrategy';
 export { OpenAIWorkoutGenerator } from './OpenAIWorkoutGenerator';
-export { OpenAIRecommendationEngine } from './OpenAIRecommendationEngine';
+// Recommendation Engine moved to /features/recommendation-system/
 
 // ===== ADVANCED WORKFLOW ORCHESTRATION =====
 // Phase 3: Advanced workflow integration capabilities
