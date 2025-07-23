@@ -1,71 +1,38 @@
-// Core types - foundation interfaces
-export * from './core';
-
-// Domain-specific types
-export * from './duration';
-export * from './equipment';
-export * from './focus';
-export * from './areas';
-export * from './exercises';
-export * from './user';
-export * from './ai';
-export * from './config';
-
-// Re-export commonly used types for convenience
-export type {
-  PerWorkoutOptions,
-  ValidationResult,
-  CustomizationComponentProps,
-  OptionDefinition,
-  RatingScaleConfig
-} from './core';
-
-// Re-export type guards and utilities
-export * from './guards';
-
-export type {
-  UserProfile,
-  FitnessLevel,
-  UserGoal
-} from './user';
-
-export type {
-  AIRecommendationContext,
-  AIRecommendation,
-  AIAnalysis
-} from './ai';
-
-export type {
-  CustomizationConfig,
-  ConfigCategory,
-  ConfigStep
-} from './config';
-
+// Core type definitions
 export type {
   DurationConfigurationData,
+  WorkoutFocusConfigurationData,
+  CategoryRatingData,
+  ValidationResult,
+  PerWorkoutOptions,
+  OptionDefinition,
+  CustomizationComponentProps
+} from './core';
+
+// Duration-specific types
+export type {
+  DurationValidationRules,
   DurationOption
 } from './duration';
 
+// Focus-specific types
 export type {
-  EquipmentSelectionData,
-  EquipmentLocation,
-  EquipmentContext
-} from './equipment';
-
-export type {
-  WorkoutFocusConfigurationData,
-  WorkoutFocus,
-  FocusCategory
+  FocusOption,
+  FocusCategory,
+  FocusValidationRules
 } from './focus';
 
+// Workout generation types
 export type {
-  HierarchicalSelectionData,
-  FocusArea,
-  AnatomicalGroup
-} from './areas';
+  WorkoutPhase,
+  Exercise,
+  WorkoutGenerationRequest,
+  WorkoutPreferences,
+  WorkoutConstraints,
+  EnvironmentalFactors
+} from './workout-generation.types';
 
+// User types
 export type {
-  IncludeExercisesData,
-  ExcludeExercisesData,
-  ExerciseDefinition
-} from './exercises'; 
+  UserProfile
+} from './user'; 

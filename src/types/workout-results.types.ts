@@ -2,7 +2,9 @@
 import { GeneratedWorkout } from '../services/ai/external/types/external-ai.types';
 import { ProfileData } from '../components/Profile/types/profile.types';
 import { LiabilityWaiverData } from '../components/LiabilityWaiver/types/liability-waiver.types';
-import { PerWorkoutOptions, WorkoutType } from './enhanced-workout-types';
+import { PerWorkoutOptions } from './core';
+// Define WorkoutType locally since it's used throughout the app
+type WorkoutType = 'quick' | 'detailed';
 import { UserProfile } from './user';
 
 // Base interface for common properties

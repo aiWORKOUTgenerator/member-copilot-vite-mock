@@ -1,6 +1,6 @@
 import React from 'react';
 import { Sparkles, Target, Clock, Battery, AlertTriangle, Activity, Dumbbell } from 'lucide-react';
-import { PerWorkoutOptions } from '../../../types/enhanced-workout-types';
+import { PerWorkoutOptions } from '../../../types/core';
 import { ProfileData } from '../../Profile/types/profile.types';
 import { WORKOUT_FOCUS_MUSCLE_GROUPS } from '../../../types/workout-focus.types';
 import { WORKOUT_EQUIPMENT_OPTIONS, filterAvailableEquipment } from '../../../utils/equipmentRecommendations';

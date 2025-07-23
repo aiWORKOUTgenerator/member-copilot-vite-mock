@@ -1,18 +1,17 @@
 // Data Transformation Utilities for PerWorkoutOptions
-import { 
-  PerWorkoutOptions, 
-  CategoryRatingData, 
-  DurationConfigurationData, 
-  WorkoutFocusConfigurationData, 
-  EquipmentSelectionData,
-  HierarchicalSelectionData
-} from '../types/enhanced-workout-types';
+import {
+  PerWorkoutOptions,
+  CategoryRatingData,
+  DurationConfigurationData,
+  WorkoutFocusConfigurationData,
+  OptionDefinition
+} from '../types/core';
 import { ProfileData } from '../components/Profile/types/profile.types';
 import { UserProfile, FitnessLevel } from '../types/user';
-import { 
-  isValidProfileData, 
-  isValidUserProfile, 
-  validateProfileConversion 
+import {
+  isValidProfileData,
+  isValidUserProfile,
+  validateProfileConversion
 } from '../types/guards';
 
 /**
@@ -26,18 +25,18 @@ export const dataTransformers = {
    */
   extractSorenessAreas: (data: string[] | CategoryRatingData | undefined): string[] => {
     if (!data) return [];
-    
+
     if (Array.isArray(data)) {
       return data;
     }
-    
+
     // Handle CategoryRatingData format
     if (typeof data === 'object' && data !== null) {
       return Object.entries(data)
         .filter(([_, config]) => config && typeof config === 'object' && config.selected === true)
         .map(([area]) => area);
     }
-    
+
     return [];
   },
 
@@ -46,16 +45,16 @@ export const dataTransformers = {
    */
   extractDurationValue: (data: number | DurationConfigurationData | undefined): number => {
     if (!data) return 0;
-    
+
     if (typeof data === 'number') {
       return data;
     }
-    
+
     // Handle DurationConfigurationData format
     if (typeof data === 'object' && data !== null && 'totalDuration' in data) {
       return data.totalDuration || 0;
     }
-    
+
     return 0;
   },
 
@@ -64,64 +63,64 @@ export const dataTransformers = {
    */
   extractFocusValue: (data: string | WorkoutFocusConfigurationData | undefined): string => {
     if (!data) return '';
-    
+
     if (typeof data === 'string') {
       return data;
     }
-    
+
     // Handle WorkoutFocusConfigurationData format
     if (typeof data === 'object' && data !== null && 'focus' in data) {
       return data.focus || '';
     }
-    
+
     return '';
   },
 
   /**
    * Extract equipment list from string array or EquipmentSelectionData
    */
-  extractEquipmentList: (data: string[] | EquipmentSelectionData | undefined): string[] => {
+  extractEquipmentList: (data: string[] | OptionDefinition | undefined): string[] => {
     if (!data) return [];
-    
+
     if (Array.isArray(data)) {
       return data;
     }
-    
+
     // Handle EquipmentSelectionData format
     if (typeof data === 'object' && data !== null) {
       if ('specificEquipment' in data && Array.isArray(data.specificEquipment)) {
         return data.specificEquipment;
       }
-      
+
       if ('equipment' in data && Array.isArray(data.equipment)) {
         return data.equipment;
       }
     }
-    
+
     return [];
   },
 
   /**
    * Extract areas list from string array or HierarchicalSelectionData
    */
-  extractAreasList: (data: string[] | HierarchicalSelectionData | undefined): string[] => {
+  extractAreasList: (data: string[] | OptionDefinition | undefined): string[] => {
     if (!data) return [];
-    
+
     if (Array.isArray(data)) {
       return data;
     }
-    
+
     // Handle HierarchicalSelectionData format
     if (typeof data === 'object' && data !== null) {
       if ('selectedAreas' in data && Array.isArray(data.selectedAreas)) {
         return data.selectedAreas;
       }
-      
+
       if ('areas' in data && Array.isArray(data.areas)) {
         return data.areas;
       }
     }
-    
+
     return [];
   },
 
@@ -198,7 +197,7 @@ export const dataTransformers = {
       if (!data) return false;
       if (Array.isArray(data)) return true;
       if (typeof data === 'object' && data !== null) {
-        return Object.values(data).some(value => 
+        return Object.values(data).some(value =>
           typeof value === 'object' && value !== null && 'selected' in value
         );
       }
@@ -223,7 +222,7 @@ export const dataTransformers = {
       return false;
     },
 
-    equipment: (data: any): data is string[] | EquipmentSelectionData => {
+    equipment: (data: any): data is string[] | OptionDefinition => {
       if (!data) return false;
       if (Array.isArray(data)) return true;
       if (typeof data === 'object' && data !== null) {
@@ -233,7 +232,7 @@ export const dataTransformers = {
       return false;
     },
 
-    areas: (data: any): data is string[] | HierarchicalSelectionData => {
+    areas: (data: any): data is string[] | OptionDefinition => {
       if (!data) return false;
       if (Array.isArray(data)) return true;
       if (typeof data === 'object' && data !== null) {
@@ -253,6 +252,63 @@ export const dataTransformers = {
  * ProfileData to UserProfile conversion utilities
  */
 export const profileTransformers = {
+  // Cache for memoized transformations
+  _transformCache: new Map<string, UserProfile>(),
+  _lastProfileData: null as ProfileData | null,
+  _lastUserProfile: null as UserProfile | null,
+
+  // Conversion helpers
+  convertAgeToNumber: (age?: string): number | undefined => {
+    if (!age) return undefined;
+    const ageRange = age.split('-');
+    if (ageRange.length === 2) {
+      return Math.floor((parseInt(ageRange[0]) + parseInt(ageRange[1])) / 2);
+    } else if (ageRange[0] === '65+') {
+      return 70; // Default for 65+
+    }
+    return undefined;
+  },
+
+  convertHeightToCm: (height?: string): number | undefined => {
+    if (!height) return undefined;
+    const heightStr = height.toLowerCase();
+    if (heightStr.includes("'") && heightStr.includes('"')) {
+      // Imperial format: 5'8" -> convert to cm
+      const match = heightStr.match(/(\d+)'(\d+)"/);
+      if (match) {
+        const feet = parseInt(match[1]);
+        const inches = parseInt(match[2]);
+        return Math.round((feet * 12 + inches) * 2.54);
+      }
+    } else if (heightStr.includes('cm')) {
+      // Metric format: 173cm
+      const match = heightStr.match(/(\d+)cm/);
+      if (match) {
+        return parseInt(match[1]);
+      }
+    }
+    return undefined;
+  },
+
+  convertWeightToKg: (weight?: string): number | undefined => {
+    if (!weight) return undefined;
+    const weightStr = weight.toLowerCase();
+    if (weightStr.includes('lbs') || weightStr.includes('lb')) {
+      // Imperial format: 150 lbs -> convert to kg
+      const match = weightStr.match(/(\d+)\s*lbs?/);
+      if (match) {
+        return Math.round(parseInt(match[1]) * 0.453592);
+      }
+    } else if (weightStr.includes('kg')) {
+      // Metric format: 68 kg
+      const match = weightStr.match(/(\d+)\s*kg/);
+      if (match) {
+        return parseInt(match[1]);
+      }
+    }
+    return undefined;
+  },
+
   /**
    * Convert ProfileData experience level to UserProfile fitness level
    */
@@ -275,7 +331,7 @@ export const profileTransformers = {
    */
   convertPrimaryGoal: (primaryGoal: ProfileData['primaryGoal']): string => {
     const goal = primaryGoal.toLowerCase();
-    
+
     // Map specific goals to standardized formats
     if (goal.includes('strength')) return 'strength';
     if (goal.includes('cardio') || goal.includes('endurance')) return 'cardio';
@@ -289,7 +345,7 @@ export const profileTransformers = {
     if (goal.includes('stress')) return 'stress_reduction';
     if (goal.includes('functional')) return 'functional_fitness';
     if (goal.includes('general') || goal.includes('health')) return 'general_fitness';
-    
+
     console.warn(`Unknown primary goal: ${primaryGoal}, defaulting to 'general_fitness'`);
     return 'general_fitness';
   },
@@ -299,7 +355,7 @@ export const profileTransformers = {
    */
   convertGoalToWorkoutStyle: (primaryGoal: ProfileData['primaryGoal']): string[] => {
     const goal = primaryGoal.toLowerCase();
-    
+
     if (goal.includes('strength')) return ['strength_training'];
     if (goal.includes('cardio') || goal.includes('endurance')) return ['cardio'];
     if (goal.includes('flexibility') || goal.includes('mobility')) return ['flexibility'];
@@ -312,7 +368,7 @@ export const profileTransformers = {
     if (goal.includes('stress')) return ['flexibility', 'cardio'];
     if (goal.includes('functional')) return ['functional_training'];
     if (goal.includes('general') || goal.includes('health')) return ['balanced'];
-    
+
     return ['balanced'];
   },
 
@@ -357,12 +413,12 @@ export const profileTransformers = {
         .replace(/[^a-z0-9]/g, '_')
         .replace(/_+/g, '_')
         .replace(/^_|_$/g, '');
-      
+
       if (!normalized) {
         console.warn(`Failed to normalize equipment: ${eq}`);
         return 'body_weight';
       }
-      
+
       return normalized;
     });
   },
@@ -391,21 +447,42 @@ export const profileTransformers = {
         .replace(/[^a-z0-9]/g, '_')
         .replace(/_+/g, '_')
         .replace(/^_|_$/g, '');
-      
+
       if (!normalized) {
         console.warn(`Failed to normalize location: ${location}`);
         return 'home';
       }
-      
+
       return normalized;
     });
   },
 
   /**
-   * Convert ProfileData to UserProfile with comprehensive validation
+   * Convert ProfileData to UserProfile with comprehensive validation and memoization
    */
   convertProfileToUserProfile: (profileData: ProfileData): UserProfile => {
     try {
+      // Quick return if same object reference
+      if (profileData === profileTransformers._lastProfileData) {
+        return profileTransformers._lastUserProfile!;
+      }
+
+      // Generate cache key from essential fields
+      const cacheKey = JSON.stringify({
+        experienceLevel: profileData.experienceLevel,
+        primaryGoal: profileData.primaryGoal,
+        availableEquipment: profileData.availableEquipment,
+        preferredDuration: profileData.preferredDuration,
+        injuries: profileData.injuries
+      });
+
+      // Check cache
+      const cached = profileTransformers._transformCache.get(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
+      // Only log on actual conversion, not cache hits
       console.log('🔄 Converting ProfileData to UserProfile:', {
         experienceLevel: profileData.experienceLevel,
         primaryGoal: profileData.primaryGoal,
@@ -418,97 +495,36 @@ export const profileTransformers = {
         return profileTransformers.createFallbackUserProfile();
       }
 
-      // For workout generation, we only need the essential fields
-      // Skip the full ProfileData validation since we're only using a subset
-
       // Convert core data with defensive programming
-      // Use calculated fitness level if available, otherwise fall back to conversion from experience level
       const fitnessLevel = profileData.calculatedFitnessLevel || profileTransformers.convertExperienceToFitnessLevel(profileData.experienceLevel);
       const primaryGoal = profileTransformers.convertPrimaryGoal(profileData.primaryGoal);
       const workoutStyle = profileTransformers.convertGoalToWorkoutStyle(profileData.primaryGoal);
       const intensityPreference = profileData.calculatedWorkoutIntensity;
       const timeConstraints = profileTransformers.convertDurationToTimeConstraints(profileData.preferredDuration || '30-45 min');
-      const equipmentConstraints = profileTransformers.convertEquipmentToNormalized(profileData.availableEquipment || []);
-      const locationConstraints = profileTransformers.convertLocationsToNormalized(profileData.availableLocations || []);
+      const equipmentConstraints = profileTransformers.convertEquipmentToNormalized(profileData.availableEquipment || ['bodyweight']);
+      const locationConstraints = profileTransformers.convertLocationsToNormalized(profileData.availableLocations || ['home']);
       const injuries = profileTransformers.convertInjuriesToFiltered(profileData.injuries || []);
 
-      // Calculate duration range
-      const durationParts = profileData.preferredDuration?.split('-') || ['30', '60'];
-      const minDuration = parseInt(durationParts[0]) || 30;
-      const maxDuration = parseInt(durationParts[1]) || 60;
-
-      // Convert optional personal metrics
-      let age: number | undefined;
-      if (profileData.age) {
-        const ageRange = profileData.age.split('-');
-        if (ageRange.length === 2) {
-          age = Math.floor((parseInt(ageRange[0]) + parseInt(ageRange[1])) / 2);
-        } else if (ageRange[0] === '65+') {
-          age = 70; // Default for 65+
-        }
-      }
-
-      // Convert height and weight to numbers if present
-      let height: number | undefined;
-      let weight: number | undefined;
-      
-      if (profileData.height) {
-        // Handle both imperial and metric formats
-        const heightStr = profileData.height.toLowerCase();
-        if (heightStr.includes("'") && heightStr.includes('"')) {
-          // Imperial format: 5'8" -> convert to cm
-          const match = heightStr.match(/(\d+)'(\d+)"/);
-          if (match) {
-            const feet = parseInt(match[1]);
-            const inches = parseInt(match[2]);
-            height = Math.round((feet * 12 + inches) * 2.54);
-          }
-        } else if (heightStr.includes('cm')) {
-          // Metric format: 173cm
-          const match = heightStr.match(/(\d+)cm/);
-          if (match) {
-            height = parseInt(match[1]);
-          }
-        }
-      }
-
-      if (profileData.weight) {
-        // Handle both imperial and metric formats
-        const weightStr = profileData.weight.toLowerCase();
-        if (weightStr.includes('lbs') || weightStr.includes('lb')) {
-          // Imperial format: 150 lbs -> convert to kg
-          const match = weightStr.match(/(\d+)\s*lbs?/);
-          if (match) {
-            weight = Math.round(parseInt(match[1]) * 0.453592);
-          }
-        } else if (weightStr.includes('kg')) {
-          // Metric format: 68 kg
-          const match = weightStr.match(/(\d+)\s*kg/);
-          if (match) {
-            weight = parseInt(match[1]);
-          }
-        }
-      }
-
+      // Create transformed profile with all required fields
       const userProfile: UserProfile = {
         fitnessLevel,
         goals: [primaryGoal],
         preferences: {
           workoutStyle: workoutStyle || ['balanced'],
-          timePreference: 'morning', // Default, could be enhanced
+          timePreference: 'morning',
           intensityPreference: intensityPreference || 'moderate',
           advancedFeatures: profileData.experienceLevel === 'Advanced Athlete',
           aiAssistanceLevel: 'moderate'
         },
         basicLimitations: {
           injuries,
-          availableEquipment: equipmentConstraints,
-          availableLocations: locationConstraints
+          availableEquipment: equipmentConstraints.length > 0 ? equipmentConstraints : ['bodyweight'],
+          availableLocations: locationConstraints.length > 0 ? locationConstraints : ['home']
         },
         enhancedLimitations: {
           timeConstraints,
-          equipmentConstraints,
-          locationConstraints,
+          equipmentConstraints: equipmentConstraints.length > 0 ? equipmentConstraints : ['bodyweight'],
+          locationConstraints: locationConstraints.length > 0 ? locationConstraints : ['home'],
           recoveryNeeds: {
             restDays: 2,
             sleepHours: 7,
@@ -519,7 +535,7 @@ export const profileTransformers = {
         },
         workoutHistory: {
           estimatedCompletedWorkouts: 0,
-          averageDuration: minDuration,
+          averageDuration: timeConstraints,
           preferredFocusAreas: [],
           progressiveEnhancementUsage: {},
           aiRecommendationAcceptance: 0.7,
@@ -535,25 +551,22 @@ export const profileTransformers = {
           adaptationSpeed: 'moderate'
         },
         // Add optional personal metrics
-        age,
-        height,
-        weight,
+        age: profileTransformers.convertAgeToNumber(profileData.age),
+        height: profileTransformers.convertHeightToCm(profileData.height),
+        weight: profileTransformers.convertWeightToKg(profileData.weight),
         gender: profileData.gender
       };
 
-      console.log('✅ ProfileData successfully converted to UserProfile:', {
-        fitnessLevel: userProfile.fitnessLevel,
-        goals: userProfile.goals,
-        workoutStyle: userProfile.preferences.workoutStyle,
-        intensityPreference: userProfile.preferences.intensityPreference
-      });
+      // Cache the result
+      profileTransformers._transformCache.set(cacheKey, userProfile);
+      profileTransformers._lastProfileData = profileData;
+      profileTransformers._lastUserProfile = userProfile;
 
+      console.log('✅ ProfileData successfully converted to UserProfile');
       return userProfile;
-
     } catch (error) {
       console.error('❌ Error converting ProfileData to UserProfile:', error);
-      console.error('ProfileData:', profileData);
-      throw new Error(`Failed to convert ProfileData to UserProfile: ${error instanceof Error ? error.message : String(error)}`);
+      return profileTransformers.createFallbackUserProfile();
     }
   },
 
@@ -565,53 +578,51 @@ export const profileTransformers = {
   /**
    * Create a safe fallback UserProfile when conversion fails
    */
-  createFallbackUserProfile: (): UserProfile => {
-    return {
-      fitnessLevel: 'intermediate',
-      goals: ['general_fitness'],
-      preferences: {
-        workoutStyle: ['balanced'],
-        timePreference: 'morning',
-        intensityPreference: 'moderate',
-        advancedFeatures: false,
-        aiAssistanceLevel: 'moderate'
+  createFallbackUserProfile: (): UserProfile => ({
+    fitnessLevel: 'beginner',
+    goals: ['general_fitness'],
+    preferences: {
+      workoutStyle: ['balanced'],
+      timePreference: 'morning',
+      intensityPreference: 'moderate',
+      advancedFeatures: false,
+      aiAssistanceLevel: 'moderate'
+    },
+    basicLimitations: {
+      injuries: [],
+      availableEquipment: ['bodyweight'],
+      availableLocations: ['home']
+    },
+    enhancedLimitations: {
+      timeConstraints: 30,
+      equipmentConstraints: ['bodyweight'],
+      locationConstraints: ['home'],
+      recoveryNeeds: {
+        restDays: 2,
+        sleepHours: 7,
+        hydrationLevel: 'moderate'
       },
-      basicLimitations: {
-        injuries: [],
-        availableEquipment: ['body_weight'],
-        availableLocations: ['home']
-      },
-      enhancedLimitations: {
-        timeConstraints: 60,
-        equipmentConstraints: ['body_weight'],
-        locationConstraints: [],
-        recoveryNeeds: {
-          restDays: 2,
-          sleepHours: 7,
-          hydrationLevel: 'moderate'
-        },
-        mobilityLimitations: [],
-        progressionRate: 'moderate'
-      },
-      workoutHistory: {
-        estimatedCompletedWorkouts: 0,
-        averageDuration: 45,
-        preferredFocusAreas: [],
-        progressiveEnhancementUsage: {},
-        aiRecommendationAcceptance: 0.7,
-        consistencyScore: 0.5,
-        plateauRisk: 'low'
-      },
-      learningProfile: {
-        prefersSimplicity: true,
-        explorationTendency: 'moderate',
-        feedbackPreference: 'detailed',
-        learningStyle: 'visual',
-        motivationType: 'intrinsic',
-        adaptationSpeed: 'moderate'
-      }
-    };
-  }
+      mobilityLimitations: [],
+      progressionRate: 'moderate'
+    },
+    workoutHistory: {
+      estimatedCompletedWorkouts: 0,
+      averageDuration: 30,
+      preferredFocusAreas: [],
+      progressiveEnhancementUsage: {},
+      aiRecommendationAcceptance: 0.7,
+      consistencyScore: 0.5,
+      plateauRisk: 'low'
+    },
+    learningProfile: {
+      prefersSimplicity: true,
+      explorationTendency: 'moderate',
+      feedbackPreference: 'simple',
+      learningStyle: 'visual',
+      motivationType: 'intrinsic',
+      adaptationSpeed: 'moderate'
+    }
+  }),
 };
 
 /**
@@ -623,12 +634,12 @@ export const legacyTransformers = {
    */
   convertLegacyFormat: (legacyData: any): Partial<PerWorkoutOptions> => {
     const converted: Partial<PerWorkoutOptions> = {};
-    
+
     // Handle legacy energy format
     if (legacyData.energy !== undefined) {
       converted.customization_energy = typeof legacyData.energy === 'number' ? legacyData.energy : 3;
     }
-    
+
     // Handle legacy soreness format
     if (legacyData.soreness !== undefined) {
       if (Array.isArray(legacyData.soreness)) {
@@ -640,27 +651,27 @@ export const legacyTransformers = {
         ) as any;
       }
     }
-    
+
     // Handle legacy focus format
     if (legacyData.focus !== undefined) {
       converted.customization_focus = typeof legacyData.focus === 'string' ? legacyData.focus : 'strength';
     }
-    
+
     // Handle legacy duration format
     if (legacyData.duration !== undefined) {
       converted.customization_duration = typeof legacyData.duration === 'number' ? legacyData.duration : 30;
     }
-    
+
     // Handle legacy equipment format
     if (legacyData.equipment !== undefined) {
       converted.customization_equipment = Array.isArray(legacyData.equipment) ? legacyData.equipment : [];
     }
-    
+
     // Handle legacy areas format
     if (legacyData.areas !== undefined) {
       converted.customization_areas = Array.isArray(legacyData.areas) ? legacyData.areas : [];
     }
-    
+
     return converted;
   },
 

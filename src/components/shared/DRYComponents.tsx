@@ -2,13 +2,11 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Brain, Lightbulb, AlertTriangle, CheckCircle, ArrowRight, Settings } from 'lucide-react';
 import { 
   OptionDefinition, 
-  RatingScaleConfig, 
   CustomizationComponentProps,
-  CustomizationConfig,
-  UserProfile,
   PerWorkoutOptions,
   ValidationResult
-} from '../../types/enhanced-workout-types';
+} from '../../types/core';
+import { UserProfile } from '../../types/user';
 import { AIRecommendationContext } from '../../types/ai';
 
 // ============================================================================

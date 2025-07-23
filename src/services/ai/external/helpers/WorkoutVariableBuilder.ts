@@ -1,6 +1,6 @@
 // Workout Variable Builder - Handles preparation of variables for OpenAI requests
 import { WorkoutGenerationRequest } from '../../../../types/workout-generation.types';
-import { PromptDataTransformer } from '../utils/PromptDataTransformer';
+import { PromptDataTransformer } from '../shared/utils/PromptDataTransformer';
 
 export class WorkoutVariableBuilder {
   /**

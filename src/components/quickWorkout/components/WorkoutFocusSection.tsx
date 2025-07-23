@@ -2,7 +2,7 @@ import React from 'react';
 import { Zap, AlignCenter, Smile, Flame, Heart, Dumbbell, Target, Lightbulb } from 'lucide-react';
 import { SectionProps } from '../types/quick-workout.types';
 import { OptionGrid } from '../../shared/DRYComponents';
-import { OptionDefinition } from '../../../types/enhanced-workout-types';
+import { OptionDefinition } from '../../../types/core';
 import { useAI } from '../../../contexts/AIContext';
 import { AIInsight } from '../../../types/insights';
 import { logger } from '../../../utils/logger';

@@ -17,6 +17,8 @@ import {
   StreamOptions
 } from './helpers';
 import { logger } from '../../../utils/logger';
+import { WorkoutPromptBuilder } from './prompts/WorkoutPromptBuilder';
+import { WorkoutGenerationRequest } from '../../../types/workout-generation.types';
 
 export class OpenAIService {
   private config: OpenAIConfig;
@@ -24,6 +26,7 @@ export class OpenAIService {
   private cacheManager: OpenAICacheManager;
   private metricsTracker: OpenAIMetricsTracker;
   private errorHandler: OpenAIErrorHandler;
+  private promptBuilder: WorkoutPromptBuilder;
   private requestCount = 0;
   private lastRequestTime = 0;
 
@@ -35,6 +38,7 @@ export class OpenAIService {
     this.cacheManager = new OpenAICacheManager();
     this.metricsTracker = new OpenAIMetricsTracker();
     this.errorHandler = new OpenAIErrorHandler();
+    this.promptBuilder = new WorkoutPromptBuilder(true); // Enable debug mode
   }
 
   // Main method to send requests to OpenAI
@@ -159,6 +163,26 @@ export class OpenAIService {
       }
       
       logger.error('OpenAI template generation failed:', error);
+      throw this.errorHandler.createExternalAIError(error);
+    }
+  }
+
+  // Generate workout using the new prompt builder
+  async generateWorkout(request: WorkoutGenerationRequest): Promise<unknown> {
+    try {
+      // Build prompt using the new WorkoutPromptBuilder
+      const { template, variables } = this.promptBuilder.buildWorkoutPrompt(request);
+
+      // Validate variables
+      this.promptBuilder.validatePromptVariables(variables);
+
+      // Generate response using the template
+      return await this.generateFromTemplate(template, variables, {
+        cacheKey: this.cacheManager.generateCacheKey('workout', variables)
+      });
+
+    } catch (error: any) {
+      logger.error('Workout generation failed:', error);
       throw this.errorHandler.createExternalAIError(error);
     }
   }

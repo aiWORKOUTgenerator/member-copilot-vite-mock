@@ -113,6 +113,17 @@ export class OpenAIStrategy implements AIStrategy {
         throw new Error('OpenAI service not available. Please configure VITE_OPENAI_API_KEY for AI-powered workouts.');
       }
 
+      // Validate request using new validation system
+      const validation = WorkoutRequestValidator.validate(request);
+      if (!validation.isValid) {
+        throw new Error(`Invalid workout request: ${validation.errors.join(', ')}`);
+      }
+
+      // Log warnings if any
+      if (validation.warnings.length > 0) {
+        logger.warn(`Workout request warnings: ${validation.warnings.join(', ')}`);
+      }
+
       // ✅ NEW: Try to use QuickWorkoutSetup feature if available and applicable
       if (this.quickWorkoutFeature && this.isQuickWorkoutApplicable(request)) {
         console.log('🎯 OpenAIStrategy: Using QuickWorkoutSetup feature for workout generation');
@@ -137,14 +148,7 @@ export class OpenAIStrategy implements AIStrategy {
         fitnessLevel: request.userProfile?.fitnessLevel || 'MISSING'
       });
       
-      // Create more specific error based on the type
-      if (errorMessage.includes('userProfile is required')) {
-        throw new Error('Workout generation failed: User profile is incomplete. Please complete your profile before generating workouts.');
-      } else if (errorMessage.includes('fitnessLevel is required')) {
-        throw new Error('Workout generation failed: Fitness level is missing from profile. Please update your profile with your experience level.');
-      } else {
-        throw ErrorHandler.createWorkoutError(error, request);
-      }
+      throw error;
     }
   }
 
@@ -404,7 +408,7 @@ export class OpenAIStrategy implements AIStrategy {
     if (!isFeatureEnabled('openai_workout_generation')) {
       throw new Error(OPENAI_STRATEGY_CONSTANTS.ERROR_MESSAGES.WORKOUT_GENERATION_DISABLED);
     }
-    
+
     // Use new validation system
     const validation = WorkoutRequestValidator.validate(request);
     if (!validation.isValid) {

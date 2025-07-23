@@ -3,7 +3,7 @@ import { WorkoutGenerationService } from '../WorkoutGenerationService';
 import { OpenAIService } from '../OpenAIService';
 import { WorkoutGenerationRequest } from '../../../../types/workout-generation.types';
 import { UserProfile } from '../../../../types/user';
-import { PerWorkoutOptions } from '../../../../types/enhanced-workout-types';
+import { PerWorkoutOptions } from '../../../../types/core';
 import { WorkoutRequestFactory } from '../../factories/WorkoutRequestFactory';
 import { WorkoutRequestValidator } from '../../validation/core/WorkoutRequestValidator';
 

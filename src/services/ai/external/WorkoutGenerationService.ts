@@ -9,7 +9,7 @@ import { WorkoutCacheManager } from './utils/cache-manager';
 import { WorkoutVariableBuilder } from './helpers/WorkoutVariableBuilder';
 import { WorkoutRequestFactory } from '../factories/WorkoutRequestFactory';
 import { WorkoutRequestValidator } from '../validation/core/WorkoutRequestValidator';
-import { PerWorkoutOptions } from '../../../types/enhanced-workout-types';
+import { PerWorkoutOptions } from '../../../types/core';
 import { UserProfile } from '../../../types/user';
 
 // Performance metrics interface

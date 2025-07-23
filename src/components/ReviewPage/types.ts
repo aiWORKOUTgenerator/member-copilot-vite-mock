@@ -1,6 +1,6 @@
 import { ProfileData } from '../Profile/types/profile.types';
 import { LiabilityWaiverData } from '../LiabilityWaiver/types/liability-waiver.types';
-import { PerWorkoutOptions, WorkoutType } from '../../types/enhanced-workout-types';
+import { PerWorkoutOptions } from '../../types/core';
 import { UseWorkoutGenerationReturn } from '../../hooks/useWorkoutGeneration';
 import { GeneratedWorkout } from '../../services/ai/external/types/external-ai.types';
 import { LucideIcon } from 'lucide-react';
@@ -10,7 +10,7 @@ export interface ReviewPageProps {
   profileData: ProfileData | null;
   waiverData: LiabilityWaiverData | null;
   workoutFocusData: PerWorkoutOptions | null;
-  workoutType: WorkoutType;
+  workoutType: 'quick' | 'detailed';
   workoutGeneration: UseWorkoutGenerationReturn;
   onWorkoutGenerated: (workout: GeneratedWorkout) => void;
 }

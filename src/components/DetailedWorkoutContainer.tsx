@@ -2,12 +2,14 @@ import React, { useState, useMemo, useCallback, memo } from 'react';
 import { Brain, Settings, ChevronRight, ChevronLeft, Eye, Zap, CheckCircle, AlertCircle, AlertTriangle, Lightbulb } from 'lucide-react';
 import { 
   PerWorkoutOptions, 
-  UserProfile, 
-  AIRecommendationContext,
   CustomizationConfig,
-  ValidationResult,
-  WorkoutType
-} from '../types/enhanced-workout-types';
+  ValidationResult
+} from '../types/core';
+import { UserProfile } from '../types/user';
+import { AIRecommendationContext } from '../types/ai';
+
+// Define WorkoutType locally since it's used throughout the app
+type WorkoutType = 'quick' | 'detailed';
 import { CustomizationWrapper } from './shared/DRYComponents';
 import { WORKOUT_CUSTOMIZATION_CONFIG, generateStepsFromConfig } from '../config/workoutCustomizationConfig';
 

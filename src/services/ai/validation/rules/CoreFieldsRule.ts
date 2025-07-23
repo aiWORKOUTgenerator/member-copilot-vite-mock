@@ -6,7 +6,8 @@
 import { ValidationContext } from '../core/ValidationContext';
 import { ValidationError } from '../core/ValidationError';
 import { isValidFitnessLevel, isValidProfileData } from '../../../../types/guards';
-import { WorkoutType } from '../../../../types/enhanced-workout-types';
+// Define WorkoutType locally since it's used throughout the app
+type WorkoutType = 'quick' | 'detailed';
 import { BaseValidationRule } from '../core/ValidationRule';
 
 /**

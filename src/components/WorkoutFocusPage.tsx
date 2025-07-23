@@ -3,7 +3,11 @@ import { PenLine, ChevronLeft, ClipboardList, Sparkles, ArrowRight } from 'lucid
 import { PageHeader } from './shared';
 import { QuickWorkoutForm } from './quickWorkout/components';
 import DetailedWorkoutContainer from './DetailedWorkoutContainer';
-import { PerWorkoutOptions, AIRecommendationContext, WorkoutType } from '../types/enhanced-workout-types';
+import { PerWorkoutOptions } from '../types/core';
+import { AIRecommendationContext } from '../types/ai';
+
+// Define WorkoutType locally since it's used throughout the app
+type WorkoutType = 'quick' | 'detailed';
 import { UserProfile, TimePreference, AIAssistanceLevel, RecoveryStatus } from '../types/user';
 import { ProfileData } from './Profile/types/profile.types';
 import { mapExperienceLevelToFitnessLevel } from '../utils/configUtils';

@@ -80,6 +80,48 @@ export class AIService {
       if (!userProfile) {
         throw new Error('UserProfile is required in GlobalAIContext');
       }
+
+      // Validate user profile has all required fields
+      if (!userProfile.preferences) {
+        throw new Error('User profile must include preferences');
+      }
+
+      if (!userProfile.basicLimitations) {
+        throw new Error('User profile must include basic limitations');
+      }
+
+      if (!userProfile.basicLimitations.availableEquipment) {
+        throw new Error('User profile must include available equipment in basic limitations');
+      }
+
+      if (!userProfile.basicLimitations.availableLocations) {
+        throw new Error('User profile must include available locations in basic limitations');
+      }
+
+      if (!userProfile.basicLimitations.injuries) {
+        throw new Error('User profile must include injuries in basic limitations');
+      }
+
+      // Validate preferences
+      if (!userProfile.preferences.workoutStyle) {
+        throw new Error('User profile preferences must include workout style');
+      }
+
+      if (!userProfile.preferences.timePreference) {
+        throw new Error('User profile preferences must include time preference');
+      }
+
+      if (!userProfile.preferences.intensityPreference) {
+        throw new Error('User profile preferences must include intensity preference');
+      }
+
+      if (typeof userProfile.preferences.advancedFeatures !== 'boolean') {
+        throw new Error('User profile preferences must include advanced features flag');
+      }
+
+      if (!userProfile.preferences.aiAssistanceLevel) {
+        throw new Error('User profile preferences must include AI assistance level');
+      }
       
       await this.context.setContext(context);
       this.cache.clear(); // Clear cache when context changes

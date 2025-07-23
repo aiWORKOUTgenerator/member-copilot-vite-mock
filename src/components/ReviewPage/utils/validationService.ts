@@ -1,8 +1,8 @@
-import { PerWorkoutOptions } from '../../../types/enhanced-workout-types';
+import { PerWorkoutOptions, DurationConfigurationData, WorkoutFocusConfigurationData } from '../../../types/core';
 import { ProfileData } from '../../Profile/types/profile.types';
-import { PromptDataTransformer } from '../../../services/ai/external/utils/PromptDataTransformer';
+import { PromptDataTransformer } from '../../../services/ai/external/shared/utils/PromptDataTransformer';
 
-export interface ValidationIssue {
+interface ValidationIssue {
   field: string;
   message: string;
   severity: 'error' | 'warning' | 'info';
@@ -13,7 +13,7 @@ export interface ValidationIssue {
   helpText?: string;
 }
 
-export interface ValidationResult {
+interface ValidationResult {
   isValid: boolean;
   issues: ValidationIssue[];
   summary: {
@@ -35,14 +35,6 @@ export class ValidationService {
   ): ValidationResult {
     const issues: ValidationIssue[] = [];
 
-    // 🔍 DEBUG: Log what ValidationService receives (key fields only)
-    if (profileData) {
-      console.log('🔍 ValidationService - Key fields:', {
-        primaryGoal: profileData.primaryGoal,
-        experienceLevel: profileData.experienceLevel
-      });
-    }
-
     // Profile validation
     if (!profileData) {
       issues.push({
@@ -55,71 +47,19 @@ export class ValidationService {
         } : undefined,
         helpText: 'Your profile helps us create workouts tailored to your fitness level, goals, and preferences.'
       });
-    } else {
-      // Validate specific profile fields - handle empty strings and undefined values
-      const experienceLevel = profileData.experienceLevel;
-      const primaryGoal = profileData.primaryGoal;
-      
-      // 🔍 DEBUG: Log detailed field validation
-      console.log('🔍 ValidationService - Field validation:', {
-        experienceLevel: {
-          value: experienceLevel,
-          type: typeof experienceLevel,
-          isEmpty: experienceLevel === '',
-          isUndefined: experienceLevel === undefined,
-          isStringUndefined: experienceLevel === 'undefined',
-          isValid: !!(experienceLevel && experienceLevel !== '' && experienceLevel !== 'undefined')
-        },
-        primaryGoal: {
-          value: primaryGoal,
-          type: typeof primaryGoal,
-          isEmpty: primaryGoal === '',
-          isUndefined: primaryGoal === undefined,
-          isStringUndefined: primaryGoal === 'undefined',
-          isValid: !!(primaryGoal && primaryGoal !== '' && primaryGoal !== 'undefined')
-        }
-      });
-      
-      if (!experienceLevel || experienceLevel === '' || experienceLevel === 'undefined') {
-        console.warn('🔍 ValidationService - Experience Level invalid:', experienceLevel);
-        issues.push({
-          field: 'Experience Level',
-          message: 'Please specify your fitness experience level.',
-          severity: 'error',
-          action: onNavigate ? {
-            label: 'Update Profile',
-            onClick: () => onNavigate('profile')
-          } : undefined,
-          helpText: 'This helps us determine appropriate exercise difficulty and progression.'
-        });
-      }
-
-      if (!primaryGoal || primaryGoal === '' || primaryGoal === 'undefined') {
-        console.warn('🔍 ValidationService - Primary Goal invalid:', primaryGoal);
-        issues.push({
-          field: 'Primary Goal',
-          message: 'Please select your primary fitness goal.',
-          severity: 'error',
-          action: onNavigate ? {
-            label: 'Update Profile',
-            onClick: () => onNavigate('profile')
-          } : undefined,
-          helpText: 'Your goal guides exercise selection and workout structure.'
-        });
-      }
     }
 
     // Workout focus validation
     if (!workoutFocusData) {
       issues.push({
-        field: 'Workout Preferences',
-        message: 'Please configure your workout preferences.',
+        field: 'Workout Focus',
+        message: 'Workout focus preferences are required.',
         severity: 'error',
         action: onNavigate ? {
-          label: 'Set Preferences',
+          label: 'Set Focus',
           onClick: () => onNavigate('focus')
         } : undefined,
-        helpText: 'Configure your workout focus, duration, and current state for personalized recommendations.'
+        helpText: 'Choose your workout focus and preferences to get started.'
       });
     } else {
       // Basic workout requirements
@@ -164,319 +104,89 @@ export class ValidationService {
 
       // Detailed workout specific validation
       if (workoutType === 'detailed') {
-        const areaIssues = this.validateFocusAreas(workoutFocusData, onNavigate);
-        issues.push(...areaIssues);
+        // Validate focus areas
+        if (!Array.isArray(workoutFocusData.customization_areas) || workoutFocusData.customization_areas.length === 0) {
+          issues.push({
+            field: 'Focus Areas',
+            message: 'Please select at least one focus area.',
+            severity: 'error',
+            action: onNavigate ? {
+              label: 'Set Focus Areas',
+              onClick: () => onNavigate('focus')
+            } : undefined,
+            helpText: 'Focus areas help us target specific muscle groups in your workout.'
+          });
+        }
 
-        const equipmentIssues = this.validateEquipment(workoutFocusData, onNavigate);
-        issues.push(...equipmentIssues);
+        // Validate equipment
+        if (!Array.isArray(workoutFocusData.customization_equipment) || workoutFocusData.customization_equipment.length === 0) {
+          issues.push({
+            field: 'Equipment',
+            message: 'Please select available equipment.',
+            severity: 'error',
+            action: onNavigate ? {
+              label: 'Set Equipment',
+              onClick: () => onNavigate('focus')
+            } : undefined,
+            helpText: 'Equipment selection helps us choose appropriate exercises for your workout.'
+          });
+        }
 
-        const durationIssues = this.validateDuration(workoutFocusData);
-        issues.push(...durationIssues);
+        // Validate duration for detailed workouts
+        const duration = typeof workoutFocusData.customization_duration === 'number'
+          ? workoutFocusData.customization_duration
+          : workoutFocusData.customization_duration?.duration;
 
-        const energyIssues = this.validateEnergyLevel(workoutFocusData);
-        issues.push(...energyIssues);
+        if (duration && duration < 15) {
+          issues.push({
+            field: 'Duration',
+            message: 'Detailed workouts work best with at least 15 minutes.',
+            severity: 'warning',
+            helpText: 'Consider increasing duration for a more effective workout.'
+          });
+        }
       }
-
-      // Cross-component validation
-      const crossComponentIssues = this.validateCrossComponent(workoutFocusData, profileData);
-      issues.push(...crossComponentIssues);
     }
 
-    const errors = issues.filter(issue => issue.severity === 'error').length;
-    const warnings = issues.filter(issue => issue.severity === 'warning').length;
-    const info = issues.filter(issue => issue.severity === 'info').length;
+    // Calculate summary
+    const summary = {
+      errors: issues.filter(i => i.severity === 'error').length,
+      warnings: issues.filter(i => i.severity === 'warning').length,
+      info: issues.filter(i => i.severity === 'info').length
+    };
 
     return {
-      isValid: errors === 0,
+      isValid: summary.errors === 0,
       issues,
-      summary: { errors, warnings, info }
+      summary
     };
   }
 
   /**
-   * Validate focus areas for detailed workouts
-   */
-  private static validateFocusAreas(
-    workoutFocusData: PerWorkoutOptions,
-    onNavigate?: (page: 'profile' | 'waiver' | 'focus' | 'review' | 'results') => void
-  ): ValidationIssue[] {
-    const issues: ValidationIssue[] = [];
-
-    const hasValidAreas = (() => {
-      if (Array.isArray(workoutFocusData.customization_areas)) {
-        return (workoutFocusData.customization_areas || []).length > 0;
-      }
-      if (typeof workoutFocusData.customization_areas === 'object' && workoutFocusData.customization_areas !== null) {
-        const selectedAreas = Object.values(workoutFocusData.customization_areas).filter((item: any) => item?.selected);
-        return selectedAreas.length > 0;
-      }
-      return false;
-    })();
-
-    if (!hasValidAreas) {
-      issues.push({
-        field: 'Focus Areas',
-        message: 'Please select at least one muscle group to target.',
-        severity: 'error',
-        action: onNavigate ? {
-          label: 'Select Areas',
-          onClick: () => onNavigate('focus')
-        } : undefined,
-        helpText: 'Focus areas help us create targeted exercises for specific muscle groups.'
-      });
-    } else {
-      // Check for optimal area selection
-      const areaCount = Array.isArray(workoutFocusData.customization_areas) 
-        ? workoutFocusData.customization_areas.length 
-        : Object.values(workoutFocusData.customization_areas || {}).filter((item: any) => item?.selected).length;
-
-      if (areaCount > 4) {
-        issues.push({
-          field: 'Focus Areas',
-          message: 'Too many focus areas may reduce workout effectiveness.',
-          severity: 'warning',
-          helpText: 'Consider focusing on 2-3 primary areas for better results.'
-        });
-      }
-    }
-
-    return issues;
-  }
-
-  /**
-   * Validate equipment selection for detailed workouts
-   */
-  private static validateEquipment(
-    workoutFocusData: PerWorkoutOptions,
-    onNavigate?: (page: 'profile' | 'waiver' | 'focus' | 'review' | 'results') => void
-  ): ValidationIssue[] {
-    const issues: ValidationIssue[] = [];
-
-    const hasValidEquipment = (() => {
-      if (Array.isArray(workoutFocusData.customization_equipment)) {
-        return (workoutFocusData.customization_equipment || []).length > 0;
-      }
-      if (typeof workoutFocusData.customization_equipment === 'object' && workoutFocusData.customization_equipment !== null) {
-        const equipment = workoutFocusData.customization_equipment.specificEquipment || [];
-        return Array.isArray(equipment) && equipment.length > 0;
-      }
-      return false;
-    })();
-
-    if (!hasValidEquipment) {
-      issues.push({
-        field: 'Equipment',
-        message: 'Please select available equipment for personalized exercises.',
-        severity: 'error',
-        action: onNavigate ? {
-          label: 'Select Equipment',
-          onClick: () => onNavigate('focus')
-        } : undefined,
-        helpText: 'Equipment selection ensures exercises are tailored to what you have available.'
-      });
-    } else {
-      // Check equipment compatibility with focus
-      const focus = typeof workoutFocusData.customization_focus === 'string' 
-        ? workoutFocusData.customization_focus 
-        : workoutFocusData.customization_focus?.focus;
-
-      const equipment = Array.isArray(workoutFocusData.customization_equipment)
-        ? workoutFocusData.customization_equipment
-        : workoutFocusData.customization_equipment?.specificEquipment || [];
-
-      if (focus === 'strength' && equipment.includes('Body Weight') && equipment.length === 1) {
-        issues.push({
-          field: 'Equipment',
-          message: 'Body weight-only training may limit strength development.',
-          severity: 'warning',
-          helpText: 'Consider adding resistance equipment for better strength gains.'
-        });
-      }
-    }
-
-    return issues;
-  }
-
-  /**
-   * Validate workout duration appropriateness
-   */
-  private static validateDuration(workoutFocusData: PerWorkoutOptions): ValidationIssue[] {
-    const issues: ValidationIssue[] = [];
-
-    if (workoutFocusData.customization_duration) {
-      const duration = typeof workoutFocusData.customization_duration === 'number' 
-        ? workoutFocusData.customization_duration 
-        : workoutFocusData.customization_duration?.totalDuration;
-
-      if (duration && duration < 15) {
-        issues.push({
-          field: 'Workout Duration',
-          message: 'Detailed workouts work best with at least 15 minutes.',
-          severity: 'warning',
-          helpText: 'Longer workouts allow for proper warm-up, main exercises, and cool-down.'
-        });
-      }
-
-      if (duration && duration > 90) {
-        issues.push({
-          field: 'Workout Duration',
-          message: 'Workouts longer than 90 minutes may lead to fatigue.',
-          severity: 'warning',
-          helpText: 'Consider breaking into multiple sessions for better recovery and performance.'
-        });
-      }
-    }
-
-    return issues;
-  }
-
-  /**
-   * Validate energy level appropriateness
-   */
-  private static validateEnergyLevel(workoutFocusData: PerWorkoutOptions): ValidationIssue[] {
-    const issues: ValidationIssue[] = [];
-
-    if (workoutFocusData.customization_energy !== undefined) {
-      if (workoutFocusData.customization_energy <= 2) {
-        issues.push({
-          field: 'Energy Level',
-          message: 'Low energy level detected. Consider a lighter workout.',
-          severity: 'warning',
-          helpText: 'Low energy workouts should focus on recovery, mobility, or light cardio.'
-        });
-      }
-
-      if (workoutFocusData.customization_energy >= 8) {
-        issues.push({
-          field: 'Energy Level',
-          message: 'High energy level detected. You may be ready for intense training.',
-          severity: 'info',
-          helpText: 'High energy is perfect for strength training, HIIT, or challenging workouts.'
-        });
-      }
-    }
-
-    return issues;
-  }
-
-  /**
-   * Cross-component validation
-   */
-  private static validateCrossComponent(
-    workoutFocusData: PerWorkoutOptions,
-    profileData: ProfileData | null
-  ): ValidationIssue[] {
-    const issues: ValidationIssue[] = [];
-
-    // Duration vs Energy validation
-    if (workoutFocusData.customization_duration && workoutFocusData.customization_energy !== undefined) {
-      const duration = typeof workoutFocusData.customization_duration === 'number' 
-        ? workoutFocusData.customization_duration 
-        : workoutFocusData.customization_duration?.totalDuration;
-
-      if (duration && workoutFocusData.customization_energy >= 8 && duration > 60) {
-        issues.push({
-          field: 'Workout Intensity',
-          message: 'High energy with long duration may lead to overtraining.',
-          severity: 'warning',
-          helpText: 'Consider reducing duration or intensity to prevent burnout.'
-        });
-      }
-
-      if (duration && workoutFocusData.customization_energy <= 3 && duration > 30) {
-        issues.push({
-          field: 'Workout Intensity',
-          message: 'Low energy with long duration may affect performance.',
-          severity: 'warning',
-          helpText: 'Consider a shorter, lighter workout or focus on recovery.'
-        });
-      }
-    }
-
-    // Profile vs Workout validation
-    if (profileData) {
-      const experienceLevel = profileData.experienceLevel;
-      const focus = typeof workoutFocusData.customization_focus === 'string' 
-        ? workoutFocusData.customization_focus 
-        : workoutFocusData.customization_focus?.focus;
-
-      if (experienceLevel === 'New to Exercise' && focus === 'strength') {
-        issues.push({
-          field: 'Experience Level',
-          message: 'Strength training for beginners should focus on form and progression.',
-          severity: 'info',
-          helpText: 'We\'ll prioritize bodyweight exercises and proper form instruction.'
-        });
-      }
-    }
-
-    return issues;
-  }
-
-  /**
-   * Enhanced validation using PromptDataTransformer for consistency
-   * This ensures validation and data transformation use the same logic
-   */
-  static validateDataTransformation(
-    profileData: ProfileData,
-    workoutFocusData: PerWorkoutOptions
-  ): {
-    isTransformable: boolean;
-    transformationIssues: string[];
-    fieldCoverage: number;
-  } {
-    try {
-      // Use PromptDataTransformer to validate the same way generation does
-      const transformedVariables = PromptDataTransformer.transformToPromptVariables(
-        profileData,
-        workoutFocusData
-      );
-
-      const validation = PromptDataTransformer.validatePromptVariables(transformedVariables);
-
-      return {
-        isTransformable: validation.isValid,
-        transformationIssues: validation.missingRequired,
-        fieldCoverage: (validation.populatedFields / validation.totalFields) * 100
-      };
-
-    } catch (error) {
-      return {
-        isTransformable: false,
-        transformationIssues: [error instanceof Error ? error.message : 'Unknown transformation error'],
-        fieldCoverage: 0
-      };
-    }
-  }
-
-  /**
-   * Debug method to log validation and transformation consistency
+   * Debug validation consistency
    */
   static debugValidationConsistency(
     profileData: ProfileData | null,
     workoutFocusData: PerWorkoutOptions | null,
     workoutType: 'quick' | 'detailed'
   ): void {
-    console.log('🔍 ValidationService Debug:');
-    
     if (!profileData || !workoutFocusData) {
-      console.log('❌ Missing data - cannot debug transformation');
+      console.warn('Missing required data for validation');
       return;
     }
 
-    // Standard validation
-    const standardValidation = this.validateWorkoutData(workoutFocusData, profileData, workoutType);
-    console.log(`📊 Standard Validation: ${standardValidation.summary.errors} errors, ${standardValidation.summary.warnings} warnings`);
-
-    // Transformation validation
-    const transformationValidation = this.validateDataTransformation(profileData, workoutFocusData);
-    console.log(`🔄 Transformation Validation: ${transformationValidation.fieldCoverage.toFixed(1)}% field coverage`);
-    
-    if (transformationValidation.transformationIssues.length > 0) {
-      console.warn('⚠️ Transformation Issues:', transformationValidation.transformationIssues);
-    }
-
-    // Debug the actual transformed data
-    PromptDataTransformer.debugTransformation(profileData, workoutFocusData);
+    // Log key validation fields
+    console.log('🔍 ValidationService - Validation check:', {
+      profileData: {
+        experienceLevel: profileData.experienceLevel,
+        primaryGoal: profileData.primaryGoal
+      },
+      workoutFocusData: {
+        focus: workoutFocusData.customization_focus,
+        duration: workoutFocusData.customization_duration,
+        energy: workoutFocusData.customization_energy
+      },
+      workoutType
+    });
   }
 } 

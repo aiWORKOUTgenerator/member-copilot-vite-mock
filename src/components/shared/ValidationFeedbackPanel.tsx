@@ -18,6 +18,11 @@ interface ValidationFeedbackPanelProps {
   showHelp?: boolean;
   onDismiss?: () => void;
   className?: string;
+  summary?: {
+    errors: number;
+    warnings: number;
+    info: number;
+  };
 }
 
 export const ValidationFeedbackPanel: React.FC<ValidationFeedbackPanelProps> = ({
@@ -25,7 +30,8 @@ export const ValidationFeedbackPanel: React.FC<ValidationFeedbackPanelProps> = (
   title = 'Validation Issues',
   showHelp = true,
   onDismiss,
-  className = ''
+  className = '',
+  summary
 }) => {
   if (issues.length === 0) return null;
 
@@ -58,16 +64,13 @@ export const ValidationFeedbackPanel: React.FC<ValidationFeedbackPanelProps> = (
     }
   };
 
-  const getSeverityCounts = () => {
-    return issues.reduce((acc, issue) => {
-      acc[issue.severity] = (acc[issue.severity] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-  };
+  const severityCounts = summary || issues.reduce((acc, issue) => {
+    acc[issue.severity] = (acc[issue.severity] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
-  const severityCounts = getSeverityCounts();
-  const hasErrors = severityCounts.error > 0;
-  const hasWarnings = severityCounts.warning > 0;
+  const hasErrors = severityCounts.errors > 0;
+  const hasWarnings = severityCounts.warnings > 0;
   const hasInfo = severityCounts.info > 0;
 
   const getPanelConfig = () => {
@@ -115,12 +118,12 @@ export const ValidationFeedbackPanel: React.FC<ValidationFeedbackPanelProps> = (
             <div className="flex items-center space-x-4 mt-1">
               {hasErrors && (
                 <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
-                  {severityCounts.error} Error{severityCounts.error !== 1 ? 's' : ''}
+                  {severityCounts.errors} Error{severityCounts.errors !== 1 ? 's' : ''}
                 </span>
               )}
               {hasWarnings && (
                 <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">
-                  {severityCounts.warning} Warning{severityCounts.warning !== 1 ? 's' : ''}
+                  {severityCounts.warnings} Warning{severityCounts.warnings !== 1 ? 's' : ''}
                 </span>
               )}
               {hasInfo && (

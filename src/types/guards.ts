@@ -6,7 +6,7 @@ import {
   WorkoutFocusConfigurationData, 
   EquipmentSelectionData,
   HierarchicalSelectionData
-} from './enhanced-workout-types';
+} from './core';
 import { dataTransformers } from '../utils/dataTransformers';
 import { FitnessLevel, PreferredActivity, UserProfile } from './user';
 import { ProfileData } from '../components/Profile/types/profile.types';

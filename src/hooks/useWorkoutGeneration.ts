@@ -1,18 +1,36 @@
 // Custom hook for workout generation workflow
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { useAI } from '../contexts/AIContext';
 import { 
-  WorkoutGenerationState, 
-  WorkoutGenerationRequest, 
-  WorkoutGenerationStatus 
+  WorkoutGenerationRequest,
 } from '../types/workout-generation.types';
 import { GeneratedWorkout } from '../services/ai/external/types/external-ai.types';
-import { UserProfile } from '../types/user';
+import { UserProfile, FitnessLevel } from '../types/user';
 import { PerWorkoutOptions } from '../types/core';
 import { ProfileData } from '../components/Profile/types/profile.types';
 import { LiabilityWaiverData } from '../components/LiabilityWaiver/types/liability-waiver.types';
 import { logger } from '../utils/logger';
-import { profileTransformers } from '../utils/dataTransformers';
+import { PromptVariableComposer } from '../services/ai/external/DataTransformer';
+
+// Define missing types
+interface WorkoutGenerationState {
+  isGenerating: boolean;
+  generatedWorkout: GeneratedWorkout | null;
+  error: string | null;
+  generationProgress: number;
+  lastGenerated: Date | null;
+  retryCount: number;
+  lastError: WorkoutGenerationError | null;
+}
+
+type WorkoutGenerationStatus = 'idle' | 'validating' | 'generating' | 'enhancing' | 'complete' | 'error';
+
+// Define WorkoutFocusData type to match the transformer's expectations
+interface WorkoutFocusData {
+  customization_focus: string;
+  customization_duration: number;
+  customization_energy: number;
+}
 
 // Enhanced return type interface
 export interface UseWorkoutGenerationReturn {
@@ -53,7 +71,7 @@ export interface WorkoutGenerationOptions {
 }
 
 // Fallback workout generation function
-const generateFallbackWorkout = (userProfile: UserProfile, workoutOptions: PerWorkoutOptions): GeneratedWorkout => {
+const generateFallbackWorkout = (userProfile: { fitnessLevel: FitnessLevel; goals: string[] }, workoutOptions: WorkoutFocusData): GeneratedWorkout => {
   console.log('🔄 Generating fallback workout due to AI service unavailability');
   
   const focusArea = workoutOptions.customization_focus || 'strength';
@@ -69,7 +87,7 @@ const generateFallbackWorkout = (userProfile: UserProfile, workoutOptions: PerWo
       reps: 12,
       duration: 60,
       rest: 90,
-      difficulty: 'beginner',
+      difficulty: userProfile.fitnessLevel,
       equipment: ['body_weight'],
       focusAreas: ['legs', 'glutes'],
       instructions: 'Stand with feet shoulder-width apart, lower into a squat position, then return to standing.'
@@ -81,7 +99,7 @@ const generateFallbackWorkout = (userProfile: UserProfile, workoutOptions: PerWo
       reps: 8,
       duration: 45,
       rest: 90,
-      difficulty: 'beginner',
+      difficulty: userProfile.fitnessLevel,
       equipment: ['body_weight'],
       focusAreas: ['chest', 'arms'],
       instructions: 'Start in plank position, lower body to ground, then push back up.'
@@ -93,7 +111,7 @@ const generateFallbackWorkout = (userProfile: UserProfile, workoutOptions: PerWo
       reps: 1,
       duration: 30,
       rest: 60,
-      difficulty: 'beginner',
+      difficulty: userProfile.fitnessLevel,
       equipment: ['body_weight'],
       focusAreas: ['core'],
       instructions: 'Hold plank position with straight body from head to heels.'
@@ -106,7 +124,7 @@ const generateFallbackWorkout = (userProfile: UserProfile, workoutOptions: PerWo
     description: 'A simple, effective workout using bodyweight exercises.',
     exercises,
     totalDuration: duration,
-    difficulty: 'beginner',
+    difficulty: userProfile.fitnessLevel,
     focusAreas: [focusArea],
     equipment: ['body_weight'],
     tags: ['fallback', 'bodyweight', focusArea],
@@ -237,13 +255,18 @@ const withTimeout = <T>(
 export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
   const { generateWorkout: aiGenerateWorkout, serviceStatus } = useAI();
   
+  // Initialize the PromptVariableComposer with debug mode
+  const composer = useMemo(() => new PromptVariableComposer(true), []);
+
   // Enhanced state with retry tracking
   const [state, setState] = useState<WorkoutGenerationState>({
     isGenerating: false,
     generatedWorkout: null,
     error: null,
     generationProgress: 0,
-    lastGenerated: null
+    lastGenerated: null,
+    retryCount: 0,
+    lastError: null
   });
   
   // Separate retry tracking state
@@ -255,11 +278,6 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
   const abortControllerRef = useRef<AbortController | null>(null);
   const lastRequestRef = useRef<WorkoutGenerationRequest | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Enhanced profile conversion with better error handling
-  const convertProfileToUserProfile = useCallback((profileData: ProfileData): UserProfile => {
-    return profileTransformers.convertProfileToUserProfileSimple(profileData);
-  }, []);
 
   // Enhanced validation with better error messages
   const validateRequest = useCallback((request: WorkoutGenerationRequest): WorkoutGenerationError | null => {
@@ -298,7 +316,7 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
 
   // Enhanced workout generation with retry logic and fallbacks
   const generateWorkout = useCallback(async (
-    request: WorkoutGenerationRequest, 
+    request: WorkoutGenerationRequest & { additionalContext?: Record<string, any> }, 
     options: WorkoutGenerationOptions = {}
   ): Promise<GeneratedWorkout | null> => {
     
@@ -310,7 +328,7 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
     const {
       retryAttempts = 3,
       retryDelay = 1000,
-              timeout = 90000, // 90 seconds
+      timeout = 90000, // 90 seconds
       useFallback = true,
       enableDetailedLogging = false
     } = options;
@@ -349,44 +367,45 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
       setStatus('generating');
       updateProgress(10);
 
-      // Use the provided userProfile or convert from profileData if not provided
-      const userProfile = request.userProfile || convertProfileToUserProfile(request.profileData);
+      // Transform data using the new PromptVariableComposer
+      const promptVariables = composer.transformToPromptVariables(
+        request.profileData,
+        request.workoutFocusData as WorkoutFocusData,
+        request.additionalContext
+      );
       
-      // Debug log to verify userProfile
-      console.log('🔍 useWorkoutGeneration - userProfile:', {
-        hasUserProfile: !!request.userProfile,
-        fitnessLevel: userProfile.fitnessLevel,
-        goals: userProfile.goals,
-        source: request.userProfile ? 'provided' : 'converted'
+      // 🔍 DEBUG: Verify transformation worked
+      console.log('🔍 DEBUG - Data transformation result:', {
+        hasPromptVariables: !!promptVariables,
+        experienceLevel: promptVariables?.experienceLevel,
+        focus: promptVariables?.focus,
+        energyLevel: promptVariables?.energyLevel
       });
       
-      updateProgress(20);
-
-      // Prepare workout options
-      const workoutOptions: PerWorkoutOptions = {
-        ...request.workoutFocusData,
-      };
-
+      if (!promptVariables) {
+        throw new Error('Failed to transform data');
+      }
+      
       updateProgress(30);
 
       // Enhanced generation with retry logic and timeout
       const generationOperation = async (): Promise<GeneratedWorkout> => {
         if (enableDetailedLogging) {
           logger.info('Starting workout generation with retry logic', { 
-            userProfile: { fitnessLevel: userProfile.fitnessLevel, goals: userProfile.goals }, 
-            workoutOptions,
+            promptVariables,
             retryAttempts,
             timeout
           });
         }
         
-        // Pass the complete request to preserve profileData
+        // Pass the complete request with transformed data
         const generatedWorkout = await aiGenerateWorkout({
           workoutType: request.workoutType,
           profileData: request.profileData,
           waiverData: request.waiverData,
-          workoutFocusData: workoutOptions,
-          userProfile
+          workoutFocusData: request.workoutFocusData,
+          promptVariables, // ✅ Pass the transformed variables
+          userProfile: request.userProfile
         });
         
         if (abortControllerRef.current?.signal.aborted) {
@@ -425,7 +444,7 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
         confidence: generatedWorkout.confidence || 0.85,
         tags: [
           ...(generatedWorkout.tags || []),
-          userProfile.fitnessLevel,
+          promptVariables.experienceLevel,
           'ai_generated',
           new Date().toISOString().split('T')[0]
         ]
@@ -445,7 +464,7 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
       setStatus('complete');
 
       // Update state with successful generation
-      setState(prev => ({
+      setState((prev: WorkoutGenerationState) => ({
         ...prev,
         isGenerating: false,
         generatedWorkout: enhancedWorkout,
@@ -498,7 +517,7 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
       const workoutError = getErrorDetails(errorCode, error);
       
       // Update state with error information
-      setState(prev => ({
+      setState((prev: WorkoutGenerationState) => ({
         ...prev,
         isGenerating: false,
         error: workoutError.message,
@@ -515,14 +534,25 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
         try {
           console.log('🔄 Attempting fallback workout generation...');
           
-          const userProfile = convertProfileToUserProfile(lastRequestRef.current.profileData);
-          const workoutOptions: PerWorkoutOptions = {
-            ...lastRequestRef.current.workoutFocusData,
-          };
+          // Transform data for fallback using the new composer
+          const promptVariables = composer.transformToPromptVariables(
+            lastRequestRef.current.profileData,
+            lastRequestRef.current.workoutFocusData as WorkoutFocusData
+          );
           
-          const fallbackWorkout = generateFallbackWorkout(userProfile, workoutOptions);
+          const fallbackWorkout = generateFallbackWorkout(
+            { 
+              fitnessLevel: promptVariables.experienceLevel as FitnessLevel, 
+              goals: [promptVariables.primaryGoal] 
+            },
+            {
+              customization_focus: String(lastRequestRef.current.workoutFocusData.customization_focus),
+              customization_duration: Number(lastRequestRef.current.workoutFocusData.customization_duration),
+              customization_energy: Number(lastRequestRef.current.workoutFocusData.customization_energy)
+            }
+          );
           
-          setState(prev => ({
+          setState((prev: WorkoutGenerationState) => ({
             ...prev,
             generatedWorkout: fallbackWorkout,
             error: null,
@@ -545,7 +575,7 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
     } finally {
       abortControllerRef.current = null;
     }
-  }, [aiGenerateWorkout, validateRequest, convertProfileToUserProfile, updateProgress, logger]);
+  }, [aiGenerateWorkout, validateRequest, updateProgress, logger, composer]);
 
   // Enhanced retry with exponential backoff
   const retryGeneration = useCallback(async (): Promise<GeneratedWorkout | null> => {

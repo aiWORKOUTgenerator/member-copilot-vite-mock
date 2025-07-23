@@ -1,8 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Eye, ChevronLeft, ChevronRight, AlertTriangle, XCircle, Loader2, Sparkles, CheckCircle } from 'lucide-react';
-// WorkoutType is imported via ReviewPageProps from ./types
 import { WorkoutGenerationRequest } from '../../types/workout-generation.types';
-import { UserProfile, TimePreference, IntensityLevel, AIAssistanceLevel } from '../../types/user';
+import { UserProfile } from '../../types/user';
 import { mapExperienceLevelToFitnessLevel } from '../../utils/configUtils';
 import { calculateWorkoutIntensity } from '../../utils/fitnessLevelCalculator';
 import { ReviewPageProps } from './types';
@@ -27,16 +26,6 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
 
-  // 🔍 DEBUG: Log the profileData received by ReviewPage (key fields only)
-  React.useEffect(() => {
-    if (profileData) {
-      console.log('🔍 ReviewPage - Received data:', {
-        primaryGoal: profileData.primaryGoal,
-        experienceLevel: profileData.experienceLevel
-      });
-    }
-  }, [profileData]);
-
   // Convert workout focus data to display format
   const displayWorkoutFocus = convertWorkoutFocusToDisplay(workoutFocusData, workoutType);
 
@@ -48,9 +37,6 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
 
     setIsGenerating(true);
     setGenerationError(null);
-
-    // 🔍 DEBUG: Log validation and transformation consistency
-    ValidationService.debugValidationConsistency(profileData, workoutFocusData, workoutType);
 
     try {
       // Use the calculated workout intensity from TimeCommitmentStep, or calculate if not available
@@ -87,10 +73,10 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
           workoutStyle: profileData.preferredActivities.map(activity => 
             activity.toLowerCase().replace(/[^a-z0-9]/g, '_')
           ),
-          timePreference: 'morning' as TimePreference,
-          intensityPreference: calculatedWorkoutIntensity as IntensityLevel,
+          timePreference: 'morning',
+          intensityPreference: calculatedWorkoutIntensity || 'moderate',
           advancedFeatures: profileData.experienceLevel === 'Advanced Athlete',
-          aiAssistanceLevel: 'moderate' as AIAssistanceLevel
+          aiAssistanceLevel: 'moderate'
         },
         basicLimitations: {
           injuries: profileData.injuries.filter(injury => injury !== 'No Injuries'),
@@ -98,7 +84,7 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
           availableLocations: profileData.availableLocations
         },
         enhancedLimitations: {
-          timeConstraints: 0, // This will be calculated by the AI service
+          timeConstraints: 0,
           equipmentConstraints: [],
           locationConstraints: [],
           recoveryNeeds: {
@@ -128,25 +114,6 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
         }
       };
 
-      // Debug log to verify userProfile is built correctly
-      console.log('✅ UserProfile built successfully:', {
-        fitnessLevel: userProfile.fitnessLevel,
-        goals: userProfile.goals,
-        experienceLevel: profileData.experienceLevel,
-        primaryGoal: profileData.primaryGoal,
-        calculatedFitnessLevel: profileData.calculatedFitnessLevel,
-        fitnessLevelSource: profileData.calculatedFitnessLevel ? 'calculated' : 'mapped',
-        calculatedWorkoutIntensity: profileData.calculatedWorkoutIntensity,
-        workoutIntensitySource: profileData.calculatedWorkoutIntensity ? 'calculated' : 'computed'
-      });
-
-      // 🔍 CRITICAL DEBUG: Log what ReviewPage is sending to workout generation  
-      console.log('🔍 CRITICAL - ReviewPage data check:');
-      console.log('  hasProfileData:', !!profileData);
-      console.log('  experienceLevel:', profileData?.experienceLevel);
-      console.log('  primaryGoal:', profileData?.primaryGoal);
-      console.log('  userProfile fitnessLevel:', userProfile?.fitnessLevel);
-
       const request: WorkoutGenerationRequest = {
         workoutType,
         profileData,
@@ -155,49 +122,17 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
         userProfile
       };
 
-      // 🔍 CRITICAL DEBUG: Log the complete request object
-      console.log('🔍 CRITICAL - WorkoutGenerationRequest check:');
-      console.log('  request.profileData exists:', !!request.profileData);
-      console.log('  request.profileData.experienceLevel:', request.profileData?.experienceLevel);
-      console.log('  request.profileData.primaryGoal:', request.profileData?.primaryGoal);
-
       const generatedWorkout = await workoutGeneration.generateWorkout(request);
       
-      // 🔍 DEBUG: Log workout generation result
-      console.log('🔍 ReviewPage - Workout generation result:', {
-        hasGeneratedWorkout: !!generatedWorkout,
-        workoutId: generatedWorkout?.id,
-        workoutTitle: generatedWorkout?.title,
-        workoutKeys: generatedWorkout ? Object.keys(generatedWorkout) : 'N/A'
-      });
-      
       if (generatedWorkout) {
-        // 🔍 DEBUG: Log before calling onWorkoutGenerated
-        console.log('🔍 ReviewPage - Calling onWorkoutGenerated with workout:', {
-          workoutId: generatedWorkout.id,
-          workoutTitle: generatedWorkout.title
-        });
-        
         onWorkoutGenerated(generatedWorkout);
-        
-        // 🔍 DEBUG: Log before navigation
-        console.log('🔍 ReviewPage - Navigating to results page');
         onNavigate('results');
       } else {
-        console.error('🔍 ReviewPage - No workout generated, setting error');
         setGenerationError('Failed to generate workout. Please try again.');
       }
     } catch (error) {
       // Enhanced error logging with actionable information
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
-      console.error('Workout generation failed:', {
-        error: errorMessage,
-        profileDataKeys: profileData ? Object.keys(profileData) : 'N/A',
-        experienceLevel: profileData?.experienceLevel || 'MISSING',
-        primaryGoal: profileData?.primaryGoal || 'MISSING',
-        intensityLevel: profileData?.intensityLevel || 'MISSING'
-      });
       
       // Provide more specific error messages based on the error type
       if (errorMessage.includes('Experience level is required')) {
@@ -216,7 +151,7 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
     }
   }, [profileData, waiverData, workoutFocusData, workoutType, workoutGeneration, onWorkoutGenerated, onNavigate]);
 
-  // 🔍 DEBUG: Add delay to ensure data is loaded before validation
+  // Add delay to ensure data is loaded before validation
   const [isDataReady, setIsDataReady] = React.useState(false);
   
   React.useEffect(() => {
@@ -293,128 +228,38 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
         </div>
         
         {/* Validation Status Badge */}
-        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full mt-2 ml-2 ${
+        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full mt-4 ${
           validationResult.isValid
             ? 'bg-green-100 text-green-800'
-            : validationResult.summary.errors > 0
-            ? 'bg-red-100 text-red-800'
             : 'bg-yellow-100 text-yellow-800'
         }`}>
           {validationResult.isValid ? (
-            <CheckCircle className="w-4 h-4" />
-          ) : validationResult.summary.errors > 0 ? (
-            <XCircle className="w-4 h-4" />
+            <>
+              <CheckCircle className="w-4 h-4" />
+              <span className="text-sm font-medium">Ready to Generate</span>
+            </>
           ) : (
-            <AlertTriangle className="w-4 h-4" />
+            <>
+              <AlertTriangle className="w-4 h-4" />
+              <span className="text-sm font-medium">
+                {validationResult.summary.errors} Issue{validationResult.summary.errors !== 1 ? 's' : ''} to Fix
+              </span>
+            </>
           )}
-          <span className="text-sm font-medium">
-            {validationResult.isValid 
-              ? 'Ready to Generate' 
-              : validationResult.summary.errors > 0 
-              ? `${validationResult.summary.errors} Issue${validationResult.summary.errors !== 1 ? 's' : ''} to Fix`
-              : `${validationResult.summary.warnings} Recommendation${validationResult.summary.warnings !== 1 ? 's' : ''}`
-            }
-          </span>
         </div>
       </div>
 
-      {/* Comprehensive Validation Feedback */}
-      {validationResult.issues.length > 0 && (
-        <div className="max-w-4xl mx-auto mb-6">
+      {/* Validation Feedback */}
+      {!validationResult.isValid && (
+        <div className="max-w-4xl mx-auto">
           <ValidationFeedbackPanel
             issues={validationResult.issues}
-            title={
-              validationResult.summary.errors > 0 
-                ? 'Required Information Missing' 
-                : validationResult.summary.warnings > 0 
-                ? 'Recommendations for Better Results'
-                : 'Additional Information Available'
-            }
-            showHelp={true}
-            className="mb-4"
+            summary={validationResult.summary}
           />
         </div>
       )}
 
-      {/* Detailed Workout Progression Indicator */}
-      {workoutType === 'detailed' && detailedProgression && (
-        <div className="max-w-4xl mx-auto mb-6">
-          <div className={`border rounded-lg p-4 ${
-            detailedProgression.isValid 
-              ? 'bg-green-50 border-green-200' 
-              : 'bg-blue-50 border-blue-200'
-          }`}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
-                  detailedProgression.isValid 
-                    ? 'bg-green-600 text-white' 
-                    : 'bg-blue-600 text-white'
-                }`}>
-                  {detailedProgression.step}
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-900">
-                    Detailed Workout Setup Progress
-                  </h3>
-                  <p className="text-xs text-gray-600">
-                    Step {detailedProgression.step} of {detailedProgression.totalSteps}: {detailedProgression.currentStep}
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-medium text-gray-900">
-                  {Math.round((detailedProgression.step / detailedProgression.totalSteps) * 100)}% Complete
-                </div>
-                <div className="text-xs text-gray-600">
-                  Next: {detailedProgression.nextStep}
-                </div>
-              </div>
-            </div>
-            
-            {/* Progress Bar */}
-            <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
-              <div 
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  detailedProgression.isValid ? 'bg-green-600' : 'bg-blue-600'
-                }`}
-                style={{ width: `${(detailedProgression.step / detailedProgression.totalSteps) * 100}%` }}
-              />
-            </div>
-            
-            {/* Issues and Recommendations */}
-            {detailedProgression.issues.length > 0 && (
-              <div className="mb-3">
-                <h4 className="text-xs font-medium text-gray-700 mb-1">Issues to Address:</h4>
-                <ul className="text-xs text-gray-600 space-y-1">
-                  {detailedProgression.issues.map((issue, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="text-red-500 mr-2 mt-0.5">•</span>
-                      <span>{issue}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            
-            {detailedProgression.recommendations.length > 0 && (
-              <div>
-                <h4 className="text-xs font-medium text-gray-700 mb-1">Recommendations:</h4>
-                <ul className="text-xs text-gray-600 space-y-1">
-                  {detailedProgression.recommendations.map((recommendation, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="text-blue-500 mr-2 mt-0.5">•</span>
-                      <span>{recommendation}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Comprehensive Error Handling */}
+      {/* Generation Error */}
       {generationError && (
         <div className="max-w-4xl mx-auto mb-6">
           <ErrorHandlingPanel

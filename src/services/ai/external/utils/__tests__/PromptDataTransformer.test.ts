@@ -1,6 +1,6 @@
-import { PromptDataTransformer } from '../PromptDataTransformer';
+import { PromptDataTransformer } from '../../shared/utils/PromptDataTransformer';
 import { ProfileData } from '../../../../components/Profile/types/profile.types';
-import { PerWorkoutOptions } from '../../../../types/enhanced-workout-types';
+import { PerWorkoutOptions } from '../../../../types/core';
 
 // Mock the equipment filtering function
 jest.mock('../../../../../utils/equipmentRecommendations', () => ({

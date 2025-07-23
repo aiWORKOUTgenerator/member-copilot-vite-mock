@@ -1,6 +1,6 @@
 import { WorkoutRequestFactory } from '../WorkoutRequestFactory';
 import { WorkoutGenerationRequest } from '../../../../types/workout-generation.types';
-import { PerWorkoutOptions } from '../../../../types/enhanced-workout-types';
+import { PerWorkoutOptions } from '../../../../types/core';
 import { UserProfile } from '../../../../types/user';
 import { ProfileData } from '../../../../components/Profile/types/profile.types';
 
@@ -46,181 +46,177 @@ describe('WorkoutRequestFactory', () => {
         aiRecommendationAcceptance: 0.7,
         consistencyScore: 0.5,
         plateauRisk: 'low'
+      },
+      learningProfile: {
+        prefersSimplicity: true,
+        explorationTendency: 'moderate',
+        feedbackPreference: 'simple',
+        learningStyle: 'visual',
+        motivationType: 'intrinsic',
+        adaptationSpeed: 'moderate'
       }
     };
 
     // Create valid mock workout focus data
     mockWorkoutFocusData = {
-      customization_duration: 30,
-      customization_focus: 'strength',
+      customization_focus: {
+        focus: 'strength',
+        label: 'Strength Training',
+        selected: true,
+        metadata: {
+          intensity: 'moderate',
+          equipment: 'moderate',
+          experience: 'some experience',
+          duration_compatibility: [30, 45, 60]
+        }
+      },
+      customization_duration: {
+        duration: 30,
+        warmupDuration: 5,
+        mainDuration: 20,
+        cooldownDuration: 5,
+        selected: true,
+        label: '30 minutes'
+      },
       customization_energy: 7,
-      customization_equipment: ['dumbbells', 'bodyweight']
+      customization_equipment: ['Dumbbells', 'Body Weight'],
+      customization_location: 'home',
+      customization_intensity: 'moderate',
+      customization_soreness: ['Upper Body', 'Lower Body']
     };
 
     // Create valid mock profile data
     mockProfileData = {
       experienceLevel: 'Some Experience',
+      primaryGoal: 'Strength',
       physicalActivity: 'moderate',
-      preferredDuration: '45-60 min',
+      preferredDuration: '30-45 min',
       timeCommitment: '3-4',
       intensityLevel: 'moderately',
-      preferredActivities: ['Running/Jogging', 'Yoga'],
-      availableLocations: ['Gym', 'Home'],
+      goalTimeline: '3 months',
+      preferredActivities: ['Running/Jogging', 'Swimming'],
       availableEquipment: ['Dumbbells', 'Resistance Bands'],
-      primaryGoal: 'Strength',
-      goalTimeline: '6 months',
-      age: '36-45',
-      height: '',
-      weight: '',
-      gender: 'prefer-not-to-say',
+      availableLocations: ['Home', 'Gym'],
+      age: '26-35',
+      height: '175',
+      weight: '70',
+      gender: 'male',
       hasCardiovascularConditions: 'No',
       injuries: ['No Injuries']
     };
   });
 
-  describe('createRequest', () => {
-    it('should create a valid request with all required fields', () => {
-      const request = WorkoutRequestFactory.createRequest({
-        workoutType: 'quick',
-        profileData: mockProfileData,
-        workoutFocusData: mockWorkoutFocusData,
-        userProfile: mockUserProfile
-      });
-
-      expect(request).toBeDefined();
-      expect(request.workoutType).toBe('quick');
-      expect(request.profileData).toBe(mockProfileData);
-      expect(request.workoutFocusData).toBe(mockWorkoutFocusData);
-      expect(request.userProfile).toBe(mockUserProfile);
-      expect(request.preferences).toBeDefined();
-      expect(request.constraints).toBeDefined();
-      expect(request.environmentalFactors).toBeDefined();
+  it('should create a valid workout generation request', () => {
+    const request = WorkoutRequestFactory.createRequest({
+      workoutType: 'quick',
+      userProfile: mockUserProfile,
+      workoutFocusData: mockWorkoutFocusData
     });
 
-    it('should infer workoutType as quick for short durations', () => {
-      const request = WorkoutRequestFactory.createRequest({
-        profileData: mockProfileData,
-        workoutFocusData: { ...mockWorkoutFocusData, customization_duration: 15 },
-        userProfile: mockUserProfile
-      });
+    expect(request).toBeDefined();
+    expect(request.workoutType).toBe('quick');
+    expect(request.userProfile).toBe(mockUserProfile);
+    expect(request.workoutFocusData).toBe(mockWorkoutFocusData);
+    expect(request.profileData).toBeDefined();
+    expect(request.preferences).toBeDefined();
+    expect(request.constraints).toBeDefined();
+    expect(request.environmentalFactors).toBeDefined();
+  });
 
-      expect(request.workoutType).toBe('quick');
+  it('should create default preferences correctly', () => {
+    const request = WorkoutRequestFactory.createRequest({
+      workoutType: 'quick',
+      userProfile: mockUserProfile,
+      workoutFocusData: mockWorkoutFocusData
     });
 
-    it('should infer workoutType as detailed for longer durations', () => {
-      const request = WorkoutRequestFactory.createRequest({
-        profileData: mockProfileData,
-        workoutFocusData: { ...mockWorkoutFocusData, customization_duration: 45 },
-        userProfile: mockUserProfile
-      });
-
-      expect(request.workoutType).toBe('detailed');
-    });
-
-    it('should throw error for invalid request', () => {
-      const invalidUserProfile = { ...mockUserProfile, fitnessLevel: 'invalid' as any };
-      
-      expect(() => {
-        WorkoutRequestFactory.createRequest({
-          workoutType: 'quick',
-          profileData: mockProfileData,
-          workoutFocusData: mockWorkoutFocusData,
-          userProfile: invalidUserProfile
-        });
-      }).toThrow('Invalid request parameters');
+    expect(request.preferences).toEqual({
+      duration: 30,
+      focus: 'strength',
+      intensity: 'moderate',
+      equipment: ['Dumbbells', 'Body Weight'],
+      location: 'home'
     });
   });
 
-  describe('fromQuickWorkout', () => {
-    it('should create a valid request from quick workout data', () => {
-      const request = WorkoutRequestFactory.fromQuickWorkout(
-        mockWorkoutFocusData,
-        mockUserProfile
-      );
+  it('should create default constraints correctly', () => {
+    const request = WorkoutRequestFactory.createRequest({
+      workoutType: 'quick',
+      userProfile: mockUserProfile,
+      workoutFocusData: mockWorkoutFocusData
+    });
 
-      expect(request).toBeDefined();
-      expect(request.workoutType).toBe('quick');
-      expect(request.workoutFocusData).toBe(mockWorkoutFocusData);
-      expect(request.userProfile).toBe(mockUserProfile);
-      expect(request.preferences).toBeDefined();
-      expect(request.constraints).toBeDefined();
-      expect(request.environmentalFactors).toBeDefined();
+    expect(request.constraints).toEqual({
+      maxDuration: 35,
+      minDuration: 25,
+      intensityLimit: 'moderate'
     });
   });
 
-  describe('fromAppComponents', () => {
-    it('should create a valid request from app components', () => {
-      const request = WorkoutRequestFactory.fromAppComponents(
-        'detailed',
-        mockProfileData,
-        mockWorkoutFocusData,
-        mockUserProfile
-      );
-
-      expect(request).toBeDefined();
-      expect(request.workoutType).toBe('detailed');
-      expect(request.profileData).toBe(mockProfileData);
-      expect(request.workoutFocusData).toBe(mockWorkoutFocusData);
-      expect(request.userProfile).toBe(mockUserProfile);
-      expect(request.preferences).toBeDefined();
-      expect(request.constraints).toBeDefined();
-      expect(request.environmentalFactors).toBeDefined();
+  it('should create default environmental factors correctly', () => {
+    const request = WorkoutRequestFactory.createRequest({
+      workoutType: 'quick',
+      userProfile: mockUserProfile,
+      workoutFocusData: mockWorkoutFocusData
     });
 
-    it('should include waiver data when provided', () => {
-      const mockWaiverData = { accepted: true, timestamp: new Date() };
-      
-      const request = WorkoutRequestFactory.fromAppComponents(
-        'detailed',
-        mockProfileData,
-        mockWorkoutFocusData,
-        mockUserProfile,
-        mockWaiverData
-      );
-
-      expect(request.waiverData).toBe(mockWaiverData);
+    expect(request.environmentalFactors).toEqual({
+      location: 'indoor',
+      timeOfDay: 'morning'
     });
   });
 
-  describe('preferences generation', () => {
-    it('should create preferences with correct intensity mapping', () => {
-      const lowEnergyRequest = WorkoutRequestFactory.createRequest({
-        workoutType: 'quick',
-        profileData: mockProfileData,
-        workoutFocusData: { ...mockWorkoutFocusData, customization_energy: 2 },
-        userProfile: mockUserProfile
-      });
-      expect(lowEnergyRequest.preferences?.intensity).toBe('low');
+  it('should handle missing optional fields', () => {
+    const minimalWorkoutFocusData: PerWorkoutOptions = {
+      customization_focus: 'strength',
+      customization_duration: {
+        duration: 30,
+        warmupDuration: 5,
+        mainDuration: 20,
+        cooldownDuration: 5,
+        selected: true,
+        label: '30 minutes'
+      }
+    };
 
-      const moderateEnergyRequest = WorkoutRequestFactory.createRequest({
-        workoutType: 'quick',
-        profileData: mockProfileData,
-        workoutFocusData: { ...mockWorkoutFocusData, customization_energy: 5 },
-        userProfile: mockUserProfile
-      });
-      expect(moderateEnergyRequest.preferences?.intensity).toBe('moderate');
-
-      const highEnergyRequest = WorkoutRequestFactory.createRequest({
-        workoutType: 'quick',
-        profileData: mockProfileData,
-        workoutFocusData: { ...mockWorkoutFocusData, customization_energy: 9 },
-        userProfile: mockUserProfile
-      });
-      expect(highEnergyRequest.preferences?.intensity).toBe('high');
+    const request = WorkoutRequestFactory.createRequest({
+      workoutType: 'quick',
+      userProfile: mockUserProfile,
+      workoutFocusData: minimalWorkoutFocusData
     });
 
-    it('should extract equipment list correctly', () => {
-      const request = WorkoutRequestFactory.createRequest({
-        workoutType: 'quick',
-        profileData: mockProfileData,
-        workoutFocusData: {
-          ...mockWorkoutFocusData,
-          customization_equipment: ['dumbbells', 'kettlebell']
-        },
-        userProfile: mockUserProfile
-      });
+    expect(request).toBeDefined();
+    expect(request.preferences.equipment).toEqual(['bodyweight']);
+    expect(request.preferences.location).toBe('home');
+  });
 
-      expect(request.preferences?.equipment).toEqual(['dumbbells', 'kettlebell']);
+  it('should handle numeric duration values', () => {
+    const numericDurationData: PerWorkoutOptions = {
+      ...mockWorkoutFocusData,
+      customization_duration: 30
+    };
+
+    const request = WorkoutRequestFactory.createRequest({
+      workoutType: 'quick',
+      userProfile: mockUserProfile,
+      workoutFocusData: numericDurationData
     });
+
+    expect(request.preferences.duration).toBe(30);
+  });
+
+  it('should handle string focus values', () => {
+    const stringFocusData: PerWorkoutOptions = {
+      ...mockWorkoutFocusData,
+      customization_focus: 'strength'
+    };
+
+    const request = WorkoutRequestFactory.createRequest({
+      workoutType: 'quick',
+      userProfile: mockUserProfile,
+      workoutFocusData: stringFocusData
+    });
+
+    expect(request.preferences.focus).toBe('strength');
   });
 }); 

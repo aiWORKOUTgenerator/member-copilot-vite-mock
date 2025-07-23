@@ -1,4 +1,4 @@
-import { PerWorkoutOptions } from '../../../types/enhanced-workout-types';
+import { PerWorkoutOptions, DurationConfigurationData, WorkoutFocusConfigurationData } from '../../../types/core';
 import { ProfileData } from '../../Profile/types/profile.types';
 import { DisplayWorkoutFocus } from '../types';
 
@@ -16,7 +16,7 @@ export const convertWorkoutFocusToDisplay = (
   };
   
   // Extract focus value properly - handle both string and object formats
-  const extractFocusValue = (focusData: any): string => {
+  const extractFocusValue = (focusData: string | WorkoutFocusConfigurationData | undefined): string => {
     if (!focusData) return 'Not specified';
     
     // If it's already a string, return it
@@ -25,41 +25,29 @@ export const convertWorkoutFocusToDisplay = (
     }
     
     // If it's an object (WorkoutFocusConfigurationData), extract the focus property
-    if (typeof focusData === 'object' && focusData.focus) {
-      return focusData.focus;
+    return focusData.focus || focusData.label || 'Not specified';
+  };
+
+  // Extract duration value properly - handle both number and object formats
+  const extractDurationValue = (durationData: number | DurationConfigurationData | undefined): string => {
+    if (!durationData) return 'Not specified';
+
+    // If it's a number, return it
+    if (typeof durationData === 'number') {
+      return `${durationData} minutes`;
     }
-    
-    // If it's an object with focusLabel, use that
-    if (typeof focusData === 'object' && focusData.focusLabel) {
-      return focusData.focusLabel;
-    }
-    
-    // If it's an object with label, use that
-    if (typeof focusData === 'object' && focusData.label) {
-      return focusData.label;
-    }
-    
-    // Fallback to string conversion
-    return String(focusData);
+
+    // If it's an object (DurationConfigurationData), use the duration property
+    return `${durationData.duration} minutes`;
   };
   
   const workoutFocus = extractFocusValue(workoutFocusData.customization_focus);
-  
-  // 🔍 DEBUG: Log the focus extraction
-  console.log('🔍 convertWorkoutFocusToDisplay - Focus extraction:', {
-    originalFocus: workoutFocusData.customization_focus,
-    originalType: typeof workoutFocusData.customization_focus,
-    extractedFocus: workoutFocus,
-    isObject: typeof workoutFocusData.customization_focus === 'object',
-    hasObjectFocus: typeof workoutFocusData.customization_focus === 'object' && workoutFocusData.customization_focus?.focus
-  });
   
   return {
     workoutFocus: workoutFocus,
     workoutIntensity: String('Not specified'), // Will be populated from profile data
     workoutType: getWorkoutTypeDisplay(),
-    duration: workoutFocusData.customization_duration ? 
-      `${workoutFocusData.customization_duration} minutes` : 'Not specified',
+    duration: extractDurationValue(workoutFocusData.customization_duration),
     focusAreas: Array.isArray(workoutFocusData.customization_areas) ? 
       workoutFocusData.customization_areas : [],
     equipment: Array.isArray(workoutFocusData.customization_equipment) ? 
@@ -67,12 +55,7 @@ export const convertWorkoutFocusToDisplay = (
     energyLevel: workoutFocusData.customization_energy ? 
       `${workoutFocusData.customization_energy}/10` : 'Not specified',
     currentSoreness: workoutFocusData.customization_soreness ? 
-      Object.keys(workoutFocusData.customization_soreness)
-        .filter(key => workoutFocusData.customization_soreness?.[key]?.selected)
-        .map(key => ({
-          area: key === 'general' ? 'General Soreness' : key,
-          level: workoutFocusData.customization_soreness?.[key]?.rating || 0
-        })) : [],
+      [{ area: 'General', level: workoutFocusData.customization_soreness.rating }] : [],
     includeExercises: [],
     excludeExercises: []
   };
@@ -95,33 +78,13 @@ export const validateWorkoutFocusData = (data: PerWorkoutOptions | null, workout
     return true;
   }
   
-  // For detailed workouts, require additional fields with complex data structure validation
+  // For detailed workouts, require additional fields
   if (workoutType === 'detailed') {
-    // Validate focus areas - handle both array and hierarchical data structures
-    const hasValidAreas = (() => {
-      if (Array.isArray(data.customization_areas)) {
-        return data.customization_areas.length > 0;
-      }
-      if (typeof data.customization_areas === 'object' && data.customization_areas !== null) {
-        // Handle HierarchicalSelectionData format
-        const selectedAreas = Object.values(data.customization_areas).filter((item: any) => item?.selected);
-        return selectedAreas.length > 0;
-      }
-      return false;
-    })();
+    // Validate focus areas
+    const hasValidAreas = Array.isArray(data.customization_areas) && data.customization_areas.length > 0;
     
-    // Validate equipment - handle both array and EquipmentSelectionData structures
-    const hasValidEquipment = (() => {
-      if (Array.isArray(data.customization_equipment)) {
-        return data.customization_equipment.length > 0;
-      }
-      if (typeof data.customization_equipment === 'object' && data.customization_equipment !== null) {
-        // Handle EquipmentSelectionData format
-        const equipment = data.customization_equipment.specificEquipment || [];
-        return Array.isArray(equipment) && equipment.length > 0;
-      }
-      return false;
-    })();
+    // Validate equipment
+    const hasValidEquipment = Array.isArray(data.customization_equipment) && data.customization_equipment.length > 0;
     
     return hasValidAreas && hasValidEquipment;
   }
@@ -159,64 +122,14 @@ export const getMissingDataWarnings = (
     warnings.push('Energy level is required. Please rate your current energy level.');
   }
   
-  // Additional requirements for detailed workouts with complex data structure validation
+  // For detailed workouts, check additional requirements
   if (workoutType === 'detailed') {
-    // Validate focus areas with detailed guidance
-    const hasValidAreas = (() => {
-      if (Array.isArray(workoutFocusData.customization_areas)) {
-        return workoutFocusData.customization_areas.length > 0;
-      }
-      if (typeof workoutFocusData.customization_areas === 'object' && workoutFocusData.customization_areas !== null) {
-        const selectedAreas = Object.values(workoutFocusData.customization_areas).filter((item: any) => item?.selected);
-        return selectedAreas.length > 0;
-      }
-      return false;
-    })();
-    
-    if (!hasValidAreas) {
-      warnings.push('Focus areas are required for detailed workouts. Please select at least one muscle group to target for personalized exercise recommendations.');
+    if (!Array.isArray(workoutFocusData.customization_areas) || workoutFocusData.customization_areas.length === 0) {
+      warnings.push('Focus areas are required for detailed workouts. Please select at least one focus area.');
     }
     
-    // Validate equipment with detailed guidance
-    const hasValidEquipment = (() => {
-      if (Array.isArray(workoutFocusData.customization_equipment)) {
-        return workoutFocusData.customization_equipment.length > 0;
-      }
-      if (typeof workoutFocusData.customization_equipment === 'object' && workoutFocusData.customization_equipment !== null) {
-        const equipment = workoutFocusData.customization_equipment.specificEquipment || [];
-        return Array.isArray(equipment) && equipment.length > 0;
-      }
-      return false;
-    })();
-    
-    if (!hasValidEquipment) {
-      warnings.push('Equipment selection is required for detailed workouts. Please specify what equipment you have available to receive targeted exercise recommendations.');
-    }
-    
-    // Additional detailed workout specific validations
-    if (workoutFocusData.customization_duration) {
-      const duration = typeof workoutFocusData.customization_duration === 'number' 
-        ? workoutFocusData.customization_duration 
-        : workoutFocusData.customization_duration?.totalDuration;
-      
-      if (duration && duration < 15) {
-        warnings.push('Detailed workouts work best with at least 15 minutes. Consider increasing duration for better results.');
-      }
-      
-      if (duration && duration > 90) {
-        warnings.push('Workouts longer than 90 minutes may lead to fatigue. Consider breaking into multiple sessions.');
-      }
-    }
-    
-    // Validate energy level appropriateness for detailed workouts
-    if (workoutFocusData.customization_energy !== undefined) {
-      if (workoutFocusData.customization_energy <= 2) {
-        warnings.push('Low energy level detected. Consider a lighter workout or recovery session.');
-      }
-      
-      if (workoutFocusData.customization_energy >= 8) {
-        warnings.push('High energy level detected. You may be ready for a more intense detailed workout.');
-      }
+    if (!Array.isArray(workoutFocusData.customization_equipment) || workoutFocusData.customization_equipment.length === 0) {
+      warnings.push('Equipment selection is required for detailed workouts. Please select available equipment.');
     }
   }
   
@@ -341,7 +254,6 @@ export const getTrainingStyle = (preferredActivities: string[], availableEquipme
 
 /**
  * Validate detailed workout step-by-step progression
- * Provides specific guidance for detailed workout requirements
  */
 export const validateDetailedWorkoutProgression = (
   workoutFocusData: PerWorkoutOptions | null,
@@ -387,63 +299,45 @@ export const validateDetailedWorkoutProgression = (
     return { isValid: false, step: 2, totalSteps, currentStep: 'Energy Level', nextStep: 'Focus Areas', issues, recommendations };
   }
   
-  // Step 4: Focus areas (detailed workout specific)
-  const hasValidAreas = (() => {
-    if (Array.isArray(workoutFocusData?.customization_areas)) {
-      return (workoutFocusData?.customization_areas || []).length > 0;
-    }
-    if (typeof workoutFocusData?.customization_areas === 'object' && workoutFocusData?.customization_areas !== null) {
-      const selectedAreas = Object.values(workoutFocusData.customization_areas).filter((item: any) => item?.selected);
-      return selectedAreas.length > 0;
-    }
-    return false;
-  })();
-  
-  if (hasValidAreas) {
+  // Step 4: Focus areas
+  if (Array.isArray(workoutFocusData?.customization_areas) && workoutFocusData.customization_areas.length > 0) {
     step = 4;
   } else {
-    issues.push('Select focus areas for targeted training');
-    recommendations.push('Choose 2-3 muscle groups for optimal detailed workout results');
+    issues.push('Select target focus areas');
+    recommendations.push('Choose areas you want to work on in this session');
     return { isValid: false, step: 3, totalSteps, currentStep: 'Focus Areas', nextStep: 'Equipment', issues, recommendations };
   }
   
-  // Step 5: Equipment (detailed workout specific)
-  const hasValidEquipment = (() => {
-    if (Array.isArray(workoutFocusData?.customization_equipment)) {
-      return (workoutFocusData?.customization_equipment || []).length > 0;
-    }
-    if (typeof workoutFocusData?.customization_equipment === 'object' && workoutFocusData?.customization_equipment !== null) {
-      const equipment = workoutFocusData.customization_equipment.specificEquipment || [];
-      return Array.isArray(equipment) && equipment.length > 0;
-    }
-    return false;
-  })();
-  
-  if (hasValidEquipment) {
+  // Step 5: Equipment
+  if (Array.isArray(workoutFocusData?.customization_equipment) && workoutFocusData.customization_equipment.length > 0) {
     step = 5;
   } else {
     issues.push('Select available equipment');
-    recommendations.push('Specify what equipment you have access to for personalized exercises');
-    return { isValid: false, step: 4, totalSteps, currentStep: 'Equipment', nextStep: 'Profile Data', issues, recommendations };
+    recommendations.push('This helps us choose appropriate exercises for your workout');
+    return { isValid: false, step: 4, totalSteps, currentStep: 'Equipment', nextStep: 'Review', issues, recommendations };
   }
   
-  // Step 6: Profile data (for enhanced detailed workouts)
-  if (profileData?.experienceLevel && profileData?.physicalActivity) {
+  // Step 6: Profile data validation
+  if (profileData) {
     step = 6;
   } else {
-    issues.push('Complete your profile for enhanced recommendations');
-    recommendations.push('Add your experience level and activity preferences for better customization');
-    return { isValid: false, step: 5, totalSteps, currentStep: 'Profile Data', nextStep: 'Ready', issues, recommendations };
+    issues.push('Complete your profile information');
+    recommendations.push('Your profile helps us personalize the workout to your needs');
+    return { isValid: false, step: 5, totalSteps, currentStep: 'Profile', nextStep: 'Complete', issues, recommendations };
   }
   
-  return { 
-    isValid: true, 
-    step: 6, 
-    totalSteps, 
-    currentStep: 'Complete', 
-    nextStep: 'Generate Workout', 
-    issues: [], 
-    recommendations: ['All requirements met! Ready to generate your detailed workout.'] 
+  // All steps complete
+  return {
+    isValid: true,
+    step: 6,
+    totalSteps,
+    currentStep: 'Complete',
+    nextStep: 'Generate',
+    issues: [],
+    recommendations: [
+      'Your workout is ready to be generated',
+      'Review all settings before proceeding'
+    ]
   };
 };
 

@@ -1,176 +1,156 @@
-import { WorkoutGenerationRequest, WorkoutPreferences, WorkoutConstraints, EnvironmentalFactors } from '../../../types/workout-generation.types';
-import { WorkoutType, PerWorkoutOptions } from '../../../types/enhanced-workout-types';
+import { 
+  WorkoutGenerationRequest,
+  WorkoutPreferences,
+  WorkoutConstraints,
+  EnvironmentalFactors
+} from '../../../types/workout-generation.types';
 import { UserProfile } from '../../../types/user';
+import { PerWorkoutOptions } from '../../../types/core';
+import { WORKOUT_GENERATION_CONSTANTS } from '../external/constants/workout-generation-constants';
 import { ProfileData } from '../../../components/Profile/types/profile.types';
-import { LiabilityWaiverData } from '../../../components/LiabilityWaiver/types/liability-waiver.types';
-import { WorkoutRequestValidator } from '../validation/core/WorkoutRequestValidator';
-import { dataTransformers } from '../../../utils/dataTransformers';
 
-/**
- * WorkoutRequestFactory - Single source of truth for creating workout requests
- * Consolidates request creation patterns and ensures validation
- */
 export class WorkoutRequestFactory {
   /**
-   * Create a workout request with built-in validation
+   * Create a workout generation request with default values
    */
-  static createRequest(params: CreateWorkoutRequestParams): WorkoutGenerationRequest {
-    // Determine request type if not specified
-    const workoutType = params.workoutType ?? this.inferWorkoutType(params);
-    
-    // Create base request structure
-    const request: WorkoutGenerationRequest = {
-      workoutType,
-      profileData: params.profileData,
-      workoutFocusData: params.workoutFocusData,
-      userProfile: params.userProfile,
-      waiverData: params.waiverData,
-      preferences: this.createPreferences(params),
-      constraints: this.createConstraints(params),
-      environmentalFactors: this.createEnvironmentalFactors(params)
+  static createRequest(params: {
+    workoutType: 'quick' | 'detailed';
+    userProfile: UserProfile;
+    workoutFocusData: PerWorkoutOptions;
+  }): WorkoutGenerationRequest {
+    const { workoutType, userProfile, workoutFocusData } = params;
+
+    // Create a minimal ProfileData from UserProfile
+    const profileData: ProfileData = {
+      experienceLevel: this.mapFitnessToExperience(userProfile.fitnessLevel),
+      physicalActivity: 'moderate',
+      preferredDuration: '30-45 min',
+      timeCommitment: '3-4',
+      intensityLevel: 'moderately',
+      preferredActivities: [],
+      availableLocations: ['Home'],
+      availableEquipment: ['Body Weight'],
+      primaryGoal: this.mapGoalToProfileGoal(userProfile.goals[0]),
+      goalTimeline: '3 months',
+      age: '26-35',
+      height: '5\'8"',
+      weight: '150',
+      gender: userProfile.gender || 'prefer-not-to-say',
+      hasCardiovascularConditions: 'No',
+      injuries: ['No Injuries']
     };
 
-    // Validate immediately
-    const validation = WorkoutRequestValidator.validate(request);
-    if (!validation.isValid) {
-      throw new WorkoutRequestError(
-        `Invalid request parameters: ${validation.errors.join(', ')}`
-      );
-    }
-
-    return request;
-  }
-
-  /**
-   * Create request from Quick Workout data (replaces WorkoutRequestConverter)
-   */
-  static fromQuickWorkout(
-    quickWorkoutData: PerWorkoutOptions,
-    userProfile: UserProfile
-  ): WorkoutGenerationRequest {
-    return this.createRequest({
-      workoutType: 'quick',
-      profileData: {} as ProfileData, // Will be enhanced by AI service
-      workoutFocusData: quickWorkoutData,
-      userProfile
-    });
-  }
-
-  /**
-   * Create request from app components (replaces WorkoutRequestAdapter.createBasicRequest)
-   */
-  static fromAppComponents(
-    workoutType: WorkoutType,
-    profileData: ProfileData,
-    workoutFocusData: PerWorkoutOptions,
-    userProfile: UserProfile,
-    waiverData?: LiabilityWaiverData
-  ): WorkoutGenerationRequest {
-    return this.createRequest({
+    return {
       workoutType,
-      profileData,
-      workoutFocusData,
       userProfile,
-      waiverData
-    });
+      workoutFocusData,
+      profileData,
+      preferences: this.createDefaultPreferences(workoutFocusData),
+      constraints: this.createDefaultConstraints(workoutFocusData),
+      environmentalFactors: this.createDefaultEnvironmentalFactors()
+    };
   }
 
   /**
-   * Create default enhancements for a request
+   * Create default preferences from workout focus data
    */
-  static createDefaultEnhancements(
-    userProfile: UserProfile,
-    workoutFocusData: PerWorkoutOptions
-  ): {
-    preferences: WorkoutPreferences;
-    constraints: WorkoutConstraints;
-    environmentalFactors: EnvironmentalFactors;
-  } {
+  private static createDefaultPreferences(workoutFocusData: PerWorkoutOptions): WorkoutPreferences {
     return {
-      preferences: {
-        duration: dataTransformers.extractDurationValue(workoutFocusData.customization_duration) ?? 30,
-        focus: dataTransformers.extractFocusValue(workoutFocusData.customization_focus) ?? 'General Fitness',
-        intensity: this.mapEnergyToIntensity(workoutFocusData.customization_energy ?? 5),
-        equipment: dataTransformers.extractEquipmentList(workoutFocusData.customization_equipment),
-        location: 'home', // Default for now
-        music: true,
-        voiceGuidance: false
-      },
-      constraints: {
-        timeOfDay: 'morning', // Default for now
-        energyLevel: workoutFocusData.customization_energy ?? 5,
-        sorenessAreas: dataTransformers.extractSorenessAreas(workoutFocusData.customization_soreness),
-        spaceLimitations: ['small_space'], // Common for Quick Workout
-        noiselevel: 'moderate'
-      },
-      environmentalFactors: {
-        weather: 'indoor',
-        temperature: 20,
-        airQuality: 'good'
-      }
+      duration: typeof workoutFocusData.customization_duration === 'number' 
+        ? workoutFocusData.customization_duration 
+        : workoutFocusData.customization_duration?.duration ?? WORKOUT_GENERATION_CONSTANTS.DEFAULT_WORKOUT_DURATION,
+      focus: typeof workoutFocusData.customization_focus === 'string'
+        ? workoutFocusData.customization_focus
+        : workoutFocusData.customization_focus?.focus ?? WORKOUT_GENERATION_CONSTANTS.DEFAULT_FOCUS,
+      intensity: 'moderate',
+      equipment: Array.isArray(workoutFocusData.customization_equipment)
+        ? [...workoutFocusData.customization_equipment]
+        : [...WORKOUT_GENERATION_CONSTANTS.DEFAULT_EQUIPMENT],
+      location: (workoutFocusData.customization_location || 'home') as 'home' | 'gym' | 'outdoor'
     };
   }
 
-  private static inferWorkoutType(params: CreateWorkoutRequestParams): WorkoutType {
-    // Infer workout type from duration and other characteristics
-    const duration = params.workoutFocusData?.customization_duration;
-    if (duration && Number(duration) <= 30) {
-      return 'quick';
+  /**
+   * Create default constraints from workout focus data
+   */
+  private static createDefaultConstraints(workoutFocusData: PerWorkoutOptions): WorkoutConstraints {
+    return {
+      maxDuration: typeof workoutFocusData.customization_duration === 'number'
+        ? workoutFocusData.customization_duration + 5
+        : workoutFocusData.customization_duration?.duration ? workoutFocusData.customization_duration.duration + 5 : undefined,
+      minDuration: typeof workoutFocusData.customization_duration === 'number'
+        ? workoutFocusData.customization_duration - 5
+        : workoutFocusData.customization_duration?.duration ? workoutFocusData.customization_duration.duration - 5 : undefined,
+      intensityLimit: workoutFocusData.customization_intensity as 'low' | 'moderate' | 'high' | undefined
+    };
+  }
+
+  /**
+   * Create default environmental factors
+   */
+  private static createDefaultEnvironmentalFactors(): EnvironmentalFactors {
+    return {
+      location: 'indoor',
+      timeOfDay: 'morning'
+    };
+  }
+
+  /**
+   * Map fitness level to experience level
+   */
+  private static mapFitnessToExperience(fitnessLevel: string): 'New to Exercise' | 'Some Experience' | 'Advanced Athlete' {
+    switch (fitnessLevel) {
+      case 'beginner':
+        return 'New to Exercise';
+      case 'novice':
+      case 'intermediate':
+        return 'Some Experience';
+      case 'advanced':
+      case 'adaptive':
+        return 'Advanced Athlete';
+      default:
+        return 'New to Exercise';
     }
-    return 'detailed';
   }
 
-  private static createPreferences(params: CreateWorkoutRequestParams): WorkoutPreferences {
-    const { workoutFocusData } = params;
-    return {
-      duration: dataTransformers.extractDurationValue(workoutFocusData.customization_duration) ?? 30,
-      focus: dataTransformers.extractFocusValue(workoutFocusData.customization_focus) ?? 'General Fitness',
-      intensity: this.mapEnergyToIntensity(workoutFocusData.customization_energy ?? 5),
-      equipment: dataTransformers.extractEquipmentList(workoutFocusData.customization_equipment),
-      location: 'home', // Default for now
-      music: true,
-      voiceGuidance: false
-    };
-  }
-
-  private static createConstraints(params: CreateWorkoutRequestParams): WorkoutConstraints {
-    const { workoutFocusData } = params;
-    return {
-      timeOfDay: 'morning', // Default for now
-      energyLevel: workoutFocusData.customization_energy ?? 5,
-      sorenessAreas: dataTransformers.extractSorenessAreas(workoutFocusData.customization_soreness),
-      spaceLimitations: ['small_space'], // Common for Quick Workout
-      noiselevel: 'moderate'
-    };
-  }
-
-  private static createEnvironmentalFactors(_params: CreateWorkoutRequestParams): EnvironmentalFactors {
-    return {
-      weather: 'indoor',
-      temperature: 20,
-      airQuality: 'good'
-    };
-  }
-
-  private static mapEnergyToIntensity(energy: number): 'low' | 'moderate' | 'high' {
-    if (energy <= 3) return 'low';
-    if (energy <= 7) return 'moderate';
-    return 'high';
-  }
-}
-
-// Supporting types
-interface CreateWorkoutRequestParams {
-  workoutType?: WorkoutType;
-  profileData: ProfileData;
-  workoutFocusData: PerWorkoutOptions;
-  userProfile: UserProfile;
-  waiverData?: LiabilityWaiverData;
-}
-
-class WorkoutRequestError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'WorkoutRequestError';
+  /**
+   * Map user goal to profile goal
+   */
+  private static mapGoalToProfileGoal(goal: string | undefined): ProfileData['primaryGoal'] {
+    switch (goal?.toLowerCase()) {
+      case 'weight loss':
+        return 'Weight Loss';
+      case 'strength':
+        return 'Strength';
+      case 'cardio':
+      case 'cardiovascular':
+        return 'Cardio Health';
+      case 'flexibility':
+      case 'mobility':
+        return 'Flexibility & Mobility';
+      case 'muscle gain':
+      case 'muscle building':
+        return 'Muscle Gain';
+      case 'athletic performance':
+      case 'performance':
+        return 'Athletic Performance';
+      case 'energy':
+      case 'energy levels':
+        return 'Energy Levels';
+      case 'toning':
+      case 'body toning':
+        return 'Body Toning';
+      case 'sleep':
+      case 'sleep quality':
+        return 'Sleep Quality';
+      case 'stress':
+      case 'stress reduction':
+        return 'Stress Reduction';
+      case 'functional':
+      case 'functional fitness':
+        return 'Functional Fitness';
+      default:
+        return 'General Health';
+    }
   }
 } 

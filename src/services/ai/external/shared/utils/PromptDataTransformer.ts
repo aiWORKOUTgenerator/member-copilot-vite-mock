@@ -1,6 +1,6 @@
-import { ProfileData } from '../../../../components/Profile/types/profile.types';
-import { PerWorkoutOptions } from '../../../../types/enhanced-workout-types';
-import { filterAvailableEquipment } from '../../../../utils/equipmentRecommendations';
+import { ProfileData } from '../../../../../components/Profile/types/profile.types';
+import { PerWorkoutOptions } from '../../../../../types/core';
+import { filterAvailableEquipment } from '../../../../../utils/equipmentRecommendations';
 
 /**
  * Centralized data transformer for workout generation prompts
@@ -62,6 +62,12 @@ export class PromptDataTransformer {
    * Transform workout focus data to prompt variables with enhanced focus extraction
    */
   static transformWorkoutFocusData(workoutFocusData: PerWorkoutOptions): Record<string, any> {
+    // Defensive validation - this should never fail if ReviewPage validation passed
+    if (!workoutFocusData) {
+      console.error('❌ WorkoutFocusData is null in PromptDataTransformer');
+      throw new Error('WorkoutFocusData is required for workout generation');
+    }
+
     // Extract focus value properly - handle both string and object formats
     const extractFocusValue = (focusData: any): string => {
       if (!focusData) return 'general';
@@ -103,8 +109,8 @@ export class PromptDataTransformer {
     // Transform soreness data
     const sorenessAreas = workoutFocusData.customization_soreness ? 
       Object.keys(workoutFocusData.customization_soreness)
-        .filter(key => workoutFocusData.customization_soreness?.[key]?.selected)
-        .map(key => `${key} (Level ${workoutFocusData.customization_soreness?.[key]?.rating || 0})`) :
+        .filter(key => (workoutFocusData.customization_soreness as any)?.[key]?.selected)
+        .map(key => `${key} (Level ${(workoutFocusData.customization_soreness as any)?.[key]?.rating || 0})`) :
       [];
 
     return {
@@ -141,9 +147,9 @@ export class PromptDataTransformer {
     console.log('  OUTPUT primaryGoal:', profileVars.primaryGoal);
     
     // Extract location properly from available locations array
-    const locationValue = Array.isArray(profileVars.availableLocations) ? 
-      profileVars.availableLocations[0] || 'Home' : 
-      profileVars.availableLocations || 'Home';
+    const locationValue = Array.isArray(profileData.availableLocations) ? 
+      profileData.availableLocations[0] || 'Home' : 
+      (profileVars.availableLocations || 'Home');
     
     // 🔍 DEBUG: Check what additionalContext contains that might override profile data
     console.log('🔍 PromptDataTransformer - Field conflict check:');

@@ -14,7 +14,10 @@ import { EnvironmentValidationBanner } from './components/shared';
 import { useWorkoutGeneration } from './hooks/useWorkoutGeneration';
 import type { UseWorkoutGenerationReturn } from './hooks/useWorkoutGeneration';
 import { GeneratedWorkout } from './services/ai/external/types/external-ai.types';
-import { PerWorkoutOptions, WorkoutType } from './types/enhanced-workout-types';
+import { PerWorkoutOptions } from './types/core';
+
+// Define WorkoutType locally since it's used throughout the app
+type WorkoutType = 'quick' | 'detailed';
 import { ProfileData } from './components/Profile/types/profile.types';
 import { LiabilityWaiverData } from './components/LiabilityWaiver/types/liability-waiver.types';
 
