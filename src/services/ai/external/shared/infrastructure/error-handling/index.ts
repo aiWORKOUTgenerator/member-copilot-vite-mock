@@ -1,5 +1,8 @@
 // Error Handling Infrastructure
-// Centralized error handling and recovery for AI services
+// Error processing and error type creation
 
+// Export the OpenAIErrorHandler class
 export { OpenAIErrorHandler } from './OpenAIErrorHandler';
-export { ErrorHandler } from './ErrorHandler'; 
+
+// Export types from external-ai.types
+export type { ExternalAIError } from '../../../types/external-ai.types'; 

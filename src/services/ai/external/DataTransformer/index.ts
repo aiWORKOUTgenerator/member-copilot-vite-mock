@@ -13,31 +13,13 @@ export { validateProfileData } from './validators/ProfileDataValidator';
 export { validateWorkoutData } from './validators/WorkoutDataValidator';
 export { validatePromptVariables } from './validators/PromptVariableValidator';
 
-// Utility exports
-export {
-  formatArrayValue,
-  formatHeight,
-  formatWeight,
-  formatSorenessData
-} from './utils/FieldMappingUtils';
-
+// Array transformation utilities
 export {
   validatePreferredActivities,
   validateAvailableLocations,
   validateInjuries,
   validateEquipment
 } from './utils/ArrayTransformUtils';
-
-export { testEquipmentFiltering } from './utils/DebugUtils';
-
-// UserProfile utilities for easy migration
-export {
-  convertProfileToUserProfile,
-  convertProfileToUserProfileSimple,
-  convertProfilesToUserProfiles,
-  validateProfileDataForConversion,
-  createDefaultUserProfile
-} from './utils/UserProfileUtils';
 
 // Constants exports
 export { VALIDATION_RULES, CORE_REQUIRED_FIELDS, ALL_REQUIRED_FIELDS } from './constants/ValidationRules';

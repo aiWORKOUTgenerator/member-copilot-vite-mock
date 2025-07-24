@@ -1,5 +1,5 @@
 // 15-Minute Express Workout Generation Prompt
-import { PromptTemplate } from '../../../types/external-ai.types';
+import { PromptTemplate } from '../../../../types/external-ai.types';
 import { DURATION_CONFIGS } from '../../constants/quick-workout.constants';
 import { generateSystemPrompt, generateWorkoutStructure, getVariablesForRequirement } from '../shared-templates';
 
@@ -7,12 +7,13 @@ const CONFIG = DURATION_CONFIGS['15min'];
 
 export const EXPRESS_WORKOUT_SYSTEM_PROMPT = generateSystemPrompt(CONFIG);
 
-export const EXPRESS_WORKOUT_PROMPT_TEMPLATE: PromptTemplate = {
-  id: 'express_15min_v1',
-  name: '15-Minute Express Workout',
-  description: 'Efficient, balanced workouts that provide comprehensive movement and energy',
-  version: '1.0',
-  template: `${EXPRESS_WORKOUT_SYSTEM_PROMPT}
+// 🔍 DEBUG: Estimate token count
+const estimateTokenCount = (text: string): number => {
+  // Rough estimation: 1 token ≈ 4 characters for English text
+  return Math.ceil(text.length / 4);
+};
+
+const templateText = `${EXPRESS_WORKOUT_SYSTEM_PROMPT}
 
 EXPRESS WORKOUT SPECIALIZATION:
 Balanced 15-minute sessions that deliver comprehensive fitness benefits efficiently. These workouts:
@@ -65,7 +66,14 @@ PERSONALIZATION PRIORITIES:
 - Modify intensity based on energy level (3-4: gentler, 7-8: challenging)
 - Consider soreness areas and provide alternatives
 - Match complexity to fitness level experience
-- Accommodate location and equipment constraints`,
+- Accommodate location and equipment constraints`;
+
+export const EXPRESS_WORKOUT_PROMPT_TEMPLATE: PromptTemplate = {
+  id: 'express_15min_v1',
+  name: '15-Minute Express Workout',
+  description: 'Efficient, balanced workouts that provide comprehensive movement and energy',
+  version: '1.0',
+  template: templateText,
   variables: getVariablesForRequirement(CONFIG.variableRequirements),
   examples: [
     {
@@ -110,3 +118,14 @@ PERSONALIZATION PRIORITIES:
     }
   ]
 }; 
+
+// 🔍 DEBUG: Log token estimates
+console.log('🔍 15min Template Token Estimates:', {
+  systemPromptTokens: estimateTokenCount(EXPRESS_WORKOUT_SYSTEM_PROMPT),
+  totalTemplateTokens: estimateTokenCount(templateText),
+  recommendedMaxTokens: estimateTokenCount(templateText) * 2, // Double for response
+  currentMaxTokens: 4000, // Updated development setting
+  warning: estimateTokenCount(templateText) * 2 > 4000 ? 
+    'Template likely to exceed token limit' : 
+    'Token limit should be sufficient'
+}); 

@@ -1,7 +1,7 @@
 // OpenAI Metrics Tracker - Handles performance monitoring
-import { ExternalAIMetrics, OpenAIResponse } from '../types/external-ai.types';
-import { OPENAI_SERVICE_CONSTANTS } from '../constants/openai-service-constants';
-import { estimateTokenCost } from '../config/openai.config';
+import { ExternalAIMetrics, OpenAIResponse } from '../../../types/external-ai.types';
+import { OPENAI_SERVICE_CONSTANTS } from '../../../constants/openai-service-constants';
+import { estimateTokenCost } from '../../../config/openai.config';
 
 export class OpenAIMetricsTracker {
   private metrics: ExternalAIMetrics = {
@@ -16,7 +16,7 @@ export class OpenAIMetricsTracker {
   private errorCount = 0;
 
   updateMetrics(response: OpenAIResponse, responseTime: number): void {
-    this.metrics.requestCount++;
+    this.incrementRequestCount();
     this.responseTimes.push(responseTime);
     
     // Keep only last N response times for rolling average
@@ -29,6 +29,7 @@ export class OpenAIMetricsTracker {
   }
 
   recordError(): void {
+    this.incrementRequestCount();
     this.errorCount++;
     this.updateErrorRate();
   }
@@ -59,6 +60,10 @@ export class OpenAIMetricsTracker {
     };
     this.responseTimes = [];
     this.errorCount = 0;
+  }
+
+  private incrementRequestCount(): void {
+    this.metrics.requestCount++;
   }
 
   private updateAverageResponseTime(): void {

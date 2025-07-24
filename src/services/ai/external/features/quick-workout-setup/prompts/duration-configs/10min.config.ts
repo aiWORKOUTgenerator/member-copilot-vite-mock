@@ -1,5 +1,5 @@
 // 10-Minute Mini Session Workout Generation Prompt
-import { PromptTemplate } from '../../../types/external-ai.types';
+import { PromptTemplate } from '../../../../types/external-ai.types';
 import { DURATION_CONFIGS } from '../../constants/quick-workout.constants';
 import { generateSystemPrompt, generateWorkoutStructure, getVariablesForRequirement } from '../shared-templates';
 
@@ -7,12 +7,13 @@ const CONFIG = DURATION_CONFIGS['10min'];
 
 export const MINI_SESSION_SYSTEM_PROMPT = generateSystemPrompt(CONFIG);
 
-export const MINI_SESSION_WORKOUT_PROMPT_TEMPLATE: PromptTemplate = {
-  id: 'mini_session_10min_v1',
-  name: '10-Minute Mini Session Workout',
-  description: 'Short but effective workouts that fit into busy schedules',
-  version: '1.0',
-  template: `${MINI_SESSION_SYSTEM_PROMPT}
+// 🔍 DEBUG: Estimate token count
+const estimateTokenCount = (text: string): number => {
+  // Rough estimation: 1 token ≈ 4 characters for English text
+  return Math.ceil(text.length / 4);
+};
+
+const templateText = `${MINI_SESSION_SYSTEM_PROMPT}
 
 MINI SESSION SPECIALIZATION:
 Efficient 10-minute sessions perfect for busy individuals who want effective workouts. These sessions:
@@ -57,7 +58,14 @@ INTENSITY AND PACING:
 - Start with moderate activation exercises
 - Build to moderately-high intensity in main workout
 - Include brief active recovery between high-intensity exercises
-- End with essential stretching for key muscle groups`,
+- End with essential stretching for key muscle groups`;
+
+export const MINI_SESSION_WORKOUT_PROMPT_TEMPLATE: PromptTemplate = {
+  id: 'mini_session_10min_v1',
+  name: '10-Minute Mini Session Workout',
+  description: 'Short but effective workouts that fit into busy schedules',
+  version: '1.0',
+  template: templateText,
   variables: getVariablesForRequirement(CONFIG.variableRequirements),
   examples: [
     {
@@ -93,3 +101,14 @@ INTENSITY AND PACING:
     }
   ]
 }; 
+
+// 🔍 DEBUG: Log token estimates
+console.log('🔍 10min Template Token Estimates:', {
+  systemPromptTokens: estimateTokenCount(MINI_SESSION_SYSTEM_PROMPT),
+  totalTemplateTokens: estimateTokenCount(templateText),
+  recommendedMaxTokens: estimateTokenCount(templateText) * 2, // Double for response
+  currentMaxTokens: 4000, // Updated development setting
+  warning: estimateTokenCount(templateText) * 2 > 4000 ? 
+    'Template likely to exceed token limit' : 
+    'Token limit should be sufficient'
+}); 

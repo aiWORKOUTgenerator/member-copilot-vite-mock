@@ -122,71 +122,126 @@ export class QuickWorkoutFeature {
   private async executeWorkflow(context: WorkflowContext): Promise<QuickWorkoutResult> {
     console.log('🔄 QuickWorkoutFeature: Executing complete workflow');
 
-    // Step 1: Duration Strategy - Select optimal duration configuration
-    console.log('1️⃣ QuickWorkoutFeature: Executing duration strategy');
-    const durationResult = this.durationStrategy.selectStrategy(context.params, context.userProfile);
-    
-    if (!this.durationStrategy.validateStrategy(durationResult, context.params)) {
-      throw new Error('Duration strategy validation failed');
-    }
-
-    // Update context with duration result
-    context.selectedDuration = durationResult.adjustedDuration;
-    context.durationConfig = durationResult.config;
-
-    // Step 2: Prompt Selection - Build context-aware prompt
-    console.log('2️⃣ QuickWorkoutFeature: Executing prompt selection');
-    const promptResult = this.promptSelector.selectPrompt(durationResult, context.params, context.userProfile);
-    
-    if (!this.promptSelector.validateSelection(promptResult)) {
-      throw new Error('Prompt selection validation failed');
-    }
-
-    // Update context with prompt result
-    context.promptVariables = promptResult.variables;
-    context.selectedPromptId = promptResult.promptId;
-
-    // Step 3: AI Generation - Generate workout using OpenAI
-    console.log('3️⃣ QuickWorkoutFeature: Executing AI generation');
-    
-    // ✅ FIXED: Use the actual pre-defined prompt template with correct variable requirements
-    // instead of dynamically creating one that marks all variables as required
-    const { DURATION_PROMPTS } = await import('./prompts');
-    const actualPromptTemplate = DURATION_PROMPTS[durationResult.adjustedDuration];
-    
-    if (!actualPromptTemplate) {
-      throw new Error(`No prompt template found for duration ${durationResult.adjustedDuration}min`);
-    }
-    
-    const aiResponse = await this.openAIService.generateFromTemplate(
-      actualPromptTemplate,
-      promptResult.variables,
-      {
-        cacheKey: `quick_workout_${context.userProfile.fitnessLevel}_${durationResult.adjustedDuration}_${JSON.stringify(context.params)}`,
-        timeout: QUICK_WORKOUT_CONSTANTS.REQUEST_TIMEOUT_MS
+    // 🔍 DEBUG: Track workflow execution metrics
+    const metrics = {
+      startTime: Date.now(),
+      steps: {} as Record<string, number>,
+      tokenUsage: {
+        prompt: 0,
+        completion: 0,
+        total: 0
       }
-    );
+    };
 
-    // Step 4: Response Processing - Process and validate AI response
-    console.log('4️⃣ QuickWorkoutFeature: Executing response processing');
-    const processingResult = await this.responseProcessor.process(
-      aiResponse,
-      durationResult,
-      context.params,
-      context.generationStartTime
-    );
+    try {
+      // Step 1: Duration Strategy
+      console.log('1️⃣ QuickWorkoutFeature: Executing duration strategy');
+      const durationStart = Date.now();
+      const durationResult = this.durationStrategy.selectStrategy(context.params, context.userProfile);
+      metrics.steps.duration = Date.now() - durationStart;
 
-    // Step 5: Create final result with metadata
-    console.log('5️⃣ QuickWorkoutFeature: Creating final result');
-    const result = this.createQuickWorkoutResult(
-      processingResult,
-      durationResult,
-      promptResult,
-      context
-    );
+      // Step 2: Prompt Selection
+      console.log('2️⃣ QuickWorkoutFeature: Executing prompt selection');
+      const promptStart = Date.now();
+      const promptResult = this.promptSelector.selectPrompt(durationResult, context.params, context.userProfile);
+      metrics.steps.promptSelection = Date.now() - promptStart;
 
-    console.log(`✅ QuickWorkoutFeature: Workflow completed successfully`);
-    return result;
+      // 🔍 DEBUG: Log prompt metrics
+      console.log('🔍 QuickWorkoutFeature - Prompt metrics:', {
+        promptId: promptResult.promptId,
+        variableCount: Object.keys(promptResult.variables).length,
+        contextFactors: promptResult.contextFactors
+      });
+
+      // Step 3: AI Generation
+      console.log('3️⃣ QuickWorkoutFeature: Executing AI generation');
+      const generationStart = Date.now();
+      
+      // Get the full prompt template for the duration
+      const { getPromptInfo } = await import('./prompts');
+      const promptInfo = getPromptInfo(durationResult.adjustedDuration);
+      
+      const aiResponse = await this.openAIService.generateFromTemplate(
+        promptInfo.prompt,
+        promptResult.variables
+      );
+      metrics.steps.generation = Date.now() - generationStart;
+
+      // 🔍 DEBUG: Log response type and structure
+      console.log('🔍 QuickWorkoutFeature - aiResponse type:', typeof aiResponse);
+      console.log('🔍 QuickWorkoutFeature - aiResponse is null:', aiResponse === null);
+      console.log('🔍 QuickWorkoutFeature - aiResponse is object:', typeof aiResponse === 'object');
+      if (typeof aiResponse === 'string') {
+        console.log('🔍 QuickWorkoutFeature - aiResponse content preview:', 
+          aiResponse.substring(0, 200) + '...');
+        console.log('🔍 QuickWorkoutFeature - aiResponse length:', aiResponse.length);
+        console.log('🔍 QuickWorkoutFeature - aiResponse last char:', 
+          aiResponse.charAt(aiResponse.length - 1));
+      }
+
+      // Step 4: Response Processing
+      console.log('4️⃣ QuickWorkoutFeature: Executing response processing');
+      const processingStart = Date.now();
+      const processingResult = await this.responseProcessor.process(
+        aiResponse,
+        durationResult,
+        context.params,
+        metrics.startTime
+      );
+      metrics.steps.processing = Date.now() - processingStart;
+
+      // Step 5: Create final result
+      console.log('5️⃣ QuickWorkoutFeature: Creating final result');
+      const totalTime = Date.now() - metrics.startTime;
+
+      // 🔍 DEBUG: Log final metrics
+      console.log('🔍 QuickWorkoutFeature - Workflow metrics:', {
+        totalTimeMs: totalTime,
+        stepTimes: metrics.steps,
+        tokenUsage: metrics.tokenUsage,
+        processingStats: {
+          structureScore: processingResult.structureScore,
+          completenessScore: processingResult.completenessScore,
+          consistencyScore: processingResult.consistencyScore,
+          issuesFound: processingResult.issuesFound.length,
+          fixesApplied: processingResult.fixesApplied.length
+        }
+      });
+
+      console.log('✅ QuickWorkoutFeature: Workflow completed successfully');
+
+      return {
+        workout: processingResult.workout,
+        metadata: {
+          generatedAt: new Date(),
+          generationTime: totalTime,
+          aiModel: 'gpt-4o',
+          durationConfig: durationResult.config,
+          promptTemplate: promptInfo.prompt.template,
+          originalDuration: context.params.duration,
+          adjustedDuration: durationResult.adjustedDuration,
+          durationAdjustmentReason: durationResult.adjustmentReason,
+          featuresUsed: ['duration_optimization', 'context_aware_prompts', 'response_processing'],
+          fallbacksUsed: []
+        },
+        confidence: processingResult.consistencyScore / 100,
+        reasoning: promptResult.selectionReasoning,
+        durationOptimization: this.durationStrategy.createDurationOptimization(context.params, durationResult),
+        personalizedNotes: processingResult.workout.personalizedNotes || [],
+        safetyReminders: processingResult.workout.safetyReminders || []
+      };
+
+    } catch (error) {
+      // 🔍 DEBUG: Log error details
+      console.error('❌ QuickWorkoutFeature - Workflow failed:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timeSpentMs: Date.now() - metrics.startTime,
+        completedSteps: Object.keys(metrics.steps),
+        lastStep: Object.keys(metrics.steps).pop()
+      });
+      
+      throw error;
+    }
   }
 
   /**
@@ -310,11 +365,34 @@ export class QuickWorkoutFeature {
    * Create feature-specific error
    */
   private createFeatureError(error: unknown, params: QuickWorkoutParams): Error {
-    const baseMessage = error instanceof Error ? error.message : String(error);
+    // Extract error details
+    const errorDetails = {
+      message: error instanceof Error ? error.message : String(error),
+      cause: error instanceof Error ? error.cause : undefined,
+      stack: error instanceof Error ? error.stack : undefined,
+      code: (error as any)?.code,
+      type: (error as any)?.type,
+      details: (error as any)?.details
+    };
     
-    return new Error(
-      `QuickWorkoutSetup feature failed: ${baseMessage} ` +
-      `(Duration: ${params.duration}min, Fitness: ${params.fitnessLevel}, Energy: ${params.energyLevel}/10)`
+    // Create structured error message
+    const errorMessage = {
+      feature: 'QuickWorkoutSetup',
+      error: errorDetails,
+      context: {
+        duration: params.duration,
+        fitnessLevel: params.fitnessLevel,
+        energyLevel: params.energyLevel,
+        timestamp: new Date().toISOString()
+      }
+    };
+
+    // Log detailed error for debugging
+    console.error('QuickWorkoutFeature error details:', JSON.stringify(errorMessage, null, 2));
+    
+    return Object.assign(
+      new Error(`QuickWorkoutSetup feature failed: ${errorDetails.message}`),
+      { details: errorMessage }
     );
   }
 

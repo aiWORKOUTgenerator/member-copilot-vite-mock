@@ -1,5 +1,5 @@
 // 5-Minute Quick Break Workout Generation Prompt
-import { PromptTemplate } from '../../../types/external-ai.types';
+import { PromptTemplate } from '../../../../types/external-ai.types';
 import { DURATION_CONFIGS } from '../../constants/quick-workout.constants';
 import { generateSystemPrompt, generateWorkoutStructure, getVariablesForRequirement } from '../shared-templates';
 
@@ -7,12 +7,13 @@ const CONFIG = DURATION_CONFIGS['5min'];
 
 export const QUICK_BREAK_SYSTEM_PROMPT = generateSystemPrompt(CONFIG);
 
-export const QUICK_BREAK_WORKOUT_PROMPT_TEMPLATE: PromptTemplate = {
-  id: 'quick_break_5min_v1',
-  name: '5-Minute Quick Break Workout',
-  description: 'Ultra-efficient desk-break workouts for instant energy and movement',
-  version: '1.0',
-  template: `${QUICK_BREAK_SYSTEM_PROMPT}
+// 🔍 DEBUG: Estimate token count
+const estimateTokenCount = (text: string): number => {
+  // Rough estimation: 1 token ≈ 4 characters for English text
+  return Math.ceil(text.length / 4);
+};
+
+const templateText = `${QUICK_BREAK_SYSTEM_PROMPT}
 
 QUICK BREAK SPECIALIZATION:
 Perfect for office workers, students, or anyone needing an instant energy boost. These workouts:
@@ -48,7 +49,14 @@ EXERCISE SELECTION PRIORITIES:
 - Dynamic stretches for common tight areas (neck, shoulders, hips)
 - Core activation exercises
 - Movements that improve circulation
-- Energizing but not exhausting exercises`,
+- Energizing but not exhausting exercises`;
+
+export const QUICK_BREAK_WORKOUT_PROMPT_TEMPLATE: PromptTemplate = {
+  id: 'quick_break_5min_v1',
+  name: '5-Minute Quick Break Workout',
+  description: 'Ultra-efficient desk-break workouts for instant energy and movement',
+  version: '1.0',
+  template: templateText,
   variables: getVariablesForRequirement(CONFIG.variableRequirements),
   examples: [
     {
@@ -73,3 +81,14 @@ EXERCISE SELECTION PRIORITIES:
     }
   ]
 }; 
+
+// 🔍 DEBUG: Log token estimates
+console.log('🔍 5min Template Token Estimates:', {
+  systemPromptTokens: estimateTokenCount(QUICK_BREAK_SYSTEM_PROMPT),
+  totalTemplateTokens: estimateTokenCount(templateText),
+  recommendedMaxTokens: estimateTokenCount(templateText) * 2, // Double for response
+  currentMaxTokens: 4000, // Updated development setting
+  warning: estimateTokenCount(templateText) * 2 > 4000 ? 
+    'Template likely to exceed token limit' : 
+    'Token limit should be sufficient'
+}); 

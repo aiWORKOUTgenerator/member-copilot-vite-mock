@@ -1,5 +1,5 @@
 // 30-Minute Complete Workout Generation Prompt
-import { PromptTemplate } from '../../../types/external-ai.types';
+import { PromptTemplate } from '../../../../types/external-ai.types';
 import { DURATION_CONFIGS } from '../../constants/quick-workout.constants';
 import { generateSystemPrompt, generateWorkoutStructure, getVariablesForRequirement } from '../shared-templates';
 
@@ -7,12 +7,13 @@ const CONFIG = DURATION_CONFIGS['30min'];
 
 export const COMPLETE_WORKOUT_SYSTEM_PROMPT = generateSystemPrompt(CONFIG);
 
-export const COMPLETE_WORKOUT_PROMPT_TEMPLATE: PromptTemplate = {
-  id: 'complete_30min_v1',
-  name: '30-Minute Complete Workout',
-  description: 'Full workout experience with comprehensive warm-up, training, and recovery phases',
-  version: '1.0',
-  template: `${COMPLETE_WORKOUT_SYSTEM_PROMPT}
+// 🔍 DEBUG: Estimate token count
+const estimateTokenCount = (text: string): number => {
+  // Rough estimation: 1 token ≈ 4 characters for English text
+  return Math.ceil(text.length / 4);
+};
+
+const templateText = `${COMPLETE_WORKOUT_SYSTEM_PROMPT}
 
 COMPLETE WORKOUT SPECIALIZATION:
 Comprehensive 30-minute sessions that provide the full workout experience with optimal structure. These workouts:
@@ -83,7 +84,14 @@ PERSONALIZATION PRIORITIES:
 - Avoid exercises that could aggravate injuries or sore areas
 - Consider age-related modifications (joint-friendly alternatives for older users)
 - Accommodate space limitations with appropriate exercise substitutions
-- Match workout focus to stated primary goal (strength, weight loss, conditioning, etc.)`,
+- Match workout focus to stated primary goal (strength, weight loss, conditioning, etc.)`;
+
+export const COMPLETE_WORKOUT_PROMPT_TEMPLATE: PromptTemplate = {
+  id: 'complete_30min_v1',
+  name: '30-Minute Complete Workout',
+  description: 'Full workout experience with comprehensive warm-up, training, and recovery phases',
+  version: '1.0',
+  template: templateText,
   variables: getVariablesForRequirement(CONFIG.variableRequirements),
   examples: [
     {
@@ -136,3 +144,14 @@ PERSONALIZATION PRIORITIES:
     }
   ]
 }; 
+
+// 🔍 DEBUG: Log token estimates
+console.log('🔍 30min Template Token Estimates:', {
+  systemPromptTokens: estimateTokenCount(COMPLETE_WORKOUT_SYSTEM_PROMPT),
+  totalTemplateTokens: estimateTokenCount(templateText),
+  recommendedMaxTokens: estimateTokenCount(templateText) * 2, // Double for response
+  currentMaxTokens: 4000, // Updated development setting
+  warning: estimateTokenCount(templateText) * 2 > 4000 ? 
+    'Template likely to exceed token limit' : 
+    'Token limit should be sufficient'
+}); 

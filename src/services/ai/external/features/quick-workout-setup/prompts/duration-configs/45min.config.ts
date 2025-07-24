@@ -1,5 +1,5 @@
 // 45-Minute Extended Workout Generation Prompt  
-import { PromptTemplate } from '../../../types/external-ai.types';
+import { PromptTemplate } from '../../../../types/external-ai.types';
 import { DURATION_CONFIGS } from '../../constants/quick-workout.constants';
 import { generateSystemPrompt, generateWorkoutStructure, getVariablesForRequirement } from '../shared-templates';
 
@@ -7,12 +7,13 @@ const CONFIG = DURATION_CONFIGS['45min'];
 
 export const EXTENDED_WORKOUT_SYSTEM_PROMPT = generateSystemPrompt(CONFIG);
 
-export const EXTENDED_WORKOUT_PROMPT_TEMPLATE: PromptTemplate = {
-  id: 'extended_45min_v1',
-  name: '45-Minute Extended Workout',
-  description: 'Comprehensive, full-featured workouts with maximum exercise variety and progressive challenge',
-  version: '1.0',
-  template: `${EXTENDED_WORKOUT_SYSTEM_PROMPT}
+// 🔍 DEBUG: Estimate token count
+const estimateTokenCount = (text: string): number => {
+  // Rough estimation: 1 token ≈ 4 characters for English text
+  return Math.ceil(text.length / 4);
+};
+
+const templateText = `${EXTENDED_WORKOUT_SYSTEM_PROMPT}
 
 EXTENDED WORKOUT SPECIALIZATION:
 Comprehensive 45-minute sessions that provide maximum benefit through:
@@ -57,6 +58,42 @@ CRITICAL REQUIREMENTS FOR 45-MINUTE WORKOUTS:
 14. Plan realistic timing for each exercise including transitions - use numeric values in seconds: 90, 120, 150, 180, etc.
 15. Include motivational elements for session completion
 
+RESPONSE FORMAT REQUIREMENTS:
+1. Response MUST be a valid JSON object
+2. Do NOT include any text outside the JSON object
+3. Do NOT use markdown code blocks
+4. Do NOT include explanatory text
+5. Follow the exact structure shown in the example output
+6. All durations MUST be in seconds (not minutes)
+7. All arrays MUST be properly formatted with square brackets
+8. All property names MUST be in camelCase
+9. All string values MUST use double quotes
+10. Ensure proper nesting of workout phases
+
+Example Response Format:
+{
+  "id": "workout_id",
+  "title": "Workout Title",
+  "description": "Workout description",
+  "totalDuration": 2700,
+  "difficulty": "advanced athlete",
+  "warmup": {
+    "name": "Warm-up",
+    "duration": 300,
+    "exercises": []
+  },
+  "mainWorkout": {
+    "name": "Main Workout",
+    "duration": 2100,
+    "exercises": []
+  },
+  "cooldown": {
+    "name": "Cool-down",
+    "duration": 300,
+    "exercises": []
+  }
+}
+
 EXERCISE PROGRESSION STRATEGY:
 - Warm-up: Gentle activation → Dynamic preparation
 - Main workout: Foundation movements → Progressive challenge → Peak intensity → Active recovery
@@ -75,7 +112,14 @@ PERSONALIZATION PRIORITIES:
 - Avoid exercises that aggravate injuries or soreness
 - Consider equipment limitations and space constraints
 - Match complexity to experience level
-- Include relevant progressions and regressions`,
+- Include relevant progressions and regressions`;
+
+export const EXTENDED_WORKOUT_PROMPT_TEMPLATE: PromptTemplate = {
+  id: 'extended_45min_v1',
+  name: '45-Minute Extended Workout',
+  description: 'Comprehensive, full-featured workouts with maximum exercise variety and progressive challenge',
+  version: '1.0',
+  template: templateText,
   variables: getVariablesForRequirement(CONFIG.variableRequirements),
   examples: [
     {
@@ -134,3 +178,14 @@ PERSONALIZATION PRIORITIES:
     }
   ]
 }; 
+
+// 🔍 DEBUG: Log token estimates
+console.log('🔍 45min Template Token Estimates:', {
+  systemPromptTokens: estimateTokenCount(EXTENDED_WORKOUT_SYSTEM_PROMPT),
+  totalTemplateTokens: estimateTokenCount(templateText),
+  recommendedMaxTokens: estimateTokenCount(templateText) * 2, // Double for response
+  currentMaxTokens: 4000, // Updated development setting
+  warning: estimateTokenCount(templateText) * 2 > 4000 ? 
+    'Template likely to exceed token limit' : 
+    'Token limit should be sufficient'
+}); 

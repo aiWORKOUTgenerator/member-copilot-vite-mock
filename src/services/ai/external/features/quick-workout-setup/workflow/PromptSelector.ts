@@ -136,6 +136,16 @@ export class PromptSelector {
         variables.availableEquipment = userProfile.basicLimitations.availableEquipment || [];
         variables.timeConstraints = params.duration; // Use requested duration as time constraint
       }
+      
+      // Add age variable (required by prompt templates)
+      variables.age = '25-45'; // Default age range, can be enhanced with actual user data
+      variables.injuries = userProfile.basicLimitations?.injuries || [];
+      variables.spaceLimitations = ['standard_space']; // Default, can be enhanced
+    } else {
+      // Provide defaults when no user profile is available
+      variables.age = '25-45';
+      variables.injuries = [];
+      variables.spaceLimitations = ['standard_space'];
     }
 
     // Add context-specific variables

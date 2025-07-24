@@ -134,7 +134,16 @@ export class OpenAIService {
         cacheKey: options.cacheKey ?? this.cacheManager.generateCacheKey(template.id, variables)
       });
 
-      return this.parseResponseContent(response);
+      const parsedContent = this.parseResponseContent(response);
+      console.log('🔍 OpenAIService.generateFromTemplate - Returning parsed content:', {
+        type: typeof parsedContent,
+        isObject: typeof parsedContent === 'object',
+        isNull: parsedContent === null,
+        hasTitle: parsedContent && typeof parsedContent === 'object' ? !!parsedContent.title : false,
+        title: parsedContent && typeof parsedContent === 'object' ? parsedContent.title : 'N/A'
+      });
+      
+      return parsedContent;
       
     } catch (error: any) {
       // BEGIN: Enhanced error logging
@@ -242,21 +251,6 @@ export class OpenAIService {
   private parseResponseContent(response: OpenAIResponse): unknown {
     const content = response.choices?.[0]?.message?.content;
     
-    // 🔍 DEBUG: Log the raw response content
-    console.log('🔍 OpenAIService.parseResponseContent - Raw response:', {
-      hasChoices: !!response.choices,
-      choicesLength: response.choices?.length,
-      hasContent: !!content,
-      contentLength: content?.length,
-      contentPreview: content?.substring(0, 200) + '...'
-    });
-    
-    // 🔍 DEBUG: Log the full content for debugging (truncated if too long)
-    if (content) {
-      const truncatedContent = content.length > 2000 ? content.substring(0, 2000) + '...[TRUNCATED]' : content;
-      console.log('🔍 OpenAIService.parseResponseContent - Full content:', truncatedContent);
-    }
-    
     if (!content) {
       throw new Error('Empty response from OpenAI');
     }
@@ -271,7 +265,7 @@ export class OpenAIService {
       parseMethod = 'direct';
     } catch {
       try {
-        // Strategy 2: Try to extract JSON from markdown code blocks
+        // Strategy 2: Try to extract JSON from markdown code blocks ✅ THIS IS THE KEY STRATEGY
         const jsonMatch = content.match(/```json\s*\n([\s\S]*?)\n```/);
         if (jsonMatch) {
           parsed = JSON.parse(jsonMatch[1]);
@@ -313,30 +307,10 @@ export class OpenAIService {
         topLevelKeys: Object.keys(parsed)
       });
       
-      // 🔍 DEBUG: Log structure details for workout debugging
-      if (parsed.warmup) {
-        console.log('🔍 OpenAIService.parseResponseContent - Warmup structure:', {
-          hasName: !!parsed.warmup.name,
-          hasDuration: !!parsed.warmup.duration,
-          hasExercises: !!parsed.warmup.exercises,
-          exercisesLength: parsed.warmup.exercises?.length
-        });
-      }
-      
-      if (parsed.mainWorkout) {
-        console.log('🔍 OpenAIService.parseResponseContent - MainWorkout structure:', {
-          hasName: !!parsed.mainWorkout.name,
-          hasDuration: !!parsed.mainWorkout.duration,
-          hasExercises: !!parsed.mainWorkout.exercises,
-          exercisesLength: parsed.mainWorkout.exercises?.length
-        });
-      }
-      
-      return parsed;
+      console.log('🔍 OpenAIService.parseResponseContent - Returning parsed object with title:', parsed.title);
+      return parsed; // ✅ RETURNS CLEAN PARSED OBJECT
     }
     
-    // If we get here, all parsing failed
-    console.log('🔍 OpenAIService.parseResponseContent - Failed to parse as JSON, returning as text');
     return content;
   }
 }

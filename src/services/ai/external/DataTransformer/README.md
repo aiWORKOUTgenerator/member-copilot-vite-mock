@@ -20,7 +20,7 @@ ProfileData → [DataTransformer] → Different Output Formats
 ### ✅ **Integrated Infrastructure**
 - **Shared Validation**: Uses existing `ProfileDataValidator` for consistent validation
 - **Shared Constants**: Leverages `DefaultValues` and `ValidationRules` for configuration
-- **Shared Utilities**: Uses `ArrayTransformUtils` and `FieldMappingUtils` for data processing
+- **Shared Utilities**: Uses `ArrayTransformUtils` for data processing
 - **Shared Types**: Maintains type consistency across all transformers
 
 ### ✅ **Configuration-Driven**
@@ -48,20 +48,17 @@ const promptVariables = composer.transformToPromptVariables(profileData, workout
 ### For App Logic (UserProfile)
 
 ```typescript
-import { UserProfileTransformer, convertProfileToUserProfile } from './DataTransformer';
+import { UserProfileTransformer } from './DataTransformer';
 
-// Method 1: Direct transformer usage
+// Direct transformer usage (recommended)
 const transformer = new UserProfileTransformer();
 const userProfile = transformer.transform(profileData);
-
-// Method 2: Convenience function (recommended for migration)
-const userProfile = convertProfileToUserProfile(profileData);
 // Returns structured UserProfile object for app logic
 ```
 
 ## Migration Guide
 
-### Replace Old Profile Transformers
+### Replace Legacy Profile Transformers
 
 **Before:**
 ```typescript
@@ -72,18 +69,18 @@ const userProfile = profileTransformers.convertProfileToUserProfileSimple(profil
 
 **After:**
 ```typescript
-import { convertProfileToUserProfileSimple } from './DataTransformer';
+import { UserProfileTransformer } from './DataTransformer';
 
-const userProfile = convertProfileToUserProfileSimple(profileData);
+const transformer = new UserProfileTransformer();
+const userProfile = transformer.transform(profileData);
 ```
 
-### Available Convenience Functions
+### Modern Transformer Classes
 
-- `convertProfileToUserProfile(profileData)` - Full conversion with validation
-- `convertProfileToUserProfileSimple(profileData)` - Simple conversion (backward compatibility)
-- `convertProfilesToUserProfiles(profileDataArray)` - Batch conversion
-- `validateProfileDataForConversion(profileData)` - Pre-conversion validation
-- `createDefaultUserProfile()` - Create default profile for fallbacks
+- `UserProfileTransformer` - Full conversion with validation
+- `ProfileDataTransformer` - Profile data transformation
+- `WorkoutFocusTransformer` - Workout focus data transformation
+- `PromptVariableComposer` - Prompt variable composition
 
 ## Infrastructure Integration
 
@@ -151,14 +148,33 @@ The transformers include comprehensive error handling and validation:
 
 ```typescript
 try {
-  const userProfile = convertProfileToUserProfile(profileData);
+  const transformer = new UserProfileTransformer();
+  const userProfile = transformer.transform(profileData);
   // Use userProfile
 } catch (error) {
   console.error('Transformation failed:', error);
   // Handle error or use fallback
-  const fallbackProfile = createDefaultUserProfile();
+  const fallbackProfile = new UserProfileTransformer().transform({});
 }
 ```
+
+## Recent Cleanup (Legacy Removal)
+
+### Removed Legacy Utilities
+The following legacy utility files have been removed to simplify the architecture:
+
+- ❌ `utils/UserProfileUtils.ts` - Legacy wrapper functions
+- ❌ `utils/FieldMappingUtils.ts` - Legacy formatting utilities  
+- ❌ `utils/DebugUtils.ts` - Development-only debug functions
+- ❌ `constants/FieldMappings.ts` - Legacy constant mappings
+
+### Modern Replacement
+All functionality is now provided through modern transformer classes:
+
+- ✅ `UserProfileTransformer` - Direct transformer usage
+- ✅ `ProfileDataTransformer` - Profile data transformation
+- ✅ `WorkoutFocusTransformer` - Workout focus transformation
+- ✅ `PromptVariableComposer` - Prompt variable composition
 
 ## Architecture Benefits
 
@@ -168,10 +184,12 @@ try {
 - ❌ External type dependencies
 - ❌ Inconsistent patterns
 - ❌ Difficult to maintain
+- ❌ Legacy utility functions
 
 ### After (Current Implementation)
 - ✅ Configuration-driven mappings
 - ✅ Shared validation infrastructure
 - ✅ Local type definitions
 - ✅ Consistent patterns
-- ✅ Easy to maintain and extend 
+- ✅ Easy to maintain and extend
+- ✅ Modern transformer classes only 

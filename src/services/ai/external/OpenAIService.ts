@@ -6,18 +6,17 @@ import {
   ExternalAIMetrics,
   PromptTemplate
 } from './types/external-ai.types';
-import { openAIConfig, validateConfig } from './config/openai.config';
+import { openAIConfig } from './config/openai.config';
 import { OPENAI_SERVICE_CONSTANTS } from './constants/openai-service-constants';
 import { 
-  OpenAIRequestHandler, 
-  OpenAICacheManager, 
-  OpenAIMetricsTracker, 
-  OpenAIErrorHandler,
+  OpenAIRequestHandler,
   RequestOptions,
-  StreamOptions
-} from './helpers';
+  StreamOptions 
+} from './shared/infrastructure/request-handling';
+import { OpenAICacheManager } from './shared/infrastructure/cache';
+import { OpenAIMetricsTracker } from './shared/infrastructure/metrics';
+import { OpenAIErrorHandler } from './shared/infrastructure/error-handling';
 import { logger } from '../../../utils/logger';
-import { WorkoutGenerationRequest } from '../../../types/workout-generation.types';
 
 export class OpenAIService {
   private config: OpenAIConfig;
@@ -30,8 +29,7 @@ export class OpenAIService {
 
   constructor(config?: OpenAIConfig) {
     this.config = config ?? openAIConfig().openai;
-    
-    // Initialize components without strict validation
+
     this.requestHandler = new OpenAIRequestHandler(this.config);
     this.cacheManager = new OpenAICacheManager();
     this.metricsTracker = new OpenAIMetricsTracker();
@@ -80,25 +78,6 @@ export class OpenAIService {
       return response;
       
     } catch (error: any) {
-      // BEGIN: Enhanced error logging
-      if (error && typeof error === 'object') {
-        console.error('[OpenAIService.makeRequest] Error object:', error);
-        if (error.status) {
-          console.error('[OpenAIService.makeRequest] Error status:', error.status);
-        }
-        if (error.statusText) {
-          console.error('[OpenAIService.makeRequest] Error statusText:', error.statusText);
-        }
-        if (error.message) {
-          console.error('[OpenAIService.makeRequest] Error message:', error.message);
-        }
-        if (error.response) {
-          console.error('[OpenAIService.makeRequest] Error response:', error.response);
-        }
-      } else {
-        console.error('[OpenAIService.makeRequest] Error:', error);
-      }
-      // END: Enhanced error logging
       this.errorHandler.handleError(error);
       this.metricsTracker.recordError();
       throw this.errorHandler.createExternalAIError(error);
@@ -134,25 +113,6 @@ export class OpenAIService {
       return this.parseResponseContent(response);
       
     } catch (error: any) {
-      // BEGIN: Enhanced error logging
-      if (error && typeof error === 'object') {
-        console.error('[OpenAIService.generateFromTemplate] Error object:', error);
-        if (error.status) {
-          console.error('[OpenAIService.generateFromTemplate] Error status:', error.status);
-        }
-        if (error.statusText) {
-          console.error('[OpenAIService.generateFromTemplate] Error statusText:', error.statusText);
-        }
-        if (error.message) {
-          console.error('[OpenAIService.generateFromTemplate] Error message:', error.message);
-        }
-        if (error.response) {
-          console.error('[OpenAIService.generateFromTemplate] Error response:', error.response);
-        }
-      } else {
-        console.error('[OpenAIService.generateFromTemplate] Error:', error);
-      }
-      // END: Enhanced error logging
       // Handle API key configuration errors gracefully
       if (error instanceof Error && error.message.includes('API key not configured')) {
         logger.warn('OpenAI API key not configured. AI features will be limited.');
@@ -160,12 +120,16 @@ export class OpenAIService {
       }
       
       logger.error('OpenAI template generation failed:', error);
+      // If the error is already an ExternalAIError, rethrow it
+      if (error.type && error.message) {
+        throw error;
+      }
       throw this.errorHandler.createExternalAIError(error);
     }
   }
 
   // Generate workout using the new prompt builder
-  async generateWorkout(request: WorkoutGenerationRequest): Promise<unknown> {
+  async generateWorkout(request: unknown): Promise<unknown> {
     try {
       // This method is no longer used - workout generation is handled by QuickWorkoutFeature
       throw new Error('Workout generation is now handled by QuickWorkoutFeature. Use generateFromTemplate() for custom prompts.');
@@ -217,136 +181,70 @@ export class OpenAIService {
     const now = Date.now();
     const timeSinceLastRequest = now - this.lastRequestTime;
     const minInterval = OPENAI_SERVICE_CONSTANTS.RATE_LIMIT_CALCULATION_MS / openAIConfig().performance.maxRequestsPerMinute;
-
+    
     if (timeSinceLastRequest < minInterval) {
       await new Promise(resolve => setTimeout(resolve, minInterval - timeSinceLastRequest));
     }
-
+    
     this.lastRequestTime = now;
-    this.requestCount++;
   }
 
   private validateTemplateVariables(template: PromptTemplate, variables: Record<string, unknown>): void {
-    const missingVars = template.variables
-      .filter(v => v.required && !variables[v.name])
-      .map(v => v.name);
-    
-    if (missingVars.length > 0) {
-      throw new Error(`Missing required variables: ${missingVars.join(', ')}`);
+    for (const variable of template.variables) {
+      if (variable.required && !(variable.name in variables)) {
+        throw new Error(`Missing required variable: ${variable.name}`);
+      }
     }
   }
 
   private replaceTemplateVariables(template: string, variables: Record<string, unknown>): string {
-    let result = template;
-    
-    for (const [key, value] of Object.entries(variables)) {
-      const placeholder = `{{${key}}}`;
-      const replacement = Array.isArray(value) ? value.join(', ') : String(value);
-      result = result.replace(new RegExp(placeholder, 'g'), replacement);
-    }
-    
-    return result;
+    return template.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+      const trimmedKey = key.trim();
+      if (!(trimmedKey in variables)) {
+        throw new Error(`Variable not found: ${trimmedKey}`);
+      }
+      return String(variables[trimmedKey]);
+    });
   }
 
   private parseResponseContent(response: OpenAIResponse): unknown {
     const content = response.choices?.[0]?.message?.content;
-    
-    // 🔍 DEBUG: Log the raw response content
-    console.log('🔍 OpenAIService.parseResponseContent - Raw response:', {
-      hasChoices: !!response.choices,
-      choicesLength: response.choices?.length,
-      hasContent: !!content,
-      contentLength: content?.length,
-      contentPreview: content?.substring(0, 200) + '...'
-    });
-    
-    // 🔍 DEBUG: Log the full content for debugging (truncated if too long)
-    if (content) {
-      const truncatedContent = content.length > 2000 ? content.substring(0, 2000) + '...[TRUNCATED]' : content;
-      console.log('🔍 OpenAIService.parseResponseContent - Full content:', truncatedContent);
-    }
-    
     if (!content) {
-      throw new Error('Empty response from OpenAI');
+      throw new Error('Invalid response format: missing content');
     }
 
-    // Try multiple JSON parsing strategies
-    let parsed: any = null;
-    let parseMethod = '';
-    
+    // 🔍 DEBUG: Log response metrics
+    console.log('🔍 OpenAIService.parseResponseContent - Response metrics:', {
+      contentLength: content.length,
+      contentPreview: content.substring(0, 100) + '...',
+      lastChar: content.charAt(content.length - 1),
+      last100Chars: '...' + content.substring(content.length - 100),
+      hasValidJSONStructure: content.trim().startsWith('{') && content.trim().endsWith('}'),
+      choiceIndex: response.choices?.[0]?.index,
+      finishReason: response.choices?.[0]?.finish_reason,
+      promptTokens: response.usage?.prompt_tokens,
+      completionTokens: response.usage?.completion_tokens,
+      totalTokens: response.usage?.total_tokens
+    });
+
+    // Try to parse as JSON first
     try {
-      // Strategy 1: Try direct JSON parsing
-      parsed = JSON.parse(content);
-      parseMethod = 'direct';
-    } catch {
-      try {
-        // Strategy 2: Try to extract JSON from markdown code blocks
-        const jsonMatch = content.match(/```json\s*\n([\s\S]*?)\n```/);
-        if (jsonMatch) {
-          parsed = JSON.parse(jsonMatch[1]);
-          parseMethod = 'markdown';
-        }
-      } catch {
-        try {
-          // Strategy 3: Try to extract JSON from any code blocks
-          const codeMatch = content.match(/```\s*\n([\s\S]*?)\n```/);
-          if (codeMatch) {
-            parsed = JSON.parse(codeMatch[1]);
-            parseMethod = 'codeblock';
-          }
-        } catch {
-          try {
-            // Strategy 4: Try to find JSON object in the text
-            const jsonObjectMatch = content.match(/\{[\s\S]*\}/);
-            if (jsonObjectMatch) {
-              parsed = JSON.parse(jsonObjectMatch[0]);
-              parseMethod = 'extracted';
-            }
-          } catch {
-            // Strategy 5: Return as text if all JSON parsing fails
-            console.log('🔍 OpenAIService.parseResponseContent - All JSON parsing failed, returning as text');
-            return content;
-          }
-        }
-      }
-    }
-    
-    if (parsed) {
-      console.log('🔍 OpenAIService.parseResponseContent - Successfully parsed JSON using method:', parseMethod);
-      console.log('🔍 OpenAIService.parseResponseContent - Parsed structure:', {
-        hasId: !!parsed.id,
-        hasTitle: !!parsed.title,
-        hasWarmup: !!parsed.warmup,
-        hasMainWorkout: !!parsed.mainWorkout,
-        hasCooldown: !!parsed.cooldown,
-        topLevelKeys: Object.keys(parsed)
+      return JSON.parse(content);
+    } catch (error) {
+      // 🔍 DEBUG: Log parsing failure details
+      console.error('❌ OpenAIService.parseResponseContent - JSON parsing failed:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        contentLength: content.length,
+        lastBracketIndex: content.lastIndexOf('}'),
+        lastQuoteIndex: content.lastIndexOf('"'),
+        truncatedAt: error instanceof Error && error.message.includes('position') 
+          ? parseInt(error.message.match(/position (\d+)/)?.[1] || '0')
+          : 'unknown'
       });
       
-      // 🔍 DEBUG: Log structure details for workout debugging
-      if (parsed.warmup) {
-        console.log('🔍 OpenAIService.parseResponseContent - Warmup structure:', {
-          hasName: !!parsed.warmup.name,
-          hasDuration: !!parsed.warmup.duration,
-          hasExercises: !!parsed.warmup.exercises,
-          exercisesLength: parsed.warmup.exercises?.length
-        });
-      }
-      
-      if (parsed.mainWorkout) {
-        console.log('🔍 OpenAIService.parseResponseContent - MainWorkout structure:', {
-          hasName: !!parsed.mainWorkout.name,
-          hasDuration: !!parsed.mainWorkout.duration,
-          hasExercises: !!parsed.mainWorkout.exercises,
-          exercisesLength: parsed.mainWorkout.exercises?.length
-        });
-      }
-      
-      return parsed;
+      // If not valid JSON, return raw content for feature-specific processing
+      return content;
     }
-    
-    // If we get here, all parsing failed
-    console.log('🔍 OpenAIService.parseResponseContent - Failed to parse as JSON, returning as text');
-    return content;
   }
 }
 

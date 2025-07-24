@@ -1,6 +1,6 @@
 // OpenAI Request Handler - Manages API communication
-import { OpenAIConfig, OpenAIResponse, OpenAIMessage } from '../types/external-ai.types';
-import { OPENAI_SERVICE_CONSTANTS } from '../constants/openai-service-constants';
+import { OpenAIConfig, OpenAIResponse, OpenAIMessage } from '../../../types/external-ai.types';
+import { OPENAI_SERVICE_CONSTANTS } from '../../../constants/openai-service-constants';
 
 export interface RequestOptions {
   maxTokens?: number;
@@ -82,20 +82,16 @@ export class OpenAIRequestHandler {
     requestBody: Record<string, unknown>,
     timeout: number
   ): Promise<OpenAIResponse> {
+    if (!this.config.baseURL) {
+      throw new Error('OpenAI baseURL not configured');
+    }
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
-      console.warn(`OpenAI API request timed out after ${timeout}ms`);
       controller.abort();
     }, timeout);
 
     try {
-      console.log('Making OpenAI API request:', {
-        url: `${this.config.baseURL}/chat/completions`,
-        model: requestBody.model,
-        maxTokens: requestBody.max_tokens,
-        timeout: timeout
-      });
-
       const response = await fetch(`${this.config.baseURL}/chat/completions`, {
         method: 'POST',
         headers: this.buildHeaders(),
@@ -105,19 +101,26 @@ export class OpenAIRequestHandler {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('OpenAI API error response:', {
-          status: response.status,
-          statusText: response.statusText,
-          errorText: errorText
-        });
+
+        // Parse error response
+        try {
+          const errorObj = JSON.parse(errorText);
+          if (errorObj?.error?.code === 'invalid_api_key') {
+            throw new Error(`HTTP ${response.status}: ${errorText}`, { cause: 'authentication' });
+          }
+          if (errorObj?.error?.code === 'rate_limit_exceeded') {
+            throw new Error(`HTTP ${response.status}: ${errorText}`, { cause: 'rate_limit' });
+          }
+        } catch {
+          // Ignore JSON parse errors
+        }
+
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('OpenAI API request successful');
       return result;
     } catch (error) {
-      console.error('OpenAI API request failed:', error);
       throw error;
     } finally {
       clearTimeout(timeoutId);

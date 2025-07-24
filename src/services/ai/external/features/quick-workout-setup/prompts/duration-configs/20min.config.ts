@@ -1,5 +1,5 @@
 // 20-Minute Focused Workout Generation Prompt
-import { PromptTemplate } from '../../../types/external-ai.types';
+import { PromptTemplate } from '../../../../types/external-ai.types';
 import { DURATION_CONFIGS } from '../../constants/quick-workout.constants';
 import { generateSystemPrompt, generateWorkoutStructure, getVariablesForRequirement } from '../shared-templates';
 
@@ -7,12 +7,13 @@ const CONFIG = DURATION_CONFIGS['20min'];
 
 export const FOCUSED_WORKOUT_SYSTEM_PROMPT = generateSystemPrompt(CONFIG);
 
-export const FOCUSED_WORKOUT_PROMPT_TEMPLATE: PromptTemplate = {
-  id: 'focused_20min_v1',
-  name: '20-Minute Focused Workout',
-  description: 'Balanced duration sessions with full structure and exercise variety',
-  version: '1.0',
-  template: `${FOCUSED_WORKOUT_SYSTEM_PROMPT}
+// 🔍 DEBUG: Estimate token count
+const estimateTokenCount = (text: string): number => {
+  // Rough estimation: 1 token ≈ 4 characters for English text
+  return Math.ceil(text.length / 4);
+};
+
+const templateText = `${FOCUSED_WORKOUT_SYSTEM_PROMPT}
 
 FOCUSED WORKOUT SPECIALIZATION:
 Well-structured 20-minute sessions that provide comprehensive fitness benefits with proper progression. These workouts:
@@ -72,7 +73,14 @@ PERSONALIZATION FOCUS:
 - Scale intensity based on energy level and recovery state
 - Modify exercises to avoid aggravating sore areas
 - Consider goal-specific exercise selection (strength vs cardio vs flexibility focus)
-- Account for equipment limitations with appropriate alternatives`,
+- Account for equipment limitations with appropriate alternatives`;
+
+export const FOCUSED_WORKOUT_PROMPT_TEMPLATE: PromptTemplate = {
+  id: 'focused_20min_v1',
+  name: '20-Minute Focused Workout',
+  description: 'Balanced duration sessions with full structure and exercise variety',
+  version: '1.0',
+  template: templateText,
   variables: getVariablesForRequirement(CONFIG.variableRequirements),
   examples: [
     {
@@ -119,3 +127,14 @@ PERSONALIZATION FOCUS:
     }
   ]
 }; 
+
+// 🔍 DEBUG: Log token estimates
+console.log('🔍 20min Template Token Estimates:', {
+  systemPromptTokens: estimateTokenCount(FOCUSED_WORKOUT_SYSTEM_PROMPT),
+  totalTemplateTokens: estimateTokenCount(templateText),
+  recommendedMaxTokens: estimateTokenCount(templateText) * 2, // Double for response
+  currentMaxTokens: 4000, // Updated development setting
+  warning: estimateTokenCount(templateText) * 2 > 4000 ? 
+    'Template likely to exceed token limit' : 
+    'Token limit should be sufficient'
+}); 

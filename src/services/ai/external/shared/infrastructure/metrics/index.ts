@@ -1,4 +1,5 @@
 // Metrics Infrastructure
-// Performance monitoring and metrics tracking for AI services
+// Performance monitoring and metrics tracking
 
-export { OpenAIMetricsTracker } from './OpenAIMetricsTracker'; 
+export { OpenAIMetricsTracker } from './OpenAIMetricsTracker';
+export type { ExternalAIMetrics } from '../../../../types/external-ai.types'; 

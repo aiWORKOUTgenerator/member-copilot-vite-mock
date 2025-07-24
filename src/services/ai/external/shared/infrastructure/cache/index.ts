@@ -1,5 +1,5 @@
 // Cache Infrastructure
-// Caching services and managers for AI operations
+// Response caching and cache management
 
 export { OpenAICacheManager } from './OpenAICacheManager';
-export * from './cache-manager'; 
+export type { CacheEntry, CacheKey } from '../../../../types/external-ai.types'; 
