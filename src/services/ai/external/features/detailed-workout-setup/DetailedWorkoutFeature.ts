@@ -2,16 +2,16 @@ import { DetailedWorkoutParams, DetailedWorkoutResult } from './types/detailed-w
 import { DetailedWorkoutStrategy } from './workflow/DetailedWorkoutStrategy';
 import { selectDetailedWorkoutPrompt } from './prompts/detailed-workout-generation.prompts';
 import { DURATION_CONFIGS, SupportedDuration } from './prompts/duration-configs';
-import { AIService } from '../../../core/AIService';
+import { OpenAIService } from '../../OpenAIService';
 
 export interface DetailedWorkoutFeatureDependencies {
-  openAIService: AIService;
+  openAIService?: OpenAIService;
   logger?: Console;
 }
 
 export class DetailedWorkoutFeature {
   private readonly strategy: DetailedWorkoutStrategy;
-  private readonly openAIService: AIService;
+  private readonly openAIService?: OpenAIService;
   private readonly logger: Console;
 
   constructor(dependencies: DetailedWorkoutFeatureDependencies) {
@@ -28,19 +28,29 @@ export class DetailedWorkoutFeature {
       // Get prompt template based on duration
       const promptTemplate = this.selectPromptTemplate(params);
 
+      // Check if OpenAI service is available
+      if (!this.openAIService) {
+        return this.generateFallbackWorkout(params, strategyResult.workoutType);
+      }
+
       // Generate workout using OpenAI
-      const response = await this.openAIService.generateWorkout({
-        fitnessLevel: params.fitnessLevel,
-        goals: params.trainingGoals,
-        duration: params.duration,
-        equipment: params.equipment,
-        location: 'home', // TODO: Make dynamic
-        energyLevel: params.energyLevel,
-        sorenessAreas: params.sorenessAreas,
-        focus: params.focus,
-        maxTokens: params.duration >= 30 ? 8000 : 4000,
-        timeout: params.duration >= 30 ? 120000 : 60000
-      });
+      const response = await this.openAIService.generateFromTemplate(
+        promptTemplate.template,
+        {
+          fitnessLevel: params.fitnessLevel,
+          goals: params.trainingGoals,
+          duration: params.duration,
+          equipment: params.equipment,
+          location: 'home', // TODO: Make dynamic
+          energyLevel: params.energyLevel,
+          sorenessAreas: params.sorenessAreas,
+          focus: params.focus
+        },
+        {
+          maxTokens: params.duration >= 30 ? 8000 : 4000,
+          timeout: params.duration >= 30 ? 120000 : 60000
+        }
+      );
 
       // Minimal response transformation
       return {
@@ -65,6 +75,73 @@ export class DetailedWorkoutFeature {
       this.logger.error('Failed to generate detailed workout:', error);
       throw error;
     }
+  }
+
+  private generateFallbackWorkout(params: DetailedWorkoutParams, workoutType: string): DetailedWorkoutResult {
+    this.logger.warn('Using fallback workout generation - OpenAI service not available');
+    
+    return {
+      workout: {
+        id: `fallback_${Date.now()}`,
+        title: `${params.duration}-Minute ${params.focus} Workout`,
+        description: 'Basic workout generated without AI assistance',
+        totalDuration: params.duration * 60,
+        estimatedCalories: this.calculateEstimatedCalories(params),
+        difficulty: params.fitnessLevel,
+        equipment: params.equipment,
+        warmup: this.createBasicPhase('Warm-up', Math.round(params.duration * 0.15)),
+        mainWorkout: this.createBasicPhase('Main Workout', Math.round(params.duration * 0.7)),
+        cooldown: this.createBasicPhase('Cool-down', Math.round(params.duration * 0.15)),
+        reasoning: 'Basic workout structure based on duration and focus',
+        personalizedNotes: [],
+        progressionTips: [],
+        safetyReminders: ['Focus on proper form', 'Stay hydrated', 'Stop if you feel pain'],
+        generatedAt: new Date(),
+        aiModel: 'fallback',
+        confidence: 0.5,
+        tags: ['fallback', params.focus.toLowerCase()]
+      },
+      metadata: {
+        complexity: 'beginner',
+        estimatedCalories: this.calculateEstimatedCalories(params),
+        targetMuscleGroups: this.determineTargetMuscleGroups(params),
+        recommendedFrequency: this.getRecommendedFrequency(workoutType),
+        progressionLevel: 1
+      },
+      recommendations: [],
+      progressionPlan: {
+        currentLevel: 1,
+        nextLevel: 2,
+        requirements: ['Complete 3 workouts at current level'],
+        estimatedTimeToProgress: '2 weeks',
+        adaptations: ['Increase weight by 5%', 'Add 1 set to each exercise']
+      }
+    };
+  }
+
+  private createBasicPhase(name: string, duration: number) {
+    return {
+      name,
+      duration: duration * 60, // Convert to seconds
+      exercises: [
+        {
+          id: `${name.toLowerCase()}_1`,
+          name: `Basic ${name} Exercise`,
+          description: `Perform ${name.toLowerCase()} exercises`,
+          duration: duration * 60,
+          form: `Perform ${name.toLowerCase()} exercises with proper form`,
+          modifications: [],
+          commonMistakes: [],
+          primaryMuscles: [],
+          secondaryMuscles: [],
+          movementType: 'strength',
+          personalizedNotes: [],
+          difficultyAdjustments: []
+        }
+      ],
+      instructions: `Complete ${name.toLowerCase()} phase`,
+      tips: []
+    };
   }
 
   private selectPromptTemplate(params: DetailedWorkoutParams) {

@@ -1,4 +1,20 @@
 // OpenAI Strategy - Implements AIStrategy interface for OpenAI integration
+/**
+ * OpenAIStrategy - Primary implementation of AIStrategy for OpenAI integration
+ * 
+ * CONSOLIDATION NOTE (2024):
+ * This file is the consolidated primary implementation of OpenAIStrategy.
+ * Previously, there was a duplicate implementation in /shared/core/OpenAIStrategy.ts
+ * which has been removed. This version includes:
+ * - Full DetailedWorkoutFeature integration
+ * - QuickWorkoutFeature support
+ * - Enhanced error handling and validation
+ * - Comprehensive feature flag support
+ * - Unified workout generation approach
+ * 
+ * All imports should reference this location:
+ * import { OpenAIStrategy } from '../services/ai/external/OpenAIStrategy';
+ */
 import { 
   AIStrategy, 
   GeneratedWorkout, 
@@ -19,7 +35,6 @@ import {
   getQuickWorkoutSystemPreference,
   validateQuickWorkoutSetupConfig
 } from './config/openai.config';
-import { logger } from '../../../utils/logger';
 import { WorkoutVariableBuilder } from './helpers/WorkoutVariableBuilder';
 import { ErrorHandler } from './helpers/ErrorHandler';
 import { OPENAI_STRATEGY_CONSTANTS } from './constants/openai-constants';
@@ -30,7 +45,6 @@ import {
   parseUserAnalysis,
   createBasicUserAnalysis
 } from './helpers/AIAnalysisHelpers';
-import { enhanceGeneratedWorkout } from './helpers/WorkoutEnhancementHelpers';
 
 // ✅ NEW: Import QuickWorkoutSetup feature
 import { QuickWorkoutFeature, QuickWorkoutParams } from './features/quick-workout-setup/index';
@@ -51,20 +65,14 @@ export class OpenAIStrategy implements AIStrategy {
     fallbackStrategy?: AIStrategy
   ) {
     try {
-      console.log('🔍 DEBUG: OpenAIStrategy constructor called');
       this.openAIService = openAIService ?? new OpenAIService();
       
-      // ✅ NEW: Initialize QuickWorkoutSetup feature
+      // Initialize QuickWorkoutSetup feature
       if (this.openAIService) {
-        console.log('🔍 DEBUG: Initializing QuickWorkoutFeature...');
         try {
-          console.log('🔍 DEBUG: Creating QuickWorkoutFeature with dependencies...');
           this.quickWorkoutFeature = new QuickWorkoutFeature({
             openAIService: this.openAIService
           });
-          console.log('✅ OpenAIStrategy: QuickWorkoutSetup feature initialized successfully');
-          console.log('🔍 DEBUG: QuickWorkoutFeature type:', this.quickWorkoutFeature?.constructor?.name);
-          console.log('🔍 DEBUG: QuickWorkoutFeature methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(this.quickWorkoutFeature)));
         } catch (featureError) {
           console.error('❌ OpenAIStrategy: QuickWorkoutFeature initialization failed:', featureError);
           console.error('❌ Error details:', {
@@ -74,36 +82,24 @@ export class OpenAIStrategy implements AIStrategy {
           });
           this.quickWorkoutFeature = undefined;
         }
-      } else {
-        console.log('⚠️ OpenAIStrategy: OpenAIService not available, skipping QuickWorkoutFeature initialization');
       }
 
       // Initialize DetailedWorkoutFeature
       if (this.openAIService) {
         this.detailedWorkoutFeature = new DetailedWorkoutFeature({
           openAIService: this.openAIService,
-          logger: logger
+          logger: console
         });
-        console.log('✅ OpenAIStrategy: DetailedWorkoutSetup feature initialized successfully');
-      } else {
-        console.log('⚠️ OpenAIStrategy: OpenAIService not available, skipping DetailedWorkoutSetup feature initialization');
       }
     } catch (error) {
       console.warn('⚠️  Failed to create OpenAIService, using fallback strategy:', error);
       this.openAIService = undefined;
       this.quickWorkoutFeature = undefined;
       this.detailedWorkoutFeature = new DetailedWorkoutFeature({
-        openAIService: undefined,
-        logger: logger
+        logger: console
       });
     }
     this.fallbackStrategy = fallbackStrategy;
-    
-    console.log('🔍 DEBUG: OpenAIStrategy constructor completed:', {
-      hasOpenAIService: !!this.openAIService,
-      hasQuickWorkoutFeature: !!this.quickWorkoutFeature,
-      hasFallbackStrategy: !!this.fallbackStrategy
-    });
   }
 
   // Generate AI-powered recommendations
@@ -146,7 +142,7 @@ export class OpenAIStrategy implements AIStrategy {
       return this.convertToStandardRecommendations(recommendations as EnhancedRecommendation[], context);
 
     } catch (error) {
-      logger.error('OpenAI recommendations failed:', error);
+      console.error('OpenAI recommendations failed:', error);
       return ErrorHandler.handleRecommendationError(error, context, this.fallbackStrategy);
     }
   }
@@ -154,42 +150,32 @@ export class OpenAIStrategy implements AIStrategy {
   // ✅ ENHANCED: Generate AI-powered workout with feature-first approach
   async generateWorkout(request: WorkoutGenerationRequest): Promise<GeneratedWorkout> {
     try {
-      console.log('🎯 OpenAIStrategy: Using QuickWorkoutSetup feature for workout generation');
-      
       // Check if OpenAIService is available
       if (!this.openAIService) {
         throw new Error('OpenAI service not available. Please configure VITE_OPENAI_API_KEY for AI-powered workouts.');
       }
-
       // Validate request using new validation system
       const validation = WorkoutRequestValidator.validate(request);
       if (!validation.isValid) {
         throw new Error(`Invalid workout request: ${validation.errors.join(', ')}`);
       }
-
       // Log warnings if any
       if (validation.warnings.length > 0) {
-        logger.warn(`Workout request warnings: ${validation.warnings.join(', ')}`);
+        console.warn(`Workout request warnings: ${validation.warnings.join(', ')}`);
       }
-
-      // ✅ SIMPLIFIED: Always use QuickWorkoutSetup feature (no fallback)
+      // Always use QuickWorkoutSetup feature (no fallback)
       if (!this.quickWorkoutFeature) {
         throw new Error('QuickWorkoutSetup feature is required but not available');
       }
-
       if (!this.isQuickWorkoutApplicable(request)) {
         throw new Error('Request not suitable for QuickWorkoutSetup feature');
       }
-
-      console.log('🎯 OpenAIStrategy: Using QuickWorkoutSetup feature for workout generation');
       return await this.generateWorkoutUsingFeature(request);
-
     } catch (error) {
       // Enhanced error logging with actionable information
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const errorStack = error instanceof Error ? error.stack : '';
-      
-      logger.error('OpenAI workout generation failed:', {
+      console.error('OpenAI workout generation failed:', {
         error: errorMessage,
         stack: errorStack,
         requestKeys: Object.keys(request),
@@ -197,7 +183,6 @@ export class OpenAIStrategy implements AIStrategy {
         userProfileKeys: request.userProfile ? Object.keys(request.userProfile) : 'N/A',
         fitnessLevel: request.userProfile?.fitnessLevel || 'MISSING'
       });
-      
       throw error;
     }
   }
@@ -210,7 +195,6 @@ export class OpenAIStrategy implements AIStrategy {
 
     // Check if this should use detailed workout feature
     if (this.shouldUseDetailedWorkout(request)) {
-      console.log('🎯 OpenAIStrategy: Using DetailedWorkoutSetup feature');
       return await this.generateDetailedWorkout(request);
     }
 
@@ -256,66 +240,31 @@ export class OpenAIStrategy implements AIStrategy {
 
   // ✅ NEW: Convert WorkoutGenerationRequest to QuickWorkoutParams
   private convertToQuickWorkoutParams(request: WorkoutGenerationRequest): QuickWorkoutParams {
-    // 🔍 DEBUG: Log the request structure
-    console.log('🔍 DEBUG: OpenAIStrategy.convertToQuickWorkoutParams - Request structure:', {
-      hasPreferences: !!request.preferences,
-      preferencesKeys: request.preferences ? Object.keys(request.preferences) : 'undefined',
-      preferencesDuration: request.preferences?.duration,
-      hasWorkoutFocusData: !!request.workoutFocusData,
-      workoutFocusDataKeys: request.workoutFocusData ? Object.keys(request.workoutFocusData) : 'undefined',
-      workoutFocusDataDuration: request.workoutFocusData?.customization_duration,
-      workoutFocusDataDurationType: typeof request.workoutFocusData?.customization_duration
-    });
-
-    // ✅ FIX: Extract duration from correct source with proper fallback logic
     const extractedDuration = 
       request.preferences?.duration ||
       (typeof request.workoutFocusData?.customization_duration === 'number' 
         ? request.workoutFocusData.customization_duration 
         : request.workoutFocusData?.customization_duration?.duration) ||
       30;
-
-    // ✅ FIX: Extract focus from correct source with proper fallback logic
     const extractedFocus = 
       request.preferences?.focus ||
       (typeof request.workoutFocusData?.customization_focus === 'string' 
         ? request.workoutFocusData.customization_focus 
         : request.workoutFocusData?.customization_focus?.focus) ||
       'general';
-
-    // ✅ FIX: Extract equipment from correct source with proper fallback logic
     const extractedEquipment = 
       request.preferences?.equipment ||
       request.workoutFocusData?.customization_equipment ||
       [];
-
-    // ✅ FIX: Extract location from correct source with proper fallback logic
     const extractedLocation = 
       request.preferences?.location ||
       'home' as const;
-
-    // ✅ FIX: Extract intensity from correct source with proper fallback logic
     const extractedIntensity = 
       request.preferences?.intensity ||
       'moderate' as const;
-
-    // Extract energy level and soreness from workoutFocusData if available
     const energyLevel = request.workoutFocusData?.customization_energy ?? 5;
     const sorenessAreas = request.workoutFocusData?.customization_soreness ? 
       Object.keys(request.workoutFocusData.customization_soreness) : [];
-
-    // 🔍 DEBUG: Log the extracted values
-    console.log('🔍 DEBUG: OpenAIStrategy.convertToQuickWorkoutParams - Extracted values:', {
-      extractedDuration,
-      extractedFocus,
-      extractedEquipment,
-      extractedLocation,
-      extractedIntensity,
-      energyLevel,
-      sorenessAreasCount: sorenessAreas.length
-    });
-
-    // ✅ FIX: Build parameters with extracted values
     const params = {
       duration: extractedDuration,
       fitnessLevel: this.mapFitnessLevel(request.userProfile.fitnessLevel),
@@ -326,13 +275,6 @@ export class OpenAIStrategy implements AIStrategy {
       location: extractedLocation,
       intensity: extractedIntensity
     };
-
-    console.log('🔍 DEBUG: OpenAIStrategy.convertToQuickWorkoutParams - Final params:', {
-      duration: params.duration,
-      focus: params.focus,
-      energyLevel: params.energyLevel
-    });
-
     return params;
   }
 
@@ -349,47 +291,16 @@ export class OpenAIStrategy implements AIStrategy {
     return mapping[systemLevel] || 'some experience';
   }
 
-  // 🔍 DEBUG: Debug method for QuickWorkout applicability
-  private debugQuickWorkoutApplicability(request: WorkoutGenerationRequest): any {
-    const systemPreference = getQuickWorkoutSystemPreference();
-    const duration = request.preferences?.duration ?? 30;
-    const supportedDurations = [5, 10, 15, 20, 30, 45];
-    const isSupported = supportedDurations.some(d => Math.abs(d - duration) <= 5);
-    
-    const hasRequiredData = !!(
-      request.userProfile &&
-      request.userProfile.fitnessLevel &&
-      request.preferences
-    );
-
-    return {
-      systemPreference,
-      duration,
-      supportedDurations,
-      isSupported,
-      hasRequiredData,
-      hasUserProfile: !!request.userProfile,
-      hasFitnessLevel: !!request.userProfile?.fitnessLevel,
-      hasPreferences: !!request.preferences,
-      durationDifferences: supportedDurations.map(d => ({ 
-        duration: d, 
-        difference: Math.abs(d - duration) 
-      }))
-    };
-  }
-
   // ✅ ENHANCED: Check if QuickWorkoutSetup feature is applicable with feature flags
   private isQuickWorkoutApplicable(request: WorkoutGenerationRequest): boolean {
     // Check feature flags first
     const systemPreference = getQuickWorkoutSystemPreference();
     
     if (systemPreference === 'new') {
-      console.log('🎯 OpenAIStrategy: New QuickWorkoutSetup feature forced via feature flag');
       return true;
     }
     
     if (systemPreference === 'legacy') {
-      console.log('🔄 OpenAIStrategy: Legacy system forced via feature flag');
       return false;
     }
     
@@ -409,10 +320,6 @@ export class OpenAIStrategy implements AIStrategy {
 
     const applicable = isSupported && hasRequiredData;
     
-    if (!applicable) {
-      console.log(`🔄 OpenAIStrategy: QuickWorkout not applicable - Duration: ${duration}, HasData: ${hasRequiredData}`);
-    }
-
     return applicable;
   }
 
@@ -614,13 +521,7 @@ export class OpenAIStrategy implements AIStrategy {
   // Execute workout generation with OpenAI
 
 
-  // Enhance and validate generated workout
-  private enhanceGeneratedWorkout(
-    workout: GeneratedWorkout, 
-    request: WorkoutGenerationRequest
-  ): GeneratedWorkout {
-    return enhanceGeneratedWorkout(workout, request);
-  }
+
 
   private async fallbackToRuleBased(
     _operation: string,
@@ -630,189 +531,6 @@ export class OpenAIStrategy implements AIStrategy {
       return await this.fallbackStrategy.generateRecommendations(context);
     }
     return [];
-  }
-
-  // Helper to normalize the workout structure to ensure consistent phases and durations
-  private normalizeWorkoutStructure(workout: any): GeneratedWorkout {
-    console.log('🔍 DEBUG: OpenAIStrategy.normalizeWorkoutStructure called with workout:', {
-      hasWorkout: !!workout,
-      workoutKeys: workout ? Object.keys(workout) : 'N/A',
-      hasWarmup: !!(workout?.warmup),
-      hasMainWorkout: !!(workout?.mainWorkout),
-      hasCooldown: !!(workout?.cooldown),
-      warmupDuration: workout?.warmup?.duration,
-      mainWorkoutDuration: workout?.mainWorkout?.duration,
-      cooldownDuration: workout?.cooldown?.duration
-    });
-    
-    // Handle different phase structures
-    let warmup, mainWorkout, cooldown;
-    
-    // Handle phases at root level
-    if (workout.warmup || workout.mainWorkout || workout.cooldown) {
-      warmup = workout.warmup;
-      mainWorkout = workout.mainWorkout;
-      cooldown = workout.cooldown;
-    }
-
-    // ✅ FIXED: Recalculate phase durations based on exercises to ensure accuracy
-    if (warmup && warmup.exercises && Array.isArray(warmup.exercises)) {
-      console.log(`🔍 DEBUG: Recalculating warm-up phase duration`);
-      console.log(`🔍 DEBUG: Original warm-up duration: ${warmup.duration}`);
-      // ✅ FIXED: Check if AI generated phase duration in minutes and convert
-      if (warmup.duration && warmup.duration >= 1 && warmup.duration <= 10) {
-        console.warn(`Warm-up phase has duration ${warmup.duration} which appears to be in minutes. Converting to seconds.`);
-        warmup.duration = warmup.duration * 60;
-      }
-      warmup = this.createPhaseFromExercises('Warm-up', warmup.exercises);
-      console.log(`🔍 DEBUG: Final warm-up duration: ${warmup.duration}`);
-    }
-    if (mainWorkout && mainWorkout.exercises && Array.isArray(mainWorkout.exercises)) {
-      console.log(`🔍 DEBUG: Recalculating main workout phase duration`);
-      console.log(`🔍 DEBUG: Original main workout duration: ${mainWorkout.duration}`);
-      // ✅ FIXED: Check if AI generated phase duration in minutes and convert
-      if (mainWorkout.duration && mainWorkout.duration >= 1 && mainWorkout.duration <= 10) {
-        console.warn(`Main workout phase has duration ${mainWorkout.duration} which appears to be in minutes. Converting to seconds.`);
-        mainWorkout.duration = mainWorkout.duration * 60;
-      }
-      mainWorkout = this.createPhaseFromExercises('Main Workout', mainWorkout.exercises);
-      console.log(`🔍 DEBUG: Final main workout duration: ${mainWorkout.duration}`);
-    }
-    if (cooldown && cooldown.exercises && Array.isArray(cooldown.exercises)) {
-      console.log(`🔍 DEBUG: Recalculating cool-down phase duration`);
-      console.log(`🔍 DEBUG: Original cool-down duration: ${cooldown.duration}`);
-      // ✅ FIXED: Check if AI generated phase duration in minutes and convert
-      if (cooldown.duration && cooldown.duration >= 1 && cooldown.duration <= 10) {
-        console.warn(`Cool-down phase has duration ${cooldown.duration} which appears to be in minutes. Converting to seconds.`);
-        cooldown.duration = cooldown.duration * 60;
-      }
-      cooldown = this.createPhaseFromExercises('Cool-down', cooldown.exercises);
-      console.log(`🔍 DEBUG: Final cool-down duration: ${cooldown.duration}`);
-    }
-
-    return {
-      id: workout.id || `workout_${Date.now()}`,
-      title: workout.title || workout.name || workout.workoutName || 'Generated Workout',
-      description: workout.description || 'AI-generated workout plan',
-      totalDuration: workout.totalDuration || workout.duration || 30,
-      estimatedCalories: workout.estimatedCalories || 200,
-      difficulty: workout.difficulty || 'some experience',
-      equipment: Array.isArray(workout.equipment) ? workout.equipment : [],
-      warmup: warmup || this.createDefaultPhase('Warm-up', 5),
-      mainWorkout: mainWorkout || this.createDefaultPhase('Main Workout', 20),
-      cooldown: cooldown || this.createDefaultPhase('Cool-down', 5),
-      reasoning: workout.reasoning || 'AI-generated workout based on your profile and preferences',
-      personalizedNotes: Array.isArray(workout.personalizedNotes) ? workout.personalizedNotes : [],
-      progressionTips: Array.isArray(workout.progressionTips) ? workout.progressionTips : [],
-      safetyReminders: Array.isArray(workout.safetyReminders) ? workout.safetyReminders : [],
-      generatedAt: workout.generatedAt || new Date(),
-      aiModel: workout.aiModel || 'gpt-4o',
-      confidence: workout.confidence || 0.8,
-      tags: Array.isArray(workout.tags) ? workout.tags : []
-    };
-  }
-
-  // Helper to create a workout phase from exercises
-  private createPhaseFromExercises(name: string, exercises: any[]): any {
-    console.log(`🔍 DEBUG: Creating phase "${name}" with ${exercises.length} exercises`);
-    
-    // Calculate total duration including exercise time and rest periods
-    const totalDuration = exercises.reduce((sum, ex, index) => {
-      let exerciseDuration = ex.duration || ex.durationMinutes || 60;
-      const restTime = ex.restTime || ex.rest || 30;
-      
-      console.log(`🔍 DEBUG: Exercise "${ex.name}" - original duration: ${exerciseDuration}, rest: ${restTime}`);
-      
-      // ✅ FIXED: More intelligent duration detection
-      // If duration is between 1-10, it's likely in minutes and needs conversion
-      // If duration is already 60+ seconds, it's already in seconds
-      if (exerciseDuration >= 1 && exerciseDuration <= 10) {
-        console.warn(`Exercise "${ex.name}" has duration ${exerciseDuration} which appears to be in minutes. Converting to seconds.`);
-        exerciseDuration = exerciseDuration * 60;
-      }
-      
-      // Add exercise duration
-      let phaseTime = exerciseDuration;
-      
-      // Add rest time after each exercise (except the last one)
-      if (index < exercises.length - 1) {
-        phaseTime += restTime;
-      }
-      
-      console.log(`🔍 DEBUG: Exercise "${ex.name}" - final duration: ${exerciseDuration}, phase time: ${phaseTime}, running sum: ${sum + phaseTime}`);
-      
-      return sum + phaseTime;
-    }, 0);
-    
-    console.log(`🔍 DEBUG: Phase "${name}" total duration: ${totalDuration} seconds`);
-    
-    return {
-      name,
-      duration: totalDuration,
-      exercises: exercises.map((exercise, index) => {
-        let exerciseDuration = exercise.duration || exercise.durationMinutes || 60;
-        
-        // ✅ FIXED: Apply the same intelligent duration fix to individual exercises
-        if (exerciseDuration >= 1 && exerciseDuration <= 10) {
-          exerciseDuration = exerciseDuration * 60;
-        }
-        
-        return {
-          id: exercise.id || `exercise_${index + 1}`,
-          name: exercise.name || exercise.activityName || `Exercise ${index + 1}`,
-          description: exercise.description || exercise.instructions || `Perform ${exercise.name || exercise.activityName || 'exercise'}`,
-          duration: exerciseDuration,
-          sets: exercise.sets || 1,
-          reps: exercise.reps || exercise.repetitions || 10,
-          restTime: exercise.rest || exercise.restTime || 30,
-          equipment: exercise.equipment || exercise.equipmentNeeded ? [exercise.equipmentNeeded] : [],
-          form: exercise.form || exercise.instructions || `Perform ${exercise.name || exercise.activityName || 'exercise'} with proper form`,
-          modifications: exercise.modifications || [],
-          commonMistakes: exercise.commonMistakes || [],
-          primaryMuscles: exercise.primaryMuscles || [],
-          secondaryMuscles: exercise.secondaryMuscles || [],
-          movementType: exercise.movementType || 'strength' as const,
-          personalizedNotes: exercise.personalizedNotes || [],
-          difficultyAdjustments: exercise.difficultyAdjustments || []
-        };
-      }),
-      instructions: `Complete ${name.toLowerCase()} phase with proper form`,
-      tips: []
-    };
-  }
-
-  // Helper to create a default workout phase
-  private createDefaultPhase(name: string, duration: number): any {
-    let exerciseDuration = duration * 60; // Convert minutes to seconds
-    
-    // ✅ FIXED: Apply the same intelligent duration validation
-    if (exerciseDuration >= 1 && exerciseDuration <= 10) {
-      console.warn(`Default phase "${name}" has duration ${exerciseDuration} which appears to be in minutes. Converting to seconds.`);
-      exerciseDuration = exerciseDuration * 60;
-    }
-    
-    return {
-      name,
-      duration: exerciseDuration,
-      exercises: [
-        {
-          id: `exercise_1`,
-          name: `${name} Exercise`,
-          description: `Perform ${name.toLowerCase()} exercises`,
-          duration: exerciseDuration,
-          form: `Perform ${name.toLowerCase()} exercises with proper form`,
-          modifications: [],
-          commonMistakes: [],
-          primaryMuscles: [],
-          secondaryMuscles: [],
-          movementType: 'strength' as const,
-          personalizedNotes: [],
-          difficultyAdjustments: []
-        }
-      ],
-      instructions: `Complete ${name.toLowerCase()} phase`,
-      tips: []
-    };
   }
 }
 
