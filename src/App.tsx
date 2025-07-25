@@ -283,7 +283,21 @@ function AppContent() {
   }, []);
 
   const updateWorkoutFocusData = useCallback((workoutFocusData: PerWorkoutOptions, workoutType: WorkoutType) => {
-    setAppState(prev => ({ ...prev, workoutFocusData, workoutType }));
+    console.log('App.tsx: updateWorkoutFocusData called', { 
+      workoutType, 
+      intensity: workoutFocusData.customization_intensity,
+      totalKeys: Object.keys(workoutFocusData).length 
+    });
+    
+    setAppState(prev => {
+      console.log('App.tsx: setAppState called with prev state:', {
+        hasProfileData: !!prev.profileData,
+        hasWorkoutFocusData: !!prev.workoutFocusData,
+        currentWorkoutType: prev.workoutType
+      });
+      
+      return { ...prev, workoutFocusData, workoutType };
+    });
     
     // Persist workoutType to localStorage
     try {

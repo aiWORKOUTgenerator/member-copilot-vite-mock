@@ -31,6 +31,19 @@ export interface CategoryRatingData {
   categories: string[];
 }
 
+export interface TrainingActivity {
+  type: string;
+  intensity: 'light' | 'moderate' | 'intense';
+  duration: number;
+  date: string;
+}
+
+export interface TrainingLoadData {
+  recentActivities: TrainingActivity[];
+  weeklyVolume: number;
+  averageIntensity: 'light' | 'moderate' | 'intense';
+}
+
 export interface ValidationResult {
   isValid: boolean;
   message?: string;
@@ -43,13 +56,19 @@ export interface PerWorkoutOptions {
   customization_equipment?: string[];
   customization_location?: string;
   customization_intensity?: string;
-  customization_energy?: number;
-  customization_soreness?: string[];
+  customization_energy?: CategoryRatingData;
+  customization_soreness?: CategoryRatingData;
   customization_stress?: CategoryRatingData;
+  customization_injury?: CategoryRatingData;
   customization_areas?: string[];
   customization_include?: string[];
   customization_exclude?: string[];
-  customization_sleep?: number;
+  customization_sleep?: CategoryRatingData;
+  customization_trainingLoad?: TrainingLoadData;
+  // Added fields for advanced customization
+  customization_restPeriods?: 'short' | 'moderate' | 'long';
+  customization_exercisePreference?: 'compound' | 'isolation' | 'mixed';
+  customization_progressionStyle?: 'conservative' | 'moderate' | 'aggressive';
 }
 
 // Enhanced option interface for DRY components

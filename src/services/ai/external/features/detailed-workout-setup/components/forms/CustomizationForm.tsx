@@ -50,12 +50,16 @@ export const CustomizationForm: React.FC<CustomizationFormProps> = ({
   const handleOptionChange = (category: keyof WorkoutCustomizationData, newValue: string) => {
     if (disabled) return;
 
+    console.log('CustomizationForm: handleOptionChange called', { category, newValue });
+
     const updatedValue = {
       ...value,
       [category]: newValue
     };
 
+    console.log('CustomizationForm: calling onChange with updatedValue:', updatedValue);
     onChange(updatedValue as WorkoutCustomizationData);
+    console.log('CustomizationForm: onChange completed');
 
     // Validate customization options
     if (onValidation) {

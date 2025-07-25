@@ -2,16 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { PenLine, ChevronLeft, ClipboardList, Sparkles, ArrowRight } from 'lucide-react';
 import { PageHeader } from './shared';
 import { QuickWorkoutForm } from './quickWorkout/components';
-import DetailedWorkoutContainer from '../services/ai/external/features/detailed-workout-setup/components/containers/DetailedWorkoutContainer';
+import { DetailedWorkoutWizard } from './DetailedWorkoutWizard';
 import { PerWorkoutOptions } from '../types/core';
 import { AIRecommendationContext } from '../types/ai';
+import { UserProfile, TimePreference, AIAssistanceLevel, RecoveryStatus } from '../types/user';
+import { ProfileData } from './Profile/types/profile.types';
+import { profileTransformers } from '../utils/dataTransformers';
 
 // Define WorkoutType locally since it's used throughout the app
 type WorkoutType = 'quick' | 'detailed';
-import { UserProfile, TimePreference, AIAssistanceLevel, RecoveryStatus } from '../types/user';
-import { ProfileData } from './Profile/types/profile.types';
-import { mapExperienceLevelToFitnessLevel } from '../utils/configUtils';
-import { profileTransformers } from '../utils/dataTransformers';
 
 // Helper function to convert ProfileData to UserProfile
 const convertProfileDataToUserProfile = (profileData: ProfileData): UserProfile => {
@@ -269,18 +268,18 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({
     );
   }
 
-  // Detailed Workout View
-  return (
-    <DetailedWorkoutContainer
-      options={options}
-      onChange={handleOptionsChange}
-      errors={{}}
-      disabled={false}
-      onNavigate={onNavigate}
-      userProfile={profileData ? convertProfileDataToUserProfile(profileData) : undefined}
-      workoutType="detailed"
-    />
-  );
+  // Detailed Workout View - Now uses proper wizard flow
+  if (viewMode === 'detailed') {
+    return (
+      <DetailedWorkoutWizard
+        onNavigate={onNavigate}
+        profileData={profileData || null}
+        userProfile={profileData ? convertProfileDataToUserProfile(profileData) : undefined}
+        initialData={options}
+        onDataUpdate={onDataUpdate}
+      />
+    );
+  }
 };
 
 export default WorkoutFocusPage;

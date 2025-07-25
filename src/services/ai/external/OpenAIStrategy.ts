@@ -90,6 +90,12 @@ export class OpenAIStrategy implements AIStrategy {
           openAIService: this.openAIService,
           logger: console
         });
+      } else {
+        // Create a fallback DetailedWorkoutFeature without OpenAIService
+        this.detailedWorkoutFeature = new DetailedWorkoutFeature({
+          openAIService: undefined,
+          logger: console
+        });
       }
     } catch (error) {
       console.warn('⚠️  Failed to create OpenAIService, using fallback strategy:', error);
@@ -433,6 +439,13 @@ export class OpenAIStrategy implements AIStrategy {
       openAIService: openAIServiceHealthy,
       quickWorkoutFeature: quickWorkoutFeatureHealthy
     };
+  }
+
+  /**
+   * Get the OpenAIService instance
+   */
+  getOpenAIService(): OpenAIService | undefined {
+    return this.openAIService;
   }
 
   // Private helper methods (existing methods preserved)

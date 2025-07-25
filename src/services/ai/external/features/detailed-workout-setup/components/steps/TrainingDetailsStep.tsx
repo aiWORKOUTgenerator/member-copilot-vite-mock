@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { PerWorkoutOptions, ValidationResult } from '../../../../../../../types/core';
 import { EquipmentForm } from '../forms/EquipmentForm';
 import { ValidationFeedback } from '../shared/ValidationFeedback';
@@ -13,6 +13,8 @@ interface TrainingDetailsStepProps {
   workoutFeature: DetailedWorkoutFeature;
   disabled?: boolean;
 }
+
+export type { TrainingDetailsStepProps };
 
 export const TrainingDetailsStep: React.FC<TrainingDetailsStepProps> = ({
   options,
@@ -49,7 +51,13 @@ export const TrainingDetailsStep: React.FC<TrainingDetailsStepProps> = ({
       
       // Check if all required fields are valid
       const isValid = Object.values(newResults).every(r => r.isValid);
-      onValidation?.(isValid);
+      
+      // Defer parent validation to prevent setState during render
+      if (onValidation) {
+        setTimeout(() => {
+          onValidation(isValid);
+        }, 0);
+      }
       
       return newResults;
     });
@@ -69,7 +77,15 @@ export const TrainingDetailsStep: React.FC<TrainingDetailsStepProps> = ({
 
       // Update conflicts based on validation result
       if (!validationResult.isValid && validationResult.details?.conflicts) {
-        setConflicts(validationResult.details.conflicts.map((conflict, index) => ({
+        setConflicts(validationResult.details.conflicts.map((conflict: {
+          message: string;
+          severity?: 'high' | 'medium' | 'low';
+          fields?: string[];
+          suggestion?: {
+            label: string;
+            changes?: Record<string, unknown>;
+          };
+        }, index: number) => ({
           id: `details-conflict-${index}`,
           message: conflict.message,
           severity: conflict.severity || 'medium',
@@ -79,7 +95,7 @@ export const TrainingDetailsStep: React.FC<TrainingDetailsStepProps> = ({
             action: () => {
               if (conflict.suggestion?.changes) {
                 Object.entries(conflict.suggestion.changes).forEach(([key, value]) => {
-                  onChange(key as keyof PerWorkoutOptions, value);
+                  onChange(key as keyof PerWorkoutOptions, value as PerWorkoutOptions[keyof PerWorkoutOptions]);
                 });
               }
             }
@@ -89,23 +105,8 @@ export const TrainingDetailsStep: React.FC<TrainingDetailsStepProps> = ({
         setConflicts([]);
       }
 
-      // Generate AI recommendations
-      const recommendationResult = await workoutFeature.generateWorkout({
-        duration: options.customization_duration,
-        focus: options.customization_focus,
-        equipment: options.customization_equipment,
-        energyLevel: options.customization_energy || 5,
-        sorenessAreas: options.customization_soreness || [],
-        experienceLevel: 'intermediate',
-        intensityPreference: 'moderate',
-        workoutStructure: 'traditional',
-        trainingGoals: ['strength'],
-        timeAvailable: typeof options.customization_duration === 'number' 
-          ? options.customization_duration 
-          : options.customization_duration?.duration || 30
-      });
-
-      setRecommendations(recommendationResult.recommendations);
+      // Set empty recommendations for now - workout generation happens in final step
+      setRecommendations([]);
     } catch (error) {
       console.error('Error validating training details:', error);
     }
@@ -136,6 +137,13 @@ export const TrainingDetailsStep: React.FC<TrainingDetailsStepProps> = ({
     }
   }, [options.customization_equipment, onChange]);
 
+  // Run cross-field validation when equipment is present
+  useEffect(() => {
+    if (options.customization_equipment) {
+      validateAndRecommend();
+    }
+  }, [options.customization_equipment, validateAndRecommend]);
+
   return (
     <div className="space-y-8">
       {/* Equipment Selection */}
@@ -144,7 +152,7 @@ export const TrainingDetailsStep: React.FC<TrainingDetailsStepProps> = ({
           value={options.customization_equipment || []}
           onChange={value => {
             onChange('customization_equipment', value);
-            validateAndRecommend();
+            // Remove automatic validation to prevent setState during render
           }}
           onValidation={result => handleValidation('equipment', result)}
           disabled={disabled}

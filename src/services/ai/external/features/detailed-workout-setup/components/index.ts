@@ -1,6 +1,3 @@
-// Containers
-export { default as DetailedWorkoutContainer } from './containers/DetailedWorkoutContainer';
-
 // Forms
 export { default as DurationForm } from './forms/DurationForm';
 export { default as FocusForm } from './forms/FocusForm';
@@ -15,7 +12,6 @@ export { default as ConflictWarning } from './shared/ConflictWarning';
 export { default as ValidationFeedback } from './shared/ValidationFeedback';
 
 // Types
-export type { DetailedWorkoutContainerProps } from './containers/DetailedWorkoutContainer';
 export type { DurationFormProps } from './forms/DurationForm';
 export type { FocusFormProps } from './forms/FocusForm';
 export type { EquipmentFormProps } from './forms/EquipmentForm';

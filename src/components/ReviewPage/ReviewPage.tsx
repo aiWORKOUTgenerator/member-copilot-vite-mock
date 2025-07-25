@@ -5,7 +5,7 @@ import { UserProfile } from '../../types/user';
 import { mapExperienceLevelToFitnessLevel } from '../../utils/configUtils';
 import { calculateWorkoutIntensity } from '../../utils/fitnessLevelCalculator';
 import { ReviewPageProps } from './types';
-import { ProfileSection, WorkoutSection } from './sections';
+import { ProfileSection, WorkoutSection, DetailedWorkoutSection } from './sections';
 import { 
   convertWorkoutFocusToDisplay, 
   validateWorkoutFocusData, 
@@ -281,10 +281,17 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
 
             {/* Today's Workout Focus Section */}
             {displayWorkoutFocus && workoutFocusData && profileData && (
-              <WorkoutSection 
-                profileData={profileData}
-                displayWorkoutFocus={displayWorkoutFocus}
-              />
+              workoutType === 'detailed' ? (
+                <DetailedWorkoutSection 
+                  profileData={profileData}
+                  workoutFocusData={workoutFocusData}
+                />
+              ) : (
+                <WorkoutSection 
+                  profileData={profileData}
+                  displayWorkoutFocus={displayWorkoutFocus}
+                />
+              )
             )}
           </div>
         </div>

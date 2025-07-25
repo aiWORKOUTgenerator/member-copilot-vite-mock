@@ -33,12 +33,14 @@ export const FocusForm: React.FC<FocusFormProps> = ({
 
     onChange(newValue);
 
-    // Validate the selection
+    // Defer validation to prevent setState during render
     if (onValidation) {
-      onValidation({
-        isValid: true,
-        message: 'Focus selected successfully'
-      });
+      setTimeout(() => {
+        onValidation({
+          isValid: true,
+          message: 'Focus selected successfully'
+        });
+      }, 0);
     }
   };
 

@@ -63,17 +63,19 @@ export const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
     onChange(newValue);
 
-    // Validate equipment selection
+    // Defer validation to prevent setState during render
     if (onValidation) {
       const isValid = newValue.length > 0;
-      onValidation({
-        isValid,
-        message: isValid ? undefined : 'Please select at least one piece of equipment',
-        details: {
-          selected: newValue,
-          minimumRequired: 1
-        }
-      });
+      setTimeout(() => {
+        onValidation({
+          isValid,
+          message: isValid ? undefined : 'Please select at least one piece of equipment',
+          details: {
+            selected: newValue,
+            minimumRequired: 1
+          }
+        });
+      }, 0);
     }
   };
 

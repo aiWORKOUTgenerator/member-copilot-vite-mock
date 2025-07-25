@@ -39,12 +39,14 @@ export const DurationForm: React.FC<DurationFormProps> = ({
 
     onChange(newValue);
 
-    // Validate the selection
+    // Defer validation to prevent setState during render
     if (onValidation) {
-      onValidation({
-        isValid: true,
-        message: 'Duration selected successfully'
-      });
+      setTimeout(() => {
+        onValidation({
+          isValid: true,
+          message: 'Duration selected successfully'
+        });
+      }, 0);
     }
   };
 

@@ -36,6 +36,7 @@ import { AIServiceLearningEngine } from './interaction/AIServiceLearningEngine';
 
 // OpenAI Strategy - Direct Integration
 import { OpenAIStrategy } from '../external/OpenAIStrategy';
+import { OpenAIService } from '../external/OpenAIService';
 
 /**
  * Main AI Service Orchestrator
@@ -192,6 +193,13 @@ export class AIService {
     this.log('info', 'OpenAI strategy configured', {
       strategyType: strategy?.constructor?.name || 'none'
     });
+  }
+
+  /**
+   * Get the OpenAIService from the OpenAI strategy
+   */
+  getOpenAIService(): OpenAIService | undefined {
+    return this.openAIStrategy?.getOpenAIService();
   }
 
   /**

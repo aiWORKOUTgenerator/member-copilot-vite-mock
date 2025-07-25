@@ -107,19 +107,39 @@ export const WORKOUT_CUSTOMIZATION_CONFIG: CustomizationConfig[] = [
 
   // Physical State Configurations
   createPhysicalStateConfig('customization_energy', 'Current Energy Level', EnergyComponent as ComponentType<CustomizationComponentProps<unknown>>, Battery, 5, validateEnergy as (value: unknown, allOptions: PerWorkoutOptions) => ValidationResult, {
-    metadata: METADATA_PATTERNS.quickAssessment(
-      ['energy', 'readiness', 'adaptation'],
+    required: true, // CHANGE TO TRUE to match Training Structure pattern
+    metadata: METADATA_PATTERNS.basicSetup( // CHANGE TO basicSetup to match Training Details
+      ['energy', 'readiness', 'state'],
       ['Assess current energy', 'Adapt workout intensity'],
-      ['Adaptive workout intensity', 'Better performance', 'Reduced injury risk']
-    )
+      ['Optimized intensity', 'Better performance', 'Safe progression']
+    ),
+    validation: {
+      required: true, // CHANGE TO TRUE
+      custom: validateEnergy
+    },
+    uiConfig: {
+      componentType: 'progressive-disclosure', // CHANGE TO match Training Details
+      progressiveEnhancement: true, // CHANGE TO TRUE
+      aiAssistance: 'suggestions'
+    }
   }),
 
-  createPhysicalStateConfig('customization_sleep', 'Sleep Quality', SleepComponent as ComponentType<CustomizationComponentProps<unknown>>, Moon, 6, validateSleep as (value: unknown, allOptions: PerWorkoutOptions) => ValidationResult, {
-    metadata: METADATA_PATTERNS.quickAssessment(
-      ['sleep', 'recovery', 'performance'],
-      ['Understand sleep impact', 'Adjust training accordingly'],
-      ['Better recovery planning', 'Performance optimization', 'Injury prevention']
-    )
+  createPhysicalStateConfig('customization_soreness', 'Muscle Soreness', SleepComponent as ComponentType<CustomizationComponentProps<unknown>>, Moon, 6, validateSleep as (value: unknown, allOptions: PerWorkoutOptions) => ValidationResult, {
+    required: false, // Keep optional
+    metadata: METADATA_PATTERNS.basicSetup(
+      ['soreness', 'recovery', 'safety'],
+      ['Identify soreness areas', 'Adapt workout safely'],
+      ['Safe workout planning', 'Injury prevention', 'Better recovery']
+    ),
+    validation: {
+      required: false,
+      custom: validateSleep
+    },
+    uiConfig: {
+      componentType: 'progressive-disclosure',
+      progressiveEnhancement: true,
+      aiAssistance: 'suggestions'
+    }
   }),
 
   // Exercise Selection Configurations

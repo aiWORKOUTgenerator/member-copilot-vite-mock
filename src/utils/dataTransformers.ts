@@ -4,7 +4,8 @@ import {
   CategoryRatingData,
   DurationConfigurationData,
   WorkoutFocusConfigurationData,
-  OptionDefinition
+  OptionDefinition,
+  TrainingLoadData
 } from '../types/core';
 import { ProfileData } from '../components/Profile/types/profile.types';
 import { UserProfile, FitnessLevel } from '../types/user';
@@ -38,6 +39,41 @@ export const dataTransformers = {
     }
 
     return [];
+  },
+
+  /**
+   * Extract injury regions from CategoryRatingData
+   */
+  extractInjuryRegions: (data: CategoryRatingData | undefined): string[] => {
+    if (!data || !data.categories) return [];
+    
+    // Filter out pain categories and 'no_injuries', return only body regions
+    return data.categories.filter(cat => 
+      !cat.startsWith('pain_') && cat !== 'no_injuries'
+    );
+  },
+
+  /**
+   * Extract training load metrics from TrainingLoadData
+   */
+  extractTrainingLoadMetrics: (data: TrainingLoadData | undefined): {
+    weeklyVolume: number;
+    averageIntensity: 'light' | 'moderate' | 'intense';
+    activityCount: number;
+  } => {
+    if (!data) {
+      return {
+        weeklyVolume: 0,
+        averageIntensity: 'moderate',
+        activityCount: 0
+      };
+    }
+
+    return {
+      weeklyVolume: data.weeklyVolume || 0,
+      averageIntensity: data.averageIntensity || 'moderate',
+      activityCount: data.recentActivities?.length || 0
+    };
   },
 
   /**
@@ -128,13 +164,19 @@ export const dataTransformers = {
    * Normalize PerWorkoutOptions to ensure consistent format
    */
   normalizePerWorkoutOptions: (options: Partial<PerWorkoutOptions>): PerWorkoutOptions => {
+    // Extract injury regions and use them for areas if injury data is present
+    const injuryRegions = dataTransformers.extractInjuryRegions(options.customization_injury);
+    const areas = injuryRegions.length > 0 ? injuryRegions : dataTransformers.extractAreasList(options.customization_areas);
+    
     return {
       customization_energy: typeof options.customization_energy === 'number' ? options.customization_energy : 3,
       customization_soreness: dataTransformers.extractSorenessAreas(options.customization_soreness) as any,
       customization_focus: dataTransformers.extractFocusValue(options.customization_focus),
       customization_duration: dataTransformers.extractDurationValue(options.customization_duration),
       customization_equipment: dataTransformers.extractEquipmentList(options.customization_equipment),
-      customization_areas: dataTransformers.extractAreasList(options.customization_areas)
+      customization_areas: areas,
+      customization_injury: options.customization_injury,
+      customization_trainingLoad: options.customization_trainingLoad
     };
   },
 
@@ -185,6 +227,41 @@ export const dataTransformers = {
       } catch (error) {
         console.warn('Invalid areas data format:', data);
         return [];
+      }
+    },
+
+    trainingLoad: (data: any): TrainingLoadData => {
+      try {
+        if (!data) {
+          return {
+            recentActivities: [],
+            weeklyVolume: 0,
+            averageIntensity: 'moderate'
+          };
+        }
+
+        if (typeof data === 'object' && data !== null) {
+          return {
+            recentActivities: Array.isArray(data.recentActivities) ? data.recentActivities : [],
+            weeklyVolume: typeof data.weeklyVolume === 'number' ? data.weeklyVolume : 0,
+            averageIntensity: ['light', 'moderate', 'intense'].includes(data.averageIntensity) 
+              ? data.averageIntensity 
+              : 'moderate'
+          };
+        }
+
+        return {
+          recentActivities: [],
+          weeklyVolume: 0,
+          averageIntensity: 'moderate'
+        };
+      } catch (error) {
+        console.warn('Invalid training load data format:', data);
+        return {
+          recentActivities: [],
+          weeklyVolume: 0,
+          averageIntensity: 'moderate'
+        };
       }
     }
   },
@@ -238,6 +315,21 @@ export const dataTransformers = {
       if (typeof data === 'object' && data !== null) {
         return ('selectedAreas' in data && Array.isArray(data.selectedAreas)) ||
                ('areas' in data && Array.isArray(data.areas));
+      }
+      return false;
+    },
+
+    trainingLoad: (data: any): data is TrainingLoadData => {
+      if (!data) return false;
+      if (typeof data === 'object' && data !== null) {
+        return (
+          'recentActivities' in data &&
+          'weeklyVolume' in data &&
+          'averageIntensity' in data &&
+          Array.isArray(data.recentActivities) &&
+          typeof data.weeklyVolume === 'number' &&
+          ['light', 'moderate', 'intense'].includes(data.averageIntensity)
+        );
       }
       return false;
     }

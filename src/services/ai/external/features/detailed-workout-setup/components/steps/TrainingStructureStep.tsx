@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { PerWorkoutOptions, ValidationResult } from '../../../../../../../types/core';
 import { DurationForm } from '../forms/DurationForm';
 import { FocusForm } from '../forms/FocusForm';
@@ -13,6 +13,8 @@ interface TrainingStructureStepProps {
   workoutFeature: DetailedWorkoutFeature;
   disabled?: boolean;
 }
+
+export type { TrainingStructureStepProps };
 
 export const TrainingStructureStep: React.FC<TrainingStructureStepProps> = ({
   options,
@@ -41,7 +43,13 @@ export const TrainingStructureStep: React.FC<TrainingStructureStepProps> = ({
       
       // Check if all required fields are valid
       const isValid = Object.values(newResults).every(r => r.isValid);
-      onValidation?.(isValid);
+      
+      // Defer parent validation to prevent setState during render
+      if (onValidation) {
+        setTimeout(() => {
+          onValidation(isValid);
+        }, 0);
+      }
       
       return newResults;
     });
@@ -89,6 +97,13 @@ export const TrainingStructureStep: React.FC<TrainingStructureStepProps> = ({
     setConflicts(prev => prev.filter(c => c.id !== conflictId));
   }, []);
 
+  // Run cross-field validation when both duration and focus are present
+  useEffect(() => {
+    if (options.customization_duration && options.customization_focus) {
+      validateCrossFields();
+    }
+  }, [options.customization_duration, options.customization_focus, validateCrossFields]);
+
   return (
     <div className="space-y-8">
       {/* Duration Selection */}
@@ -97,7 +112,7 @@ export const TrainingStructureStep: React.FC<TrainingStructureStepProps> = ({
           value={options.customization_duration}
           onChange={value => {
             onChange('customization_duration', value);
-            validateCrossFields();
+            // Remove automatic cross-field validation to prevent setState during render
           }}
           onValidation={result => handleValidation('duration', result)}
           disabled={disabled}
@@ -116,7 +131,7 @@ export const TrainingStructureStep: React.FC<TrainingStructureStepProps> = ({
           value={options.customization_focus}
           onChange={value => {
             onChange('customization_focus', value);
-            validateCrossFields();
+            // Remove automatic cross-field validation to prevent setState during render
           }}
           onValidation={result => handleValidation('focus', result)}
           disabled={disabled}

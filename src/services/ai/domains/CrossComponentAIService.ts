@@ -9,6 +9,7 @@ import {
   extractAreasList,
   extractEquipmentList 
 } from '../../../types/guards';
+import { dataTransformers } from '../../../utils/dataTransformers';
 
 // Configuration Constants - Extracted from magic numbers
 export const CROSS_COMPONENT_CONSTANTS = {
@@ -196,6 +197,52 @@ export class CrossComponentAIService {
         }
       })
     },
+
+    // Injury vs Focus conflicts
+    {
+      condition: (options, _context) => {
+        const injuryRegions = dataTransformers.extractInjuryRegions(options.customization_injury);
+        const focus = extractFocusValue(options.customization_focus);
+        return !!(injuryRegions.length > 0 && focus && ['strength', 'power'].includes(focus));
+      },
+      generateConflict: (options, _context) => ({
+        id: this.generateConflictId('injury_focus'),
+        components: ['customization_injury', 'customization_focus'],
+        type: 'safety',
+        severity: 'high',
+        description: 'Injuries present with high-intensity focus may worsen conditions',
+        suggestedResolution: 'Switch to mobility, flexibility, or recovery focus',
+        confidence: CROSS_COMPONENT_CONSTANTS.HIGH_CONFIDENCE,
+        impact: 'safety',
+        metadata: {
+          injuryRegions: dataTransformers.extractInjuryRegions(options.customization_injury),
+          focus: extractFocusValue(options.customization_focus)
+        }
+      })
+    },
+
+    // Injury vs Duration conflicts
+    {
+      condition: (options, _context) => {
+        const injuryRegions = dataTransformers.extractInjuryRegions(options.customization_injury);
+        const duration = extractDurationValue(options.customization_duration);
+        return !!(injuryRegions.length > 0 && duration && duration > CROSS_COMPONENT_CONSTANTS.LONG_DURATION_THRESHOLD);
+      },
+      generateConflict: (options, _context) => ({
+        id: this.generateConflictId('injury_duration'),
+        components: ['customization_injury', 'customization_duration'],
+        type: 'safety',
+        severity: 'medium',
+        description: 'Long workout duration with injuries may increase risk of aggravation',
+        suggestedResolution: 'Reduce duration to 30-45 minutes or focus on shorter, targeted sessions',
+        confidence: CROSS_COMPONENT_CONSTANTS.MEDIUM_HIGH_CONFIDENCE,
+        impact: 'safety',
+        metadata: {
+          injuryRegions: dataTransformers.extractInjuryRegions(options.customization_injury),
+          duration: extractDurationValue(options.customization_duration)
+        }
+      })
+    },
     
     // Equipment vs Focus conflicts
     {
@@ -287,6 +334,82 @@ export class CrossComponentAIService {
           focus: extractFocusValue(options.customization_focus),
           timeOfDay: context.environmentalFactors?.timeOfDay,
           fitnessLevel: context.userProfile.fitnessLevel
+        }
+      }),
+    
+    // Training Load vs Focus conflicts
+    {
+      condition: (options, _context) => {
+        const trainingLoad = options.customization_trainingLoad;
+        const focus = extractFocusValue(options.customization_focus);
+        return !!(trainingLoad && focus && 
+               trainingLoad.averageIntensity === 'intense' && 
+               ['strength', 'power'].includes(focus) &&
+               trainingLoad.weeklyVolume > 300); // High volume + intense focus
+      },
+      generateConflict: (options, _context) => ({
+        id: this.generateConflictId('training_load_focus'),
+        components: ['customization_trainingLoad', 'customization_focus'],
+        type: 'safety',
+        severity: 'high',
+        description: 'High training load with intense focus may lead to overtraining',
+        suggestedResolution: 'Consider recovery focus or reduce training intensity',
+        confidence: CROSS_COMPONENT_CONSTANTS.MEDIUM_HIGH_CONFIDENCE,
+        impact: 'safety',
+        metadata: {
+          trainingLoad: options.customization_trainingLoad?.averageIntensity,
+          weeklyVolume: options.customization_trainingLoad?.weeklyVolume,
+          focus: extractFocusValue(options.customization_focus)
+        }
+      })
+    },
+    
+    // Training Load vs Duration conflicts
+    {
+      condition: (options, _context) => {
+        const trainingLoad = options.customization_trainingLoad;
+        const duration = extractDurationValue(options.customization_duration);
+        return !!(trainingLoad && duration && 
+               trainingLoad.averageIntensity === 'intense' && 
+               duration > CROSS_COMPONENT_CONSTANTS.LONG_DURATION_THRESHOLD);
+      },
+      generateConflict: (options, _context) => ({
+        id: this.generateConflictId('training_load_duration'),
+        components: ['customization_trainingLoad', 'customization_duration'],
+        type: 'efficiency',
+        severity: 'medium',
+        description: 'High training load with long duration may be unsustainable',
+        suggestedResolution: 'Reduce duration or consider recovery-focused session',
+        confidence: CROSS_COMPONENT_CONSTANTS.MEDIUM_CONFIDENCE,
+        impact: 'performance',
+        metadata: {
+          trainingLoad: options.customization_trainingLoad?.averageIntensity,
+          duration: extractDurationValue(options.customization_duration)
+        }
+      })
+    },
+    
+    // Training Load vs Energy conflicts
+    {
+      condition: (options, _context) => {
+        const trainingLoad = options.customization_trainingLoad;
+        const energy = options.customization_energy;
+        return !!(trainingLoad && typeof energy === 'number' && 
+               trainingLoad.averageIntensity === 'intense' && 
+               energy <= CROSS_COMPONENT_CONSTANTS.LOW_ENERGY_THRESHOLD);
+      },
+      generateConflict: (options, _context) => ({
+        id: this.generateConflictId('training_load_energy'),
+        components: ['customization_trainingLoad', 'customization_energy'],
+        type: 'safety',
+        severity: 'high',
+        description: 'Low energy with high training load may lead to poor performance',
+        suggestedResolution: 'Consider recovery session or reduce workout intensity',
+        confidence: CROSS_COMPONENT_CONSTANTS.HIGH_CONFIDENCE,
+        impact: 'performance',
+        metadata: {
+          trainingLoad: options.customization_trainingLoad?.averageIntensity,
+          energyLevel: options.customization_energy
         }
       })
     }
@@ -572,6 +695,8 @@ export class CrossComponentAIService {
     dependencies.set('customization_equipment', ['customization_focus', 'customization_duration']);
     dependencies.set('customization_areas', ['customization_soreness', 'customization_focus']);
     dependencies.set('customization_soreness', ['customization_areas', 'customization_focus']);
+    dependencies.set('customization_injury', ['customization_focus', 'customization_duration', 'customization_areas']);
+    dependencies.set('customization_trainingLoad', ['customization_focus', 'customization_duration', 'customization_energy']);
     
     return dependencies;
   }

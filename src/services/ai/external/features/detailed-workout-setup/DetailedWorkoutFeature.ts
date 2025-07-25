@@ -1,4 +1,4 @@
-import { AIService } from '../../../core/AIService';
+import { OpenAIService } from '../../OpenAIService';
 import { WorkoutGenerationRequest, GeneratedWorkout } from '../../../../../types/workout-generation.types';
 import { PerWorkoutOptions, ValidationResult } from '../../../../../types/core';
 import { DetailedWorkoutParams, DetailedWorkoutResult } from './types/detailed-workout.types';
@@ -8,18 +8,18 @@ import { selectDetailedWorkoutPrompt } from './prompts/detailed-workout-generati
 import { DURATION_CONFIGS, SupportedDuration } from './prompts/duration-configs';
 
 export interface DetailedWorkoutFeatureDependencies {
-  aiService: AIService; // ✅ Fixed: Use unified AIService instead of OpenAIService
+  openAIService?: OpenAIService; // ✅ Fixed: Use OpenAIService directly, but optional
   logger?: Console;
 }
 
 export class DetailedWorkoutFeature {
   private readonly strategy: DetailedWorkoutStrategy;
-  private readonly aiService: AIService;
+  private readonly openAIService?: OpenAIService;
   private readonly logger: Console;
 
-  constructor({ aiService, logger = console }: DetailedWorkoutFeatureDependencies) {
+  constructor({ openAIService, logger = console }: DetailedWorkoutFeatureDependencies) {
     this.strategy = new DetailedWorkoutStrategy();
-    this.aiService = aiService;
+    this.openAIService = openAIService;
     this.logger = logger;
   }
 
@@ -34,41 +34,24 @@ export class DetailedWorkoutFeature {
       // Get prompt template based on duration
       const promptTemplate = this.selectPromptTemplate(params);
 
-      // ✅ Fixed: Use generateWorkout method instead of generateFromTemplate
-      const workoutRequest = {
-        type: 'detailed',
-        profileData: {
-          fitnessLevel: params.fitnessLevel,
-          goals: params.trainingGoals,
-          equipment: params.equipment,
-          timeAvailable: params.timeAvailable
-        },
-        workoutFocusData: {
-          customization_duration: params.duration,
-          customization_focus: params.focus,
-          customization_equipment: params.equipment,
-          customization_energy: params.energyLevel,
-          customization_soreness: params.sorenessAreas
-        },
-        userProfile: {
-          fitnessLevel: params.fitnessLevel,
-          goals: params.trainingGoals,
-          preferences: {
-            workoutStyle: [params.focus],
-            intensityPreference: params.intensityPreference,
-            timePreference: 'flexible',
-            advancedFeatures: true,
-            aiAssistanceLevel: 'high'
-          },
-          basicLimitations: {
-            injuries: params.sorenessAreas,
-            availableEquipment: params.equipment,
-            availableLocations: ['home', 'gym']
-          }
-        }
-      };
-
-      const result = await this.aiService.generateWorkout(workoutRequest);
+      // Generate workout using the OpenAIService directly
+      if (!this.openAIService) {
+        throw new Error('OpenAIService not available for detailed workout generation');
+      }
+      
+      const result = await this.openAIService.generateFromTemplate(promptTemplate, {
+        duration: params.duration,
+        fitnessLevel: params.fitnessLevel,
+        focus: params.focus,
+        energyLevel: params.energyLevel,
+        sorenessAreas: params.sorenessAreas,
+        equipment: params.equipment,
+        trainingGoals: params.trainingGoals,
+        experienceLevel: params.experienceLevel,
+        timeAvailable: params.timeAvailable,
+        intensityPreference: params.intensityPreference,
+        workoutStructure: params.workoutStructure
+      });
 
       // Parse and validate the result
       const workout = this.parseWorkoutResult(result);
@@ -220,6 +203,48 @@ export class DetailedWorkoutFeature {
     // Validate soreness areas (optional but if provided should be valid)
     if (state.sorenessAreas && !Array.isArray(state.sorenessAreas)) {
       errors.push('Soreness areas must be an array');
+    }
+
+    // Validate training load data (optional but if provided should be valid)
+    if (state.trainingLoad) {
+      if (typeof state.trainingLoad !== 'object' || state.trainingLoad === null) {
+        errors.push('Training load must be an object');
+      } else {
+        // Validate recentActivities array
+        if (!Array.isArray(state.trainingLoad.recentActivities)) {
+          errors.push('Training load recentActivities must be an array');
+        } else {
+          // Validate each activity
+          state.trainingLoad.recentActivities.forEach((activity: any, index: number) => {
+            if (typeof activity !== 'object' || activity === null) {
+              errors.push(`Training activity ${index + 1} must be an object`);
+            } else {
+              if (typeof activity.type !== 'string') {
+                errors.push(`Training activity ${index + 1} type must be a string`);
+              }
+              if (!['light', 'moderate', 'intense'].includes(activity.intensity)) {
+                errors.push(`Training activity ${index + 1} intensity must be light, moderate, or intense`);
+              }
+              if (typeof activity.duration !== 'number' || activity.duration <= 0) {
+                errors.push(`Training activity ${index + 1} duration must be a positive number`);
+              }
+              if (typeof activity.date !== 'string') {
+                errors.push(`Training activity ${index + 1} date must be a string`);
+              }
+            }
+          });
+        }
+
+        // Validate weeklyVolume
+        if (typeof state.trainingLoad.weeklyVolume !== 'number' || state.trainingLoad.weeklyVolume < 0) {
+          errors.push('Training load weeklyVolume must be a non-negative number');
+        }
+
+        // Validate averageIntensity
+        if (!['light', 'moderate', 'intense'].includes(state.trainingLoad.averageIntensity)) {
+          errors.push('Training load averageIntensity must be light, moderate, or intense');
+        }
+      }
     }
 
     return {
