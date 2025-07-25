@@ -36,6 +36,34 @@ export interface Exercise {
 }
 
 // ============================================================================
+// GENERATED WORKOUT INTERFACE
+// ============================================================================
+
+/**
+ * Complete generated workout structure returned by AI services
+ */
+export interface GeneratedWorkout {
+  id: string;
+  title: string;
+  description: string;
+  totalDuration: number; // in seconds
+  estimatedCalories: number;
+  difficulty: string;
+  equipment: string[];
+  warmup: WorkoutPhase;
+  mainWorkout: WorkoutPhase;
+  cooldown: WorkoutPhase;
+  reasoning: string;
+  personalizedNotes: string[];
+  progressionTips: string[];
+  safetyReminders: string[];
+  generatedAt: Date;
+  aiModel: string;
+  confidence: number;
+  tags: string[];
+}
+
+// ============================================================================
 // UNIFIED WORKOUT GENERATION REQUEST INTERFACE
 // ============================================================================
 

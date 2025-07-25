@@ -84,9 +84,9 @@ const DetailedWorkoutContainer = memo(function DetailedWorkoutContainer({
   // Get AI service from context
   const { aiService } = useAI();
 
-  // Initialize DetailedWorkoutFeature with direct service injection
+  // ✅ Fixed: Initialize DetailedWorkoutFeature with unified AIService
   const workoutFeature = useMemo(() => new DetailedWorkoutFeature({
-    openAIService: aiService
+    aiService: aiService
   }), [aiService]);
 
   // Step management
