@@ -1,5 +1,5 @@
 // OpenAI Error Handler - Manages error processing and external AI error creation
-import { ExternalAIError } from '../../../types/external-ai.types';
+import { ExternalAIError } from '../../types/external-ai.types';
 import { OPENAI_SERVICE_CONSTANTS } from '../../../constants/openai-service-constants';
 import { logger } from '../../../../../../utils/logger';
 

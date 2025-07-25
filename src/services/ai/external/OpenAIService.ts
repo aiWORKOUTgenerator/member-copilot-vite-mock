@@ -91,6 +91,7 @@ export class OpenAIService {
     options: {
       cacheKey?: string;
       timeout?: number;
+      maxTokens?: number;
     } = {}
   ): Promise<unknown> {
     try {
@@ -107,10 +108,11 @@ export class OpenAIService {
       // Make request
       const response = await this.makeRequest(messages, {
         ...options,
+        maxTokens: options.maxTokens || this.config.maxTokens,
         cacheKey: options.cacheKey ?? this.cacheManager.generateCacheKey(template.id, variables)
       });
 
-      return this.parseResponseContent(response);
+      return response.choices?.[0]?.message?.content || '';
       
     } catch (error: any) {
       // Handle API key configuration errors gracefully
@@ -128,17 +130,7 @@ export class OpenAIService {
     }
   }
 
-  // Generate workout using the new prompt builder
-  async generateWorkout(request: unknown): Promise<unknown> {
-    try {
-      // This method is no longer used - workout generation is handled by QuickWorkoutFeature
-      throw new Error('Workout generation is now handled by QuickWorkoutFeature. Use generateFromTemplate() for custom prompts.');
 
-    } catch (error: any) {
-      logger.error('Workout generation failed:', error);
-      throw this.errorHandler.createExternalAIError(error);
-    }
-  }
 
   // Stream responses for real-time applications
   async streamResponse(
@@ -207,45 +199,7 @@ export class OpenAIService {
     });
   }
 
-  private parseResponseContent(response: OpenAIResponse): unknown {
-    const content = response.choices?.[0]?.message?.content;
-    if (!content) {
-      throw new Error('Invalid response format: missing content');
-    }
 
-    // 🔍 DEBUG: Log response metrics
-    console.log('🔍 OpenAIService.parseResponseContent - Response metrics:', {
-      contentLength: content.length,
-      contentPreview: content.substring(0, 100) + '...',
-      lastChar: content.charAt(content.length - 1),
-      last100Chars: '...' + content.substring(content.length - 100),
-      hasValidJSONStructure: content.trim().startsWith('{') && content.trim().endsWith('}'),
-      choiceIndex: response.choices?.[0]?.index,
-      finishReason: response.choices?.[0]?.finish_reason,
-      promptTokens: response.usage?.prompt_tokens,
-      completionTokens: response.usage?.completion_tokens,
-      totalTokens: response.usage?.total_tokens
-    });
-
-    // Try to parse as JSON first
-    try {
-      return JSON.parse(content);
-    } catch (error) {
-      // 🔍 DEBUG: Log parsing failure details
-      console.error('❌ OpenAIService.parseResponseContent - JSON parsing failed:', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        contentLength: content.length,
-        lastBracketIndex: content.lastIndexOf('}'),
-        lastQuoteIndex: content.lastIndexOf('"'),
-        truncatedAt: error instanceof Error && error.message.includes('position') 
-          ? parseInt(error.message.match(/position (\d+)/)?.[1] || '0')
-          : 'unknown'
-      });
-      
-      // If not valid JSON, return raw content for feature-specific processing
-      return content;
-    }
-  }
 }
 
 // Export singleton instance

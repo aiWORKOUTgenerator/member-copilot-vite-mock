@@ -1,0 +1,56 @@
+=== FILES TO FIX IN PHASE 2 ===
+
+HIGH PRIORITY (fix first):
+1. src/services/ai/external/shared/types/index.ts
+2. src/services/ai/external/shared/infrastructure/error-handling/index.ts
+3. src/services/ai/external/shared/infrastructure/metrics/index.ts
+4. src/services/ai/external/shared/infrastructure/cache/index.ts
+
+QUICK-WORKOUT-SETUP FILES:
+src/services/ai/external/features/quick-workout-setup/types/quick-workout.types.ts
+src/services/ai/external/features/quick-workout-setup/workflow/PromptSelector.ts
+src/services/ai/external/features/quick-workout-setup/workflow/normalization/WorkoutNormalizer.ts
+src/services/ai/external/features/quick-workout-setup/workflow/normalization/types/normalization.types.ts
+src/services/ai/external/features/quick-workout-setup/workflow/normalization/processors/MetadataProcessor.ts
+src/services/ai/external/features/quick-workout-setup/workflow/normalization/processors/ExerciseProcessor.ts
+src/services/ai/external/features/quick-workout-setup/workflow/normalization/processors/DurationProcessor.ts
+src/services/ai/external/features/quick-workout-setup/workflow/parsing/types/parsing.types.ts
+src/services/ai/external/features/quick-workout-setup/workflow/parsing/strategies/StringJSONStrategy.ts
+src/services/ai/external/features/quick-workout-setup/workflow/parsing/strategies/DirectJSONStrategy.ts
+src/services/ai/external/features/quick-workout-setup/workflow/parsing/strategies/FallbackStrategy.ts
+src/services/ai/external/features/quick-workout-setup/workflow/parsing/strategies/MarkdownExtractorStrategy.ts
+src/services/ai/external/features/quick-workout-setup/workflow/ResponseProcessor.ts
+src/services/ai/external/features/quick-workout-setup/prompts/index.ts
+src/services/ai/external/features/quick-workout-setup/prompts/duration-configs/30min.config.ts
+src/services/ai/external/features/quick-workout-setup/prompts/duration-configs/15min.config.ts
+src/services/ai/external/features/quick-workout-setup/prompts/duration-configs/45min.config.ts
+src/services/ai/external/features/quick-workout-setup/prompts/duration-configs/10min.config.ts
+src/services/ai/external/features/quick-workout-setup/prompts/duration-configs/20min.config.ts
+src/services/ai/external/features/quick-workout-setup/prompts/duration-configs/5min.config.ts
+src/services/ai/external/features/quick-workout-setup/helpers/ExerciseStructureBuilder.ts
+
+DETAILED-WORKOUT-SETUP FILES:
+src/services/ai/external/features/detailed-workout-setup/types/detailed-workout.types.ts
+src/services/ai/external/features/detailed-workout-setup/workflow/DetailedWorkoutStrategy.ts
+src/services/ai/external/features/detailed-workout-setup/prompts/detailed-workout-generation.prompts.ts
+src/services/ai/external/features/detailed-workout-setup/prompts/duration-configs/90min.config.ts
+src/services/ai/external/features/detailed-workout-setup/prompts/duration-configs/150min.config.ts
+src/services/ai/external/features/detailed-workout-setup/prompts/duration-configs/30min.config.ts
+src/services/ai/external/features/detailed-workout-setup/prompts/duration-configs/120min.config.ts
+src/services/ai/external/features/detailed-workout-setup/prompts/duration-configs/45min.config.ts
+src/services/ai/external/features/detailed-workout-setup/prompts/duration-configs/20min.config.ts
+src/services/ai/external/features/detailed-workout-setup/prompts/duration-configs/60min.config.ts
+
+SHARED INFRASTRUCTURE FILES:
+src/services/ai/external/shared/types/index.ts
+src/services/ai/external/shared/core/OpenAIStrategy.ts
+src/services/ai/external/shared/core/OpenAIService.ts
+src/services/ai/external/shared/core/index.ts
+src/services/ai/external/shared/utils/index.ts
+src/services/ai/external/shared/infrastructure/metrics/OpenAIMetricsTracker.ts
+src/services/ai/external/shared/infrastructure/metrics/index.ts
+src/services/ai/external/shared/infrastructure/error-handling/OpenAIErrorHandler.ts
+src/services/ai/external/shared/infrastructure/error-handling/index.ts
+src/services/ai/external/shared/infrastructure/request-handling/OpenAIRequestHandler.ts
+src/services/ai/external/shared/infrastructure/cache/index.ts
+src/services/ai/external/shared/infrastructure/cache/OpenAICacheManager.ts

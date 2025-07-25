@@ -1,4 +1,4 @@
-import { GeneratedWorkout, Exercise } from '../../../../../../../types/external-ai.types';
+import { GeneratedWorkout, Exercise, WorkoutPhase } from '../../../../../types/external-ai.types';
 import { 
   NormalizationProcessor, 
   NormalizationContext, 
@@ -17,14 +17,24 @@ export class ExerciseProcessor implements NormalizationProcessor {
     // Process each phase
     ['warmup', 'mainWorkout', 'cooldown'].forEach(phaseName => {
       const phase = modifiedWorkout[phaseName as keyof GeneratedWorkout];
-      if (phase && Array.isArray(phase.exercises)) {
-        phase.exercises = phase.exercises.map((exercise, index) => 
+      if (this.isWorkoutPhase(phase)) {
+        phase.exercises = phase.exercises.map((exercise: Exercise, index: number) => 
           this.normalizeExercise(exercise, index, phaseName, issues, fixes)
         );
       }
     });
 
     return { modifiedWorkout, issues, fixes };
+  }
+
+  /**
+   * Type guard to safely check if a phase is a WorkoutPhase with exercises
+   */
+  private isWorkoutPhase(phase: unknown): phase is WorkoutPhase {
+    return typeof phase === 'object' && 
+           phase !== null && 
+           'exercises' in phase && 
+           Array.isArray((phase as WorkoutPhase).exercises);
   }
 
   private normalizeExercise(

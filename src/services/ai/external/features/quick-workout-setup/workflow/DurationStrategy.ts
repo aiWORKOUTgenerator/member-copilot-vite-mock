@@ -1,26 +1,24 @@
 // QuickWorkoutSetup Feature - Duration Strategy
 // Handles duration selection logic and configuration mapping
 
-import { DurationConfig, DURATION_CONFIGS, getDurationConfig, QUICK_WORKOUT_CONSTANTS } from '../constants/quick-workout.constants';
+import { DurationConfig, getDurationConfig, QUICK_WORKOUT_CONSTANTS } from '../constants/quick-workout.constants';
 import { 
   QuickWorkoutParams, 
   DurationStrategyResult, 
-  WorkflowContext,
   DurationOptimization 
 } from '../types/quick-workout.types';
-import { UserProfile } from '../../../../types';
+import { UserProfile } from '../../../../../../types';
 
 /**
  * Duration strategy for optimizing workout duration based on user context
  */
 export class DurationStrategy {
-  private readonly supportedDurations = QUICK_WORKOUT_CONSTANTS.SUPPORTED_DURATIONS;
-  private readonly defaultDuration = QUICK_WORKOUT_CONSTANTS.DEFAULT_DURATION;
+  private readonly supportedDurations: readonly number[] = QUICK_WORKOUT_CONSTANTS.SUPPORTED_DURATIONS;
 
   /**
    * Select optimal duration strategy based on parameters
    */
-  selectStrategy(params: QuickWorkoutParams, userProfile?: UserProfile): DurationStrategyResult {
+  selectStrategy(params: QuickWorkoutParams): DurationStrategyResult {
     console.log(`🎯 DurationStrategy: Selecting strategy for ${params.duration}min workout`);
 
     // Find the closest supported duration
@@ -32,7 +30,7 @@ export class DurationStrategy {
     const adjustmentReason = this.getAdjustmentReason(params.duration, adjustedDuration, params);
 
     // Generate recommendations
-    const recommendations = this.generateRecommendations(params, config, userProfile);
+    const recommendations = this.generateRecommendations(params, config);
     const alternativeOptions = this.getAlternativeOptions(adjustedDuration, params);
 
     console.log(`✅ DurationStrategy: Selected ${adjustedDuration}min (${config.name}) - exact match: ${isExactMatch}`);
@@ -148,8 +146,7 @@ export class DurationStrategy {
    */
   private generateRecommendations(
     params: QuickWorkoutParams, 
-    config: DurationConfig,
-    userProfile?: UserProfile
+    config: DurationConfig
   ): string[] {
     const recommendations: string[] = [];
 

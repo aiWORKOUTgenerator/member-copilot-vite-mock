@@ -1,17 +1,23 @@
-import { DetailedWorkoutParams, DetailedWorkoutResult, DetailedWorkoutDependencies } from './types/detailed-workout.types';
+import { DetailedWorkoutParams, DetailedWorkoutResult } from './types/detailed-workout.types';
 import { DetailedWorkoutStrategy } from './workflow/DetailedWorkoutStrategy';
 import { selectDetailedWorkoutPrompt } from './prompts/detailed-workout-generation.prompts';
 import { DURATION_CONFIGS, SupportedDuration } from './prompts/duration-configs';
+import { AIService } from '../../../core/AIService';
+
+export interface DetailedWorkoutFeatureDependencies {
+  openAIService: AIService;
+  logger?: Console;
+}
 
 export class DetailedWorkoutFeature {
-  private strategy: DetailedWorkoutStrategy;
-  private openAIService: any; // TODO: Replace with proper type
-  private logger: any; // TODO: Replace with proper type
+  private readonly strategy: DetailedWorkoutStrategy;
+  private readonly openAIService: AIService;
+  private readonly logger: Console;
 
-  constructor(dependencies: DetailedWorkoutDependencies) {
+  constructor(dependencies: DetailedWorkoutFeatureDependencies) {
     this.strategy = new DetailedWorkoutStrategy();
     this.openAIService = dependencies.openAIService;
-    this.logger = dependencies.logger;
+    this.logger = dependencies.logger || console;
   }
 
   async generateWorkout(params: DetailedWorkoutParams): Promise<DetailedWorkoutResult> {
@@ -23,7 +29,7 @@ export class DetailedWorkoutFeature {
       const promptTemplate = this.selectPromptTemplate(params);
 
       // Generate workout using OpenAI
-      const response = await this.openAIService.generateFromTemplate(promptTemplate, {
+      const response = await this.openAIService.generateWorkout({
         fitnessLevel: params.fitnessLevel,
         goals: params.trainingGoals,
         duration: params.duration,
@@ -31,7 +37,9 @@ export class DetailedWorkoutFeature {
         location: 'home', // TODO: Make dynamic
         energyLevel: params.energyLevel,
         sorenessAreas: params.sorenessAreas,
-        focus: params.focus
+        focus: params.focus,
+        maxTokens: params.duration >= 30 ? 8000 : 4000,
+        timeout: params.duration >= 30 ? 120000 : 60000
       });
 
       // Minimal response transformation

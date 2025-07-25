@@ -1,4 +1,4 @@
 // Shared Types
 // Core types used across features and infrastructure
 
-export * from './external-ai.types'; 
+export * from '../../types/external-ai.types'; 

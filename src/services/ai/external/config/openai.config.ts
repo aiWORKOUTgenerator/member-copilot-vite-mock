@@ -16,8 +16,8 @@ export const openAIConfig = (): ExternalAIServiceConfig => {
   const config: ExternalAIServiceConfig = {
     openai: {
       apiKey: getEnvVar('VITE_OPENAI_API_KEY') || 'sk-mock-development-key-for-testing-only',
-      model: (getEnvVar('VITE_OPENAI_MODEL') || 'gpt-3.5-turbo') as 'gpt-4' | 'gpt-4-turbo' | 'gpt-4o' | 'gpt-3.5-turbo',
-      maxTokens: parseInt(getEnvVar('VITE_OPENAI_MAX_TOKENS') || '4000'),
+      model: (getEnvVar('VITE_OPENAI_MODEL') || 'gpt-4o') as 'gpt-4' | 'gpt-4-turbo' | 'gpt-4o',
+      maxTokens: parseInt(getEnvVar('VITE_OPENAI_MAX_TOKENS') || '8000'),
       temperature: parseFloat(getEnvVar('VITE_OPENAI_TEMPERATURE') || '0.7'),
       baseURL: getEnvVar('VITE_OPENAI_BASE_URL') || 'https://api.openai.com/v1',
       organizationId: getEnvVar('VITE_OPENAI_ORG_ID')
@@ -69,9 +69,8 @@ export const estimateTokenCost = (tokens: number, model: string): number => {
   const costPer1K = {
     'gpt-4': 0.03,
     'gpt-4-turbo': 0.01,
-    'gpt-4o': 0.01,
-    'gpt-3.5-turbo': 0.001
-  }[model] || 0.001;
+    'gpt-4o': 0.01
+  }[model] || 0.01;
 
   return (tokens / 1000) * costPer1K;
 };
@@ -133,8 +132,8 @@ export const OPENAI_CONFIG = {
   baseURL: getEnvVar('VITE_OPENAI_BASE_URL') || 'https://api.openai.com/v1',
   
   // Model Configuration
-  defaultModel: getEnvVar('VITE_OPENAI_MODEL') || 'gpt-3.5-turbo',
-  fallbackModel: 'gpt-3.5-turbo',
+  defaultModel: getEnvVar('VITE_OPENAI_MODEL') || 'gpt-4o',
+  fallbackModel: 'gpt-4o',
   
   // Feature Flags
   features: {
@@ -259,8 +258,8 @@ export const configPresets = {
   development: (): ExternalAIServiceConfig => ({
     openai: {
       apiKey: 'sk-mock-development-key-for-testing-only',
-      model: 'gpt-3.5-turbo',
-      maxTokens: 4000,
+      model: 'gpt-4o',
+      maxTokens: 4096,
       temperature: 0.7
     },
     features: {
@@ -285,7 +284,7 @@ export const configPresets = {
     openai: {
       apiKey: 'sk-mock-production-key-for-testing-only',
       model: 'gpt-4o',
-      maxTokens: 4000,
+      maxTokens: 4096,
       temperature: 0.7
     },
     features: {
@@ -309,7 +308,7 @@ export const configPresets = {
   test: (): ExternalAIServiceConfig => ({
     openai: {
       apiKey: 'sk-mock-test-key-for-testing-only',
-      model: 'gpt-3.5-turbo',
+      model: 'gpt-4o',
       maxTokens: 1000,
       temperature: 0.7
     },

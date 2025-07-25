@@ -1,5 +1,5 @@
 // OpenAI Cache Manager - Handles response caching
-import { CacheEntry, CacheKey } from '../../../types/external-ai.types';
+import { CacheEntry, CacheKey } from '../../types/external-ai.types';
 import { OPENAI_SERVICE_CONSTANTS } from '../../../constants/openai-service-constants';
 
 export class OpenAICacheManager {

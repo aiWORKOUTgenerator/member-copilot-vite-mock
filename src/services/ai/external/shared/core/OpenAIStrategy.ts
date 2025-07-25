@@ -4,7 +4,7 @@ import {
   GeneratedWorkout, 
   EnhancedRecommendation, 
   UserPreferenceAnalysis
-} from '../types/external-ai.types';
+} from '../../types/external-ai.types';
 import { WorkoutGenerationRequest } from '../../../../types/workout-generation.types';
 import { PrioritizedRecommendation, GlobalAIContext } from '../../../../services/ai/core/types/AIServiceTypes';
 import { AIInsight } from '../../../../types/insights';

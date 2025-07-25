@@ -30,7 +30,7 @@ describe('DurationStrategy', () => {
         equipment: []
       };
 
-      const result = strategy.selectStrategy(params, mockUserProfile);
+      const result = strategy.selectStrategy(params);
 
       expect(result.adjustedDuration).toBe(30);
       expect(result.isExactMatch).toBe(true);
@@ -47,7 +47,7 @@ describe('DurationStrategy', () => {
         equipment: []
       };
 
-      const result = strategy.selectStrategy(params, mockUserProfile);
+      const result = strategy.selectStrategy(params);
 
       expect(result.adjustedDuration).toBe(20); // Closest supported
       expect(result.isExactMatch).toBe(false);
@@ -64,7 +64,7 @@ describe('DurationStrategy', () => {
         equipment: []
       };
 
-      const result = strategy.selectStrategy(params, mockUserProfile);
+      const result = strategy.selectStrategy(params);
 
       expect(result.adjustedDuration).toBeLessThan(45);
       expect(result.adjustmentReason).toContain('low energy');
@@ -80,7 +80,7 @@ describe('DurationStrategy', () => {
         equipment: []
       };
 
-      const result = strategy.selectStrategy(params, mockUserProfile);
+      const result = strategy.selectStrategy(params);
 
       expect(result.adjustedDuration).toBeLessThanOrEqual(45);
       expect(result.adjustmentReason).toContain('high soreness');
@@ -96,7 +96,7 @@ describe('DurationStrategy', () => {
         equipment: []
       };
 
-      const result = strategy.selectStrategy(params, mockUserProfile);
+      const result = strategy.selectStrategy(params);
 
       expect(result.adjustedDuration).toBeLessThanOrEqual(30);
     });
@@ -111,7 +111,7 @@ describe('DurationStrategy', () => {
         equipment: ['Dumbbells']
       };
 
-      const result = strategy.selectStrategy(params, mockUserProfile);
+      const result = strategy.selectStrategy(params);
 
       expect(result.recommendations).toContain('High energy level');
       expect(result.recommendations.length).toBeGreaterThan(0);
@@ -129,7 +129,7 @@ describe('DurationStrategy', () => {
         equipment: []
       };
 
-      const result = strategy.selectStrategy(params, mockUserProfile);
+      const result = strategy.selectStrategy(params);
       const isValid = strategy.validateStrategy(result, params);
 
       expect(isValid).toBe(true);
@@ -170,7 +170,7 @@ describe('DurationStrategy', () => {
         equipment: []
       };
 
-      const result = strategy.selectStrategy(params, mockUserProfile);
+      const result = strategy.selectStrategy(params);
       const optimization = strategy.createDurationOptimization(params, result);
 
       expect(optimization.requestedDuration).toBe(30);

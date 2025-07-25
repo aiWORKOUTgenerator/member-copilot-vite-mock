@@ -1,5 +1,5 @@
 import { ParseStrategy } from '../types/parsing.types';
-import { GeneratedWorkout } from '../../../../../../../types/external-ai.types';
+import { GeneratedWorkout } from '../../../types/external-ai.types';
 import { DirectJSONStrategy } from './DirectJSONStrategy';
 
 /**

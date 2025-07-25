@@ -6,8 +6,7 @@ import { UserProfile } from '../../../../../../types/user';
 import { 
   QuickWorkoutParams, 
   DurationStrategyResult, 
-  PromptSelectionResult,
-  WorkflowContext 
+  PromptSelectionResult
 } from '../types/quick-workout.types';
 import { DurationConfig } from '../constants/quick-workout.constants';
 import { 
@@ -136,6 +135,13 @@ export class PromptSelector {
         variables.availableEquipment = userProfile.basicLimitations.availableEquipment || [];
         variables.timeConstraints = params.duration; // Use requested duration as time constraint
       }
+      
+      // Add health-related variables for full requirement templates
+      variables.hasCardiovascularConditions = 'No'; // Default value since not in UserProfile
+      variables.injuries = userProfile.basicLimitations?.injuries || [];
+      variables.age = userProfile.age ? `${userProfile.age}` : '25-35';
+      variables.previousWorkout = 'Not specified';
+      variables.preferredActivities = userProfile.goals || ['general fitness'];
       
       // Add age variable (required by prompt templates)
       variables.age = '25-45'; // Default age range, can be enhanced with actual user data

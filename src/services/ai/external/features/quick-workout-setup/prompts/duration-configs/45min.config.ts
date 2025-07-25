@@ -25,19 +25,9 @@ Comprehensive 45-minute sessions that provide maximum benefit through:
 - Variety to prevent monotony and maintain engagement
 
 USER PROFILE:
-- Energy Level: {{energyLevel}}/10
-- Workout Focus: {{focus}}
-- Available Equipment: {{equipment}}
-- Fitness Level: {{fitnessLevel}}
-- Soreness Areas: {{sorenessAreas}}
-- Primary Goal: {{primaryGoal}}
-- Location: {{location}}
-- Age Range: {{age}}
-- Injuries: {{injuries}}
-- Space Limitations: {{spaceLimitations}}
-- Cardiovascular Health: {{hasCardiovascularConditions}}
-- Previous Workout: {{previousWorkout}}
-- Preferred Activities: {{preferredActivities}}
+- Energy: {{energyLevel}}/10 | Focus: {{focus}} | Equipment: {{equipment}}
+- Fitness: {{fitnessLevel}} | Goal: {{primaryGoal}} | Location: {{location}}
+- Soreness: {{sorenessAreas}} | Injuries: {{injuries}} | Health: {{hasCardiovascularConditions}}
 
 ${generateWorkoutStructure(CONFIG)}
 
@@ -61,7 +51,7 @@ CRITICAL REQUIREMENTS FOR 45-MINUTE WORKOUTS:
 RESPONSE FORMAT REQUIREMENTS:
 1. Response MUST be a valid JSON object
 2. Do NOT include any text outside the JSON object
-3. Do NOT use markdown code blocks
+3. Do NOT use markdown code blocks (no \`\`\`json or \`\`\`)
 4. Do NOT include explanatory text
 5. Follow the exact structure shown in the example output
 6. All durations MUST be in seconds (not minutes)
@@ -69,6 +59,7 @@ RESPONSE FORMAT REQUIREMENTS:
 8. All property names MUST be in camelCase
 9. All string values MUST use double quotes
 10. Ensure proper nesting of workout phases
+11. Return ONLY the JSON object - no formatting, no code blocks
 
 Example Response Format:
 {

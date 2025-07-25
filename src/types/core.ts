@@ -46,6 +46,10 @@ export interface PerWorkoutOptions {
   customization_energy?: number;
   customization_soreness?: string[];
   customization_stress?: CategoryRatingData;
+  customization_areas?: string[];
+  customization_include?: string[];
+  customization_exclude?: string[];
+  customization_sleep?: number;
 }
 
 // Enhanced option interface for DRY components

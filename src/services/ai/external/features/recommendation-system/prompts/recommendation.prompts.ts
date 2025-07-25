@@ -1,5 +1,5 @@
 // Enhanced Recommendation Prompt Templates
-import { PromptTemplate } from '../types/external-ai.types';
+import { PromptTemplate } from '../../../types/external-ai.types';
 
 export const RECOMMENDATION_SYSTEM_PROMPT = `You are an expert fitness coach with deep knowledge of exercise science, injury prevention, and personalized training. Your role is to provide intelligent, actionable fitness recommendations that enhance the user's workout experience while prioritizing safety and effectiveness.
 

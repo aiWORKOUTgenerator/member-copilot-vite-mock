@@ -12,7 +12,7 @@ import { FOCUSED_WORKOUT_PROMPT_TEMPLATE } from './duration-configs/20min.config
 import { COMPLETE_WORKOUT_PROMPT_TEMPLATE } from './duration-configs/30min.config';
 import { EXTENDED_WORKOUT_PROMPT_TEMPLATE } from './duration-configs/45min.config';
 
-import { PromptTemplate } from '../../../../types/external-ai.types';
+import { PromptTemplate } from '../../../types/external-ai.types';
 
 // Duration-specific prompt mapping
 export const DURATION_PROMPTS: Record<number, PromptTemplate> = {

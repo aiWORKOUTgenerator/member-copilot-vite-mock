@@ -1,5 +1,5 @@
 import { ParseStrategy } from '../types/parsing.types';
-import { GeneratedWorkout, Exercise, WorkoutPhase } from '../../../../../../../types/external-ai.types';
+import { GeneratedWorkout, Exercise, WorkoutPhase } from '../../../../../types/external-ai.types';
 
 /**
  * Strategy for handling cases where other strategies fail

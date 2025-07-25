@@ -1,4 +1,4 @@
-import { OpenAIConfig, ExternalAIServiceConfig } from '../../types/external-ai.types';
+import { OpenAIConfig, ExternalAIServiceConfig } from '../types/external-ai.types';
 
 // Mock environment variables
 const mockEnv = {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PenLine, ChevronLeft, ClipboardList, Sparkles, ArrowRight } from 'lucide-react';
 import { PageHeader } from './shared';
 import { QuickWorkoutForm } from './quickWorkout/components';
-import DetailedWorkoutContainer from './DetailedWorkoutContainer';
+import DetailedWorkoutContainer from '../services/ai/external/features/detailed-workout-setup/components/containers/DetailedWorkoutContainer';
 import { PerWorkoutOptions } from '../types/core';
 import { AIRecommendationContext } from '../types/ai';
 
@@ -78,7 +78,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({
   const aiContext: AIRecommendationContext = {
     currentSelections: options,
     userProfile: profileData ? convertProfileDataToUserProfile(profileData) : {
-      fitnessLevel: 'some experience',
+      fitnessLevel: 'intermediate',
       goals: ['general_fitness'],
       preferences: {
         workoutStyle: ['balanced'],
@@ -278,7 +278,6 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({
       disabled={false}
       onNavigate={onNavigate}
       userProfile={profileData ? convertProfileDataToUserProfile(profileData) : undefined}
-      aiContext={aiContext}
       workoutType="detailed"
     />
   );

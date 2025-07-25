@@ -27,7 +27,7 @@ export {
 } from './orchestration/WorkflowTemplates';
 
 // Re-export types that are fundamental to core services
-export type { OpenAIServiceOptions } from '../types/external-ai.types';
+export type { OpenAIServiceOptions } from '../../types/external-ai.types';
 
 // Re-export workflow types
 export type * from '../types/workflow.types';

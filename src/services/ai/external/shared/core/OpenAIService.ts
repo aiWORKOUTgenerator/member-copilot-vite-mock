@@ -5,7 +5,7 @@ import {
   OpenAIMessage, 
   ExternalAIMetrics,
   PromptTemplate
-} from '../types/external-ai.types';
+} from '../../types/external-ai.types';
 import { openAIConfig, validateConfig } from '../infrastructure/config/openai.config';
 import { OPENAI_SERVICE_CONSTANTS } from '../constants/openai-service-constants';
 import { 

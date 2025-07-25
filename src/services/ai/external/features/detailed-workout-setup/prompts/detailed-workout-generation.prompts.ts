@@ -1,5 +1,5 @@
 // Detailed Workout Generation Prompt Templates
-import { PromptTemplate } from '../types/external-ai.types';
+import { PromptTemplate } from '../../../types/external-ai.types';
 
 export const DETAILED_WORKOUT_SYSTEM_PROMPT = `You are an expert fitness coach and exercise physiologist with 15+ years of experience. Your role is to create comprehensive, personalized workout plans that consider the user's complete profile, current state, and goals.
 

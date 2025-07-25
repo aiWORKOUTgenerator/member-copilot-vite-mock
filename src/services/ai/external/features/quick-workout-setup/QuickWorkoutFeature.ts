@@ -10,6 +10,9 @@ import {
   QuickWorkoutMetadata,
   FeatureMetrics,
   FeatureCapabilities,
+  ResponseProcessingResult,
+  DurationStrategyResult,
+  PromptSelectionResult,
   isQuickWorkoutParams,
   DEFAULT_QUICK_WORKOUT_PARAMS
 } from './types/quick-workout.types';
@@ -137,7 +140,7 @@ export class QuickWorkoutFeature {
       // Step 1: Duration Strategy
       console.log('1️⃣ QuickWorkoutFeature: Executing duration strategy');
       const durationStart = Date.now();
-      const durationResult = this.durationStrategy.selectStrategy(context.params, context.userProfile);
+      const durationResult = this.durationStrategy.selectStrategy(context.params);
       metrics.steps.duration = Date.now() - durationStart;
 
       // Step 2: Prompt Selection
@@ -161,9 +164,16 @@ export class QuickWorkoutFeature {
       const { getPromptInfo } = await import('./prompts');
       const promptInfo = getPromptInfo(durationResult.adjustedDuration);
       
+      // Use duration-specific token limits for longer workouts
+      const tokenOptions = durationResult.adjustedDuration >= 30 ? {
+        maxTokens: 8000,
+        timeout: 120000 // 2 minutes for longer workouts
+      } : {};
+      
       const aiResponse = await this.openAIService.generateFromTemplate(
         promptInfo.prompt,
-        promptResult.variables
+        promptResult.variables,
+        tokenOptions
       );
       metrics.steps.generation = Date.now() - generationStart;
 
@@ -210,26 +220,7 @@ export class QuickWorkoutFeature {
 
       console.log('✅ QuickWorkoutFeature: Workflow completed successfully');
 
-      return {
-        workout: processingResult.workout,
-        metadata: {
-          generatedAt: new Date(),
-          generationTime: totalTime,
-          aiModel: 'gpt-4o',
-          durationConfig: durationResult.config,
-          promptTemplate: promptInfo.prompt.template,
-          originalDuration: context.params.duration,
-          adjustedDuration: durationResult.adjustedDuration,
-          durationAdjustmentReason: durationResult.adjustmentReason,
-          featuresUsed: ['duration_optimization', 'context_aware_prompts', 'response_processing'],
-          fallbacksUsed: []
-        },
-        confidence: processingResult.consistencyScore / 100,
-        reasoning: promptResult.selectionReasoning,
-        durationOptimization: this.durationStrategy.createDurationOptimization(context.params, durationResult),
-        personalizedNotes: processingResult.workout.personalizedNotes || [],
-        safetyReminders: processingResult.workout.safetyReminders || []
-      };
+      return this.createQuickWorkoutResult(processingResult, durationResult, promptResult, context, totalTime);
 
     } catch (error) {
       // 🔍 DEBUG: Log error details
@@ -270,20 +261,19 @@ export class QuickWorkoutFeature {
    * Create the final QuickWorkoutResult
    */
   private createQuickWorkoutResult(
-    processingResult: any,
-    durationResult: any,
-    promptResult: any,
-    context: WorkflowContext
+    processingResult: ResponseProcessingResult,
+    durationResult: DurationStrategyResult,
+    promptResult: PromptSelectionResult,
+    context: WorkflowContext,
+    generationTime: number
   ): QuickWorkoutResult {
-    const generationTime = Date.now() - context.generationStartTime;
-
     // Create metadata
     const metadata: QuickWorkoutMetadata = {
       generatedAt: new Date(),
       generationTime,
       aiModel: 'gpt-4o',
       durationConfig: durationResult.config,
-      promptTemplate: promptResult.promptId,
+      promptTemplate: promptResult.promptTemplate || promptResult.promptId,
       originalDuration: context.params.duration,
       adjustedDuration: durationResult.adjustedDuration,
       durationAdjustmentReason: durationResult.adjustmentReason,
@@ -324,7 +314,7 @@ export class QuickWorkoutFeature {
     return {
       workout: processingResult.workout,
       metadata,
-      confidence: processingResult.workout.confidence || 0.8,
+      confidence: processingResult.consistencyScore ? processingResult.consistencyScore / 100 : 0.8,
       reasoning: promptResult.selectionReasoning,
       durationOptimization,
       personalizedNotes,
@@ -532,7 +522,7 @@ export class QuickWorkoutFeature {
       };
 
       // Test duration strategy
-      const durationResult = this.durationStrategy.selectStrategy(testParams, testProfile);
+      const durationResult = this.durationStrategy.selectStrategy(testParams);
       if (!durationResult || !durationResult.config) {
         return false;
       }

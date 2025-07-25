@@ -1,4 +1,4 @@
-import { GeneratedWorkout } from '../../../../../../types/external-ai.types';
+import { GeneratedWorkout } from '../../../types/external-ai.types';
 
 /**
  * Interface for parsing strategies

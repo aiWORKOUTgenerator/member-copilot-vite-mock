@@ -1,4 +1,4 @@
-import { PromptTemplate } from '../../../../types/external-ai.types';
+import { PromptTemplate } from '../../../types/external-ai.types';
 
 // 30-minute workout configuration
 export const THIRTY_MIN_CONFIG: PromptTemplate = {
