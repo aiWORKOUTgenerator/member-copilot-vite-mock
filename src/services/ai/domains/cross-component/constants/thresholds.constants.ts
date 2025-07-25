@@ -1,0 +1,31 @@
+export const CROSS_COMPONENT_CONSTANTS = {
+  // Energy thresholds
+  LOW_ENERGY_THRESHOLD: 2,
+  HIGH_ENERGY_THRESHOLD: 4,
+  
+  // Duration thresholds
+  SHORT_DURATION_THRESHOLD: 30,
+  LONG_DURATION_THRESHOLD: 60,
+  VERY_LONG_DURATION_THRESHOLD: 45,
+  
+  // Soreness thresholds
+  HIGH_SORENESS_THRESHOLD: 3,
+  
+  // Equipment thresholds
+  MIN_EQUIPMENT_FOR_STRENGTH: 2,
+  MAX_EQUIPMENT_FOR_SHORT_DURATION: 4,
+  
+  // Confidence levels
+  HIGH_CONFIDENCE: 0.95,
+  MEDIUM_HIGH_CONFIDENCE: 0.9,
+  MEDIUM_CONFIDENCE: 0.85,
+  MEDIUM_LOW_CONFIDENCE: 0.8,
+  LOW_CONFIDENCE: 0.75,
+  VERY_LOW_CONFIDENCE: 0.7,
+  
+  // Warm-up duration
+  WARMUP_DURATION_MINUTES: 5,
+  WARMUP_DURATION_MAX_MINUTES: 10
+} as const;
+
+export type CrossComponentConstantKeys = keyof typeof CROSS_COMPONENT_CONSTANTS; 

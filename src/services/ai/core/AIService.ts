@@ -21,7 +21,7 @@ import { SorenessAIService } from '../domains/SorenessAIService';
 import { FocusAIService } from '../domains/FocusAIService';
 import { DurationAIService } from '../domains/DurationAIService';
 import { EquipmentAIService } from '../domains/EquipmentAIService';
-import { CrossComponentAIService } from '../domains/CrossComponentAIService';
+import { CrossComponentAIService } from '../domains';
 
 // Core Components
 import { AIServiceContext } from './context/AIServiceContext';

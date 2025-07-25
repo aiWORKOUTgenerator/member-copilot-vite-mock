@@ -1,8 +1,7 @@
 import { OpenAIService } from '../../OpenAIService';
-import { WorkoutGenerationRequest, GeneratedWorkout } from '../../../../../types/workout-generation.types';
-import { PerWorkoutOptions, ValidationResult } from '../../../../../types/core';
+import { GeneratedWorkout } from '../../../../../types/workout-generation.types';
+import { PerWorkoutOptions, ValidationResult, CategoryRatingData, TrainingLoadData, TrainingActivity, WorkoutFocusConfigurationData, DurationConfigurationData } from '../../../../../types/core';
 import { DetailedWorkoutParams, DetailedWorkoutResult } from './types/detailed-workout.types';
-import { DETAILED_WORKOUT_PROMPT_TEMPLATE } from './prompts/detailed-workout-generation.prompts';
 import { DetailedWorkoutStrategy } from './workflow/DetailedWorkoutStrategy';
 import { selectDetailedWorkoutPrompt } from './prompts/detailed-workout-generation.prompts';
 import { DURATION_CONFIGS, SupportedDuration } from './prompts/duration-configs';
@@ -10,6 +9,38 @@ import { DURATION_CONFIGS, SupportedDuration } from './prompts/duration-configs'
 export interface DetailedWorkoutFeatureDependencies {
   openAIService?: OpenAIService; // ✅ Fixed: Use OpenAIService directly, but optional
   logger?: Console;
+}
+
+// Validation parameter interfaces
+export interface TrainingDetailsValidationParams {
+  goals?: string[];
+  experienceLevel?: string;
+  intensityPreference?: string;
+  // Additional parameters that may be passed
+  equipment?: string[];
+  focus?: string | WorkoutFocusConfigurationData;
+  duration?: number | DurationConfigurationData;
+}
+
+export interface ExerciseSelectionsValidationParams {
+  include?: string[];
+  exclude?: string[];
+  equipment?: string[];
+  // Additional parameters that may be passed
+  focus?: string | WorkoutFocusConfigurationData;
+  duration?: number | DurationConfigurationData;
+}
+
+export interface PhysicalStateValidationParams {
+  energyLevel?: number;
+  sorenessAreas?: string[];
+  trainingLoad?: TrainingLoadData;
+}
+
+export interface WorkoutStructureValidationParams {
+  duration?: number;
+  focus?: string;
+  equipment?: string[];
 }
 
 export class DetailedWorkoutFeature {
@@ -65,7 +96,7 @@ export class DetailedWorkoutFeature {
           recommendedFrequency: this.getRecommendedFrequency(strategyResult.workoutType),
           progressionLevel: this.calculateProgressionLevel(params)
         },
-        recommendations: await this.generateRecommendations(params, workout),
+        recommendations: await this.generateRecommendations(params),
         progressionPlan: {
           currentLevel: this.calculateProgressionLevel(params),
           nextLevel: Math.min(this.calculateProgressionLevel(params) + 1, 5),
@@ -83,7 +114,7 @@ export class DetailedWorkoutFeature {
   /**
    * ✅ Added: Missing validation method for training details
    */
-  async validateTrainingDetails(details: any): Promise<ValidationResult> {
+  async validateTrainingDetails(details: TrainingDetailsValidationParams): Promise<ValidationResult> {
     const errors: string[] = [];
 
     if (!details.goals || details.goals.length === 0) {
@@ -108,14 +139,14 @@ export class DetailedWorkoutFeature {
   /**
    * ✅ Added: Missing validation method for exercise selections
    */
-  async validateExerciseSelections(selections: any): Promise<ValidationResult> {
+  async validateExerciseSelections(selections: ExerciseSelectionsValidationParams): Promise<ValidationResult> {
     const errors: string[] = [];
     const conflicts: any[] = [];
 
     // Check for conflicting include/exclude selections
     if (selections.include && selections.exclude) {
       const conflictingExercises = selections.include.filter(
-        (exercise: string) => selections.exclude.includes(exercise)
+        (exercise: string) => selections.exclude!.includes(exercise)
       );
       
       if (conflictingExercises.length > 0) {
@@ -127,22 +158,6 @@ export class DetailedWorkoutFeature {
             label: 'Remove from exclude list',
             action: () => {} // Will be implemented by calling component
           }
-        });
-      }
-    }
-
-    // Check equipment compatibility
-    if (selections.include && selections.equipment) {
-      const incompatibleExercises = this.checkEquipmentCompatibility(
-        selections.include,
-        selections.equipment
-      );
-      
-      if (incompatibleExercises.length > 0) {
-        conflicts.push({
-          message: `Selected exercises require equipment not available: ${incompatibleExercises.join(', ')}`,
-          severity: 'medium',
-          fields: ['customization_include', 'customization_equipment']
         });
       }
     }
@@ -177,8 +192,9 @@ export class DetailedWorkoutFeature {
       errors.push('At least one equipment option is required (or select "No equipment")');
     }
 
-    // Validate energy level
-    if (options.customization_energy === undefined || options.customization_energy < 1 || options.customization_energy > 10) {
+    // Validate energy level - properly handle CategoryRatingData type
+    const energyLevel = this.extractEnergyLevel(options.customization_energy);
+    if (energyLevel === undefined || energyLevel < 1 || energyLevel > 10) {
       errors.push('Energy level must be between 1 and 10');
     }
 
@@ -192,7 +208,7 @@ export class DetailedWorkoutFeature {
   /**
    * ✅ Added: Missing validation method for physical state
    */
-  async validatePhysicalState(state: any): Promise<ValidationResult> {
+  async validatePhysicalState(state: PhysicalStateValidationParams): Promise<ValidationResult> {
     const errors: string[] = [];
 
     // Validate energy level
@@ -215,7 +231,7 @@ export class DetailedWorkoutFeature {
           errors.push('Training load recentActivities must be an array');
         } else {
           // Validate each activity
-          state.trainingLoad.recentActivities.forEach((activity: any, index: number) => {
+          state.trainingLoad.recentActivities.forEach((activity: TrainingActivity, index: number) => {
             if (typeof activity !== 'object' || activity === null) {
               errors.push(`Training activity ${index + 1} must be an object`);
             } else {
@@ -257,7 +273,7 @@ export class DetailedWorkoutFeature {
   /**
    * ✅ Added: Missing validation method for workout structure
    */
-  async validateWorkoutStructure(structure: any): Promise<ValidationResult> {
+  async validateWorkoutStructure(structure: WorkoutStructureValidationParams): Promise<ValidationResult> {
     const errors: string[] = [];
 
     // Validate duration
@@ -356,7 +372,8 @@ export class DetailedWorkoutFeature {
       return DURATION_CONFIGS[duration];
     }
 
-    // Fall back to general template selection
+    // For unsupported durations, use context-specific template selection
+    // This handles recovery, beginner, and general cases appropriately
     return selectDetailedWorkoutPrompt(
       params.fitnessLevel,
       params.duration,
@@ -425,7 +442,7 @@ export class DetailedWorkoutFeature {
     return Math.min(level, 5);
   }
 
-  private async generateRecommendations(params: DetailedWorkoutParams, workout: GeneratedWorkout): Promise<any[]> {
+  private async generateRecommendations(params: DetailedWorkoutParams): Promise<any[]> {
     const recommendations = [];
 
     // Add intensity recommendations
@@ -451,9 +468,20 @@ export class DetailedWorkoutFeature {
     return recommendations;
   }
 
-  private checkEquipmentCompatibility(exercises: string[], availableEquipment: string[]): string[] {
-    // This would need a proper exercise database to implement fully
-    // For now, return empty array (no conflicts)
-    return [];
+  /**
+   * Helper function to extract energy level rating from CategoryRatingData or number
+   */
+  private extractEnergyLevel(energyData: CategoryRatingData | number | undefined): number | undefined {
+    if (energyData === undefined) return undefined;
+    
+    if (typeof energyData === 'number') {
+      return energyData;
+    }
+    
+    if (typeof energyData === 'object' && energyData !== null && 'rating' in energyData) {
+      return energyData.rating;
+    }
+    
+    return undefined;
   }
 } 

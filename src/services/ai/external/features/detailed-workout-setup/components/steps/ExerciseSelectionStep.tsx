@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Plus, X, Zap, Clock } from 'lucide-react';
-import { PerWorkoutOptions, ValidationResult } from '../../../../../../../types/core';
+import { PerWorkoutOptions, ValidationResult } from 'src/types/core';
 import { ValidationFeedback } from '../shared/ValidationFeedback';
 import { ConflictWarning } from '../shared/ConflictWarning';
 import { DetailedWorkoutFeature } from '../../DetailedWorkoutFeature';

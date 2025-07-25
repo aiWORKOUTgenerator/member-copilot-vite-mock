@@ -1,7 +1,18 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { PerWorkoutOptions } from '../../../../../../../types/core';
-import { DetailedWorkoutFeature } from '../../DetailedWorkoutFeature';
+import { PerWorkoutOptions } from 'src/types/core';
+import { DetailedWorkoutFeature } from '../../../../DetailedWorkoutFeature';
 import { EXERCISE_DATABASE } from '../constants';
+
+// Type definition for validation conflicts returned by DetailedWorkoutFeature
+interface ValidationConflict {
+  message: string;
+  severity?: 'high' | 'medium' | 'low';
+  fields?: string[];
+  suggestion?: {
+    label: string;
+    changes?: Record<string, unknown>;
+  };
+}
 
 interface ConflictItem {
   id: string;
@@ -71,7 +82,7 @@ export const useValidationLogic = ({
 
       // Update conflicts based on validation result
       if (!validationResult.isValid && validationResult.details?.conflicts) {
-        const newConflicts = validationResult.details.conflicts.map((conflict, index) => ({
+        const newConflicts = validationResult.details.conflicts.map((conflict: ValidationConflict, index: number) => ({
           id: `exercise-conflict-${index}`,
           message: conflict.message,
           severity: conflict.severity || 'medium',
@@ -174,7 +185,9 @@ export const useValidationLogic = ({
       ex.name.toLowerCase().includes('sprint')
     );
     
-    return energyLevel === 'low' && hasHighIntensity;
+    // Extract rating from CategoryRatingData and compare as number
+    const energyRating = typeof energyLevel === 'object' && energyLevel !== null ? energyLevel.rating : energyLevel;
+    return energyRating <= 2 && hasHighIntensity;
   }, [selectedInclude, options.customization_energy]);
 
   // Auto-validate when selections change

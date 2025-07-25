@@ -9,13 +9,13 @@ const mockEnv = {
   VITE_OPENAI_BASE_URL: 'https://api.openai.com/v1'
 };
 
-export const openAIConfig = (): ExternalAIServiceConfig => ({
+export const openAIConfig = () => ({
   openai: {
-    apiKey: mockEnv.VITE_OPENAI_API_KEY,
-    model: mockEnv.VITE_OPENAI_MODEL,
-    maxTokens: parseInt(mockEnv.VITE_OPENAI_MAX_TOKENS),
-    temperature: parseFloat(mockEnv.VITE_OPENAI_TEMPERATURE),
-    baseURL: mockEnv.VITE_OPENAI_BASE_URL
+    apiKey: 'test-api-key',
+    model: 'gpt-3.5-turbo',
+    maxTokens: 1000,
+    temperature: 0.7,
+    baseURL: 'https://api.openai.com/v1'
   },
   features: {
     openai_workout_generation: true,

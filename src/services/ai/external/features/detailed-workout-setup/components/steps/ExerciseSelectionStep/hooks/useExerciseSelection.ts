@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { PerWorkoutOptions } from '../../../../../../../types/core';
+import { PerWorkoutOptions } from 'src/types/core';
 
 interface UseExerciseSelectionProps {
   selectedInclude: string[];
