@@ -16,6 +16,7 @@ interface TrainingDetailsStepProps {
 
 export type { TrainingDetailsStepProps };
 
+// eslint-disable-next-line max-lines-per-function
 export const TrainingDetailsStep: React.FC<TrainingDetailsStepProps> = ({
   options,
   onChange,
@@ -41,7 +42,7 @@ export const TrainingDetailsStep: React.FC<TrainingDetailsStepProps> = ({
     type: 'form' | 'progression' | 'modification' | 'alternative';
     description: string;
     priority: 'low' | 'medium' | 'high';
-    context?: Record<string, any>;
+    context?: Record<string, unknown>;
   }>>([]);
 
   // Handle form validation
@@ -63,6 +64,38 @@ export const TrainingDetailsStep: React.FC<TrainingDetailsStepProps> = ({
     });
   }, [onValidation]);
 
+  // Process validation conflicts
+  const processValidationConflicts = useCallback((validationResult: ValidationResult) => {
+    if (!validationResult.isValid && validationResult.details?.conflicts) {
+      setConflicts(validationResult.details.conflicts.map((conflict: {
+        message: string;
+        severity?: 'high' | 'medium' | 'low';
+        fields?: string[];
+        suggestion?: {
+          label: string;
+          changes?: Record<string, unknown>;
+        };
+      }, index: number) => ({
+        id: `details-conflict-${index}`,
+        message: conflict.message,
+        severity: conflict.severity ?? 'medium',
+        affectedFields: conflict.fields ?? [],
+        suggestedAction: conflict.suggestion ? {
+          label: conflict.suggestion.label,
+          action: () => {
+            if (conflict.suggestion?.changes) {
+              Object.entries(conflict.suggestion.changes).forEach(([key, value]) => {
+                onChange(key as keyof PerWorkoutOptions, value as PerWorkoutOptions[keyof PerWorkoutOptions]);
+              });
+            }
+          }
+        } : undefined
+      })));
+    } else {
+      setConflicts([]);
+    }
+  }, [onChange]);
+
   // Handle cross-field validation and AI recommendations
   const validateAndRecommend = useCallback(async () => {
     if (!options.customization_equipment) return;
@@ -75,42 +108,15 @@ export const TrainingDetailsStep: React.FC<TrainingDetailsStepProps> = ({
         duration: options.customization_duration
       });
 
-      // Update conflicts based on validation result
-      if (!validationResult.isValid && validationResult.details?.conflicts) {
-        setConflicts(validationResult.details.conflicts.map((conflict: {
-          message: string;
-          severity?: 'high' | 'medium' | 'low';
-          fields?: string[];
-          suggestion?: {
-            label: string;
-            changes?: Record<string, unknown>;
-          };
-        }, index: number) => ({
-          id: `details-conflict-${index}`,
-          message: conflict.message,
-          severity: conflict.severity || 'medium',
-          affectedFields: conflict.fields || [],
-          suggestedAction: conflict.suggestion ? {
-            label: conflict.suggestion.label,
-            action: () => {
-              if (conflict.suggestion?.changes) {
-                Object.entries(conflict.suggestion.changes).forEach(([key, value]) => {
-                  onChange(key as keyof PerWorkoutOptions, value as PerWorkoutOptions[keyof PerWorkoutOptions]);
-                });
-              }
-            }
-          } : undefined
-        })));
-      } else {
-        setConflicts([]);
-      }
+      // Process conflicts from validation result
+      processValidationConflicts(validationResult);
 
       // Set empty recommendations for now - workout generation happens in final step
       setRecommendations([]);
     } catch (error) {
       console.error('Error validating training details:', error);
     }
-  }, [options, workoutFeature, onChange]);
+  }, [options, workoutFeature, processValidationConflicts]);
 
   // Handle conflict dismissal
   const handleConflictDismiss = useCallback((conflictId: string) => {
@@ -118,7 +124,7 @@ export const TrainingDetailsStep: React.FC<TrainingDetailsStepProps> = ({
   }, []);
 
   // Handle AI recommendation application
-  const handleRecommendationApply = useCallback((type: string, description: string) => {
+  const handleRecommendationApply = useCallback((type: string, _description: string) => {
     // Apply the recommendation based on type
     switch (type) {
       case 'modification':
@@ -140,7 +146,7 @@ export const TrainingDetailsStep: React.FC<TrainingDetailsStepProps> = ({
   // Run cross-field validation when equipment is present
   useEffect(() => {
     if (options.customization_equipment) {
-      validateAndRecommend();
+      void validateAndRecommend();
     }
   }, [options.customization_equipment, validateAndRecommend]);
 
@@ -149,7 +155,7 @@ export const TrainingDetailsStep: React.FC<TrainingDetailsStepProps> = ({
       {/* Equipment Selection */}
       <div className="space-y-4">
         <EquipmentForm
-          value={options.customization_equipment || []}
+          value={options.customization_equipment ?? []}
           onChange={value => {
             onChange('customization_equipment', value);
             // Remove automatic validation to prevent setState during render

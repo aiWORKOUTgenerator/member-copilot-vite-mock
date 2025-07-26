@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { EXERCISE_DATABASE, CATEGORIES } from '../constants';
+import { EXERCISE_DATABASE } from '../constants';
 import type { Exercise } from '../types';
 
 interface UseExerciseFilteringReturn {

@@ -4,7 +4,7 @@ export { default as FilterControls } from './components/FilterControls';
 export { default as ExerciseGrid } from './components/ExerciseGrid';
 
 // Hook exports
-export { useExerciseFiltering, useExerciseSelection, useValidationLogic } from './hooks';
+export { useExerciseFiltering, useExerciseSelection } from './hooks';
 
 // Type exports
 export type {

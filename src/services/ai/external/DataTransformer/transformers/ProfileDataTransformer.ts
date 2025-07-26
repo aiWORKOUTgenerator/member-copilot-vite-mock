@@ -1,12 +1,33 @@
 import { DataTransformerBase } from '../core/DataTransformerBase';
-import { VALIDATION_RULES, CORE_REQUIRED_FIELDS } from '../constants/ValidationRules';
+import { CORE_REQUIRED_FIELDS } from '../constants/ValidationRules';
 import { DEFAULT_VALUES, DERIVED_VALUE_MAPS } from '../constants/DefaultValues';
 import type { ProfileFields } from '../types/profile.types';
 
 export type TransformedProfileData = ProfileFields;
 
-export class ProfileDataTransformer extends DataTransformerBase<any, TransformedProfileData> {
-  transform(input: any): TransformedProfileData {
+// Input type for profile data transformation
+export interface ProfileDataInput {
+  experienceLevel?: string;
+  physicalActivity?: string;
+  preferredDuration?: string;
+  timeCommitment?: string;
+  intensityLevel?: string;
+  preferredActivities?: string[];
+  availableLocations?: string[];
+  availableEquipment?: string[];
+  primaryGoal?: string;
+  goalTimeline?: string;
+  age?: string;
+  gender?: string;
+  height?: string;
+  weight?: string;
+  hasCardiovascularConditions?: string;
+  injuries?: string[];
+  [key: string]: unknown; // Allow additional properties
+}
+
+export class ProfileDataTransformer extends DataTransformerBase<ProfileDataInput, TransformedProfileData> {
+  transform(input: ProfileDataInput): TransformedProfileData {
     // Defensive validation - this should never fail if ReviewPage validation passed
     if (!input) {
       this.log('❌ ProfileData is null in ProfileDataTransformer');
@@ -20,13 +41,13 @@ export class ProfileDataTransformer extends DataTransformerBase<any, Transformed
       // Transform with fallbacks to defaults
       const transformedData = {
         // Experience & Activity
-        experienceLevel: input.experienceLevel || defaultProfile.experienceLevel,
-        physicalActivity: input.physicalActivity || defaultProfile.physicalActivity,
+        experienceLevel: input.experienceLevel ?? defaultProfile.experienceLevel,
+        physicalActivity: input.physicalActivity ?? defaultProfile.physicalActivity,
         
         // Time & Commitment
-        preferredDuration: input.preferredDuration || defaultProfile.preferredDuration,
-        timeCommitment: input.timeCommitment || defaultProfile.timeCommitment,
-        intensityLevel: input.intensityLevel || defaultProfile.intensityLevel,
+        preferredDuration: input.preferredDuration ?? defaultProfile.preferredDuration,
+        timeCommitment: input.timeCommitment ?? defaultProfile.timeCommitment,
+        intensityLevel: input.intensityLevel ?? defaultProfile.intensityLevel,
         
         // Preferences (Array handling)
         preferredActivities: Array.isArray(input.preferredActivities) ? 
@@ -40,17 +61,17 @@ export class ProfileDataTransformer extends DataTransformerBase<any, Transformed
           defaultProfile.availableEquipment,
         
         // Goals
-        primaryGoal: input.primaryGoal || defaultProfile.primaryGoal,
-        goalTimeline: input.goalTimeline || defaultProfile.goalTimeline,
+        primaryGoal: input.primaryGoal ?? defaultProfile.primaryGoal,
+        goalTimeline: input.goalTimeline ?? defaultProfile.goalTimeline,
         
         // Personal Information
-        age: input.age || defaultProfile.age,
-        gender: input.gender || defaultProfile.gender,
-        height: input.height || defaultProfile.height,
-        weight: input.weight || defaultProfile.weight,
+        age: input.age ?? defaultProfile.age,
+        gender: input.gender ?? defaultProfile.gender,
+        height: input.height ?? defaultProfile.height,
+        weight: input.weight ?? defaultProfile.weight,
         
         // Health & Safety
-        hasCardiovascularConditions: input.hasCardiovascularConditions || defaultProfile.hasCardiovascularConditions,
+        hasCardiovascularConditions: input.hasCardiovascularConditions ?? defaultProfile.hasCardiovascularConditions,
         injuries: Array.isArray(input.injuries) ? 
           input.injuries : 
           defaultProfile.injuries
@@ -58,21 +79,21 @@ export class ProfileDataTransformer extends DataTransformerBase<any, Transformed
 
       // Calculate derived fields
       const calculatedFitnessLevel = DERIVED_VALUE_MAPS.calculateFitnessLevel(
-        transformedData.experienceLevel,
-        transformedData.physicalActivity
+        transformedData.experienceLevel as ProfileFields['experienceLevel'],
+        transformedData.physicalActivity as ProfileFields['physicalActivity']
       );
 
       const calculatedWorkoutIntensity = DERIVED_VALUE_MAPS.calculateWorkoutIntensity(
-        transformedData.intensityLevel,
-        transformedData.timeCommitment
+        transformedData.intensityLevel as ProfileFields['intensityLevel'],
+        transformedData.timeCommitment as ProfileFields['timeCommitment']
       );
 
-      // Add derived fields
+      // Add derived fields with proper type casting
       const result: TransformedProfileData = {
         ...transformedData,
         calculatedFitnessLevel,
         calculatedWorkoutIntensity
-      };
+      } as TransformedProfileData;
 
       // Log transformation results for debugging
       this.log('Profile transformation successful', {

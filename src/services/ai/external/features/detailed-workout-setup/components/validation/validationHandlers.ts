@@ -68,10 +68,9 @@ export const validateAndRecommend = async (
     // Validate physical state
     const validationResult = await workoutFeature.validatePhysicalState({
       energyLevel: energyValue,
-      sorenessAreas: options.customization_soreness?.map(s => {
-        const [area, intensity = 'moderate'] = s.split('_');
-        return { area, intensity };
-      }) || []
+      sorenessAreas: Array.isArray(options.customization_soreness) 
+        ? options.customization_soreness
+        : []
     });
 
     let conflicts: Conflict[] = [];
@@ -147,10 +146,10 @@ export const handleValidation = (
   field: string,
   result: ValidationResult,
   validationResults: Record<string, ValidationResult>,
-  setValidationResults: (results: Record<string, ValidationResult>) => void,
+  setValidationResults: React.Dispatch<React.SetStateAction<Record<string, ValidationResult>>>,
   onValidation?: (isValid: boolean) => void
 ) => {
-  setValidationResults(prev => {
+  setValidationResults((prev: Record<string, ValidationResult>) => {
     const newResults = { ...prev, [field]: result };
     
     // Check if all required fields are valid

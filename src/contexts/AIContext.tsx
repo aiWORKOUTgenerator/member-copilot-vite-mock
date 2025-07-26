@@ -43,6 +43,7 @@ import { WorkoutGenerationRequest } from '../types/workout-generation.types';
 import { featureFlagService, useFeatureFlags, FeatureFlag, ABTestResults, AnalyticsEvent } from '../services/ai/featureFlags/FeatureFlagService';
 import { openAIStrategy } from '../services/ai/external/OpenAIStrategy';
 import { openAIConfig, isFeatureEnabled, checkEnvironmentConfiguration } from '../services/ai/external/config/openai.config';
+import { aiContextMonitor } from '../services/ai/monitoring/AIContextMonitor';
 
 // Enhanced AI Context with Feature Flag Support
 interface AIContextValue {
@@ -194,6 +195,9 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
   // Simplified initialization for MVP with basic guards
   const initialize = useCallback(async (userProfile: UserProfile) => {
+    // Start monitoring this initialization attempt
+    const monitor = aiContextMonitor.recordInitializationAttempt(userProfile);
+    
     // Simple guard to prevent multiple initializations
     if (isInitializing) {
       console.log('ℹ️ AIProvider: Already initializing, skipping duplicate request');
@@ -301,6 +305,10 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       setServiceStatus('ready');
       setHasInitialized(true);
       
+      // Record successful initialization
+      monitor.success();
+      aiContextMonitor.recordStatusChange('ready');
+      
       console.log('✅ AIProvider: AI service initialization completed successfully', {
         duration: endTime.getTime() - startTime.getTime(),
         healthStatus: healthStatus.status,
@@ -316,6 +324,10 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     } catch (error) {
       const endTime = new Date();
       const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Record initialization failure
+      monitor.failure(error instanceof Error ? error : new Error(errorMessage));
+      aiContextMonitor.recordStatusChange('error');
       
       console.error('❌ AIProvider: Failed to initialize AI service:', error);
       console.error('AIProvider: Error details:', {
@@ -491,6 +503,9 @@ export const AIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const isFeatureEnabled = useCallback((flagId: string) => {
     // Use cached feature flags if available, otherwise fall back to direct service call
     const result = featureFlags[flagId] ?? (currentUserProfile ? featureFlagService.isEnabled(flagId, currentUserProfile) : false);
+    
+    // Monitor feature flag checks
+    aiContextMonitor.recordFeatureFlagCheck(flagId, result);
     
     return result;
   }, [currentUserProfile, featureFlags]);

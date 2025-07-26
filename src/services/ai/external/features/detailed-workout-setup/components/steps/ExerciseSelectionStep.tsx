@@ -1,16 +1,13 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { Plus, X, Zap, Clock } from 'lucide-react';
-import { PerWorkoutOptions, ValidationResult } from 'src/types/core';
+import { PerWorkoutOptions } from 'src/types/core';
 import { ValidationFeedback } from '../shared/ValidationFeedback';
 import { ConflictWarning } from '../shared/ConflictWarning';
 import { DetailedWorkoutFeature } from '../../DetailedWorkoutFeature';
 import { AIRecommendationPanel } from '../shared/AIRecommendationPanel';
-import { ExerciseCard } from './ExerciseSelectionStep/components/ExerciseCard';
 import { FilterControls } from './ExerciseSelectionStep/components/FilterControls';
 import { ExerciseGrid } from './ExerciseSelectionStep/components/ExerciseGrid';
-import { EXERCISE_DATABASE, CATEGORIES } from './ExerciseSelectionStep/constants';
-import { useExerciseFiltering, useExerciseSelection, useValidationLogic } from './ExerciseSelectionStep/hooks';
-import type { Exercise } from './ExerciseSelectionStep/types';
+import { useExerciseFiltering, useExerciseSelection } from './ExerciseSelectionStep/hooks';
+import { useExerciseSelectionValidation } from '../hooks/useExerciseSelectionValidation';
 
 interface ExerciseSelectionStepProps {
   options: PerWorkoutOptions;
@@ -22,7 +19,7 @@ interface ExerciseSelectionStepProps {
 
 export type { ExerciseSelectionStepProps };
 
-
+// eslint-disable-next-line max-lines-per-function
 export const ExerciseSelectionStep: React.FC<ExerciseSelectionStepProps> = ({
   options,
   onChange,
@@ -33,20 +30,25 @@ export const ExerciseSelectionStep: React.FC<ExerciseSelectionStepProps> = ({
   // UI State
   const [activeTab, setActiveTab] = useState<'include' | 'exclude'>('include');
 
-  // Validation state is now handled by the useValidationLogic hook
+  // Use the shared validation hook
+  const {
+    validationResults,
+    conflicts,
+    recommendations,
+    isValidating,
+    handleConflictDismiss,
+    handleRecommendationApply
+  } = useExerciseSelectionValidation({
+    options,
+    onChange,
+    onValidation,
+    workoutFeature
+  });
 
-  // AI recommendations state
-  const [recommendations, setRecommendations] = useState<Array<{
-    type: 'form' | 'progression' | 'modification' | 'alternative';
-    description: string;
-    priority: 'low' | 'medium' | 'high';
-    context?: Record<string, any>;
-  }>>([]);
-
-  // Get current selections
-  const selectedInclude = (options.customization_include as string[]) || [];
-  const selectedExclude = (options.customization_exclude as string[]) || [];
-  const availableEquipment = (options.customization_equipment as string[]) || [];
+  // Get current selections with useMemo to prevent unnecessary re-renders
+  const selectedInclude = useMemo(() => (options.customization_include as string[]) || [], [options.customization_include]);
+  const selectedExclude = useMemo(() => (options.customization_exclude as string[]) || [], [options.customization_exclude]);
+  const availableEquipment = useMemo(() => (options.customization_equipment as string[]) || [], [options.customization_equipment]);
 
   // Use the extracted filtering hook
   const filtering = useExerciseFiltering(availableEquipment);
@@ -55,69 +57,47 @@ export const ExerciseSelectionStep: React.FC<ExerciseSelectionStepProps> = ({
   const exerciseSelection = useExerciseSelection({
     selectedInclude,
     selectedExclude,
-    onChange: onChange as any,
+    onChange: onChange as (key: string | number | symbol, value: unknown) => void,
     disabled
   });
 
-  // Use the extracted validation hook
-  const validation = useValidationLogic({
-    selectedInclude,
-    selectedExclude,
-    options,
-    workoutFeature,
-    availableEquipment,
-    onValidation
-  });
-
   // Use filtered exercises from the hook
-  const { filteredExercises, availableExercises } = filtering;
+  const { filteredExercises } = filtering;
 
-  // Use the hook's handleExerciseToggle function
+  // Handle exercise toggle with validation
   const handleExerciseToggle = useCallback((exerciseId: string, listType: 'include' | 'exclude') => {
     exerciseSelection.handleExerciseToggle(exerciseId, listType);
     
     // Trigger validation after change
-    validation.validateSelections();
-  }, [exerciseSelection, validation]);
+    const newInclude = listType === 'include' 
+      ? exerciseSelection.isExerciseSelected(exerciseId, 'include')
+        ? selectedInclude.filter(id => id !== exerciseId)
+        : [...selectedInclude, exerciseId]
+      : selectedInclude;
+    
+    const newExclude = listType === 'exclude'
+      ? exerciseSelection.isExerciseSelected(exerciseId, 'exclude')
+        ? selectedExclude.filter(id => id !== exerciseId)
+        : [...selectedExclude, exerciseId]
+      : selectedExclude;
 
-  // Use the hook's clearAll function
+    // Update options and trigger validation
+    onChange('customization_include', newInclude);
+    onChange('customization_exclude', newExclude);
+  }, [exerciseSelection, selectedInclude, selectedExclude, onChange]);
+
+  // Clear all exercises from specified list
   const clearAll = useCallback((listType: 'include' | 'exclude') => {
     exerciseSelection.clearAll(listType);
-    validation.validateSelections();
-  }, [exerciseSelection, validation]);
+  }, [exerciseSelection]);
 
-  // Validation and recommendations are now handled by the useValidationLogic hook
+  // Handle difficulty change (placeholder for future implementation)
+  const handleDifficultyChange = useCallback(() => {
+    // TODO: Add difficulty filtering to hook
+  }, []);
 
-  // Handle recommendation application
-  const handleRecommendationApply = useCallback((type: string, description: string) => {
-    if (type === 'modification' && description.includes('adding')) {
-      const focus = typeof options.customization_focus === 'string' 
-        ? options.customization_focus 
-        : options.customization_focus?.focus;
-      
-      if (focus) {
-        const focusExercises = EXERCISE_DATABASE.filter(ex => 
-          ex.category.toLowerCase().includes(focus.toLowerCase())
-        );
-        
-        const newExercises = focusExercises
-          .filter(exercise => !selectedInclude.includes(exercise.id))
-          .slice(0, 2)
-          .map(ex => ex.id);
-        
-        onChange('customization_include', [...selectedInclude, ...newExercises]);
-      }
-    }
-  }, [options, selectedInclude, onChange]);
-
-  // Handle conflict dismissal
-  const handleConflictDismiss = useCallback((conflictId: string) => {
-    validation.dismissConflict(conflictId);
-  }, [validation]);
-
-
-
-  return (
+  // Render the exercise selection interface
+  const renderExerciseInterface = () => (
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center">
@@ -162,7 +142,7 @@ export const ExerciseSelectionStep: React.FC<ExerciseSelectionStepProps> = ({
         showFilters={filtering.showFilters}
         onSearchChange={filtering.setSearchTerm}
         onCategoryChange={filtering.setSelectedCategory}
-        onDifficultyChange={() => {}} // TODO: Add difficulty filtering to hook
+        onDifficultyChange={handleDifficultyChange}
         onToggleFilters={filtering.toggleFilters}
         onClearAll={() => clearAll(activeTab)}
         disabled={disabled}
@@ -177,8 +157,15 @@ export const ExerciseSelectionStep: React.FC<ExerciseSelectionStepProps> = ({
         activeTab={activeTab}
         onExerciseToggle={(exerciseId) => handleExerciseToggle(exerciseId, activeTab)}
         disabled={disabled}
-        loading={false}
+        loading={isValidating}
       />
+
+      {/* Loading Indicator */}
+      {isValidating && (
+        <div className="flex justify-center py-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+        </div>
+      )}
 
       {/* AI Recommendations */}
       {recommendations.length > 0 && (
@@ -190,23 +177,25 @@ export const ExerciseSelectionStep: React.FC<ExerciseSelectionStepProps> = ({
       )}
 
       {/* Cross-field Validation Warnings */}
-      {validation.conflicts.length > 0 && (
+      {conflicts.length > 0 && (
         <ConflictWarning
-          conflicts={validation.conflicts}
+          conflicts={conflicts}
           onDismiss={handleConflictDismiss}
           className="mt-6"
         />
       )}
 
       {/* Validation Feedback */}
-      {validation.validationResults.include && !validation.validationResults.include.isValid && (
+      {validationResults.include && !validationResults.include.isValid && (
         <ValidationFeedback
-          validation={validation.validationResults.include}
+          validation={validationResults.include}
           size="small"
         />
       )}
     </div>
   );
+
+  return renderExerciseInterface();
 };
 
 export default ExerciseSelectionStep; 

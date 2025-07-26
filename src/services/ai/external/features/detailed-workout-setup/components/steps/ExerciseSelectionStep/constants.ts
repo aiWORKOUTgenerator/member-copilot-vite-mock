@@ -1,5 +1,6 @@
 import { Exercise } from './types';
 
+/* eslint-disable max-lines */
 // Exercise Categories
 export const CATEGORIES = [
   'All',

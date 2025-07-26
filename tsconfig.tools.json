@@ -1,15 +1,13 @@
 {
   "compilerOptions": {
-    "composite": true,
     "target": "ES2022",
     "lib": ["es2022"],
     "module": "Node16",
     "skipLibCheck": true,
 
-    /* Bundler mode */
+    /* Module resolution */
     "moduleResolution": "node16",
     "isolatedModules": true,
-    "moduleDetection": "force",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
 
@@ -17,7 +15,14 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+
+    /* Path resolution */
+    "baseUrl": ".",
+    "paths": {
+      "src/*": ["src/*"]
+    }
   },
-  "include": ["vite.config.ts"]
-}
+  "include": ["tools/**/*", "vite.config.ts"],
+  "exclude": ["node_modules", "dist"]
+} 

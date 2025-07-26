@@ -437,7 +437,7 @@ export class AIService {
    */
   learnFromUserFeedback(
     feedback: 'helpful' | 'not_helpful' | 'partially_helpful',
-    context: any
+    context: Record<string, unknown>
   ): void {
     this.learningEngine.learnFromUserFeedback(feedback, context);
   }
@@ -537,7 +537,7 @@ export class AIService {
   /**
    * Log message with component prefix
    */
-  private log(level: 'debug' | 'info' | 'warn' | 'error', message: string, data?: any): void {
+  private log(level: 'debug' | 'info' | 'warn' | 'error', message: string, data?: Record<string, unknown>): void {
     const prefix = `[AIService]`;
     switch (level) {
       case 'debug':

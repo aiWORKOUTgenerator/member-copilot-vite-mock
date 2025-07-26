@@ -1,6 +1,94 @@
 import { ProfileData } from '../../../../../components/Profile/types/profile.types';
-import { PerWorkoutOptions } from '../../../../../types/core';
+import { PerWorkoutOptions, CategoryRatingData, WorkoutFocusConfigurationData } from '../../../../../types/core';
 import { filterAvailableEquipment } from '../../../../../utils/equipmentRecommendations';
+
+// Type definitions for prompt variables
+export interface PromptVariables {
+  // Experience & Activity
+  experienceLevel: string;
+  physicalActivity: string;
+  fitnessLevel?: string;
+  
+  // Time & Commitment
+  preferredDuration: string;
+  timeCommitment: string;
+  intensityLevel: string;
+  
+  // Preferences
+  preferredActivities: string;
+  availableLocations: string;
+  availableEquipment: string[];
+  
+  // Goals & Timeline
+  primaryGoal: string;
+  goalTimeline: string;
+  
+  // Personal Information
+  age: string;
+  height: string;
+  weight: string;
+  gender: string;
+  
+  // Health & Safety
+  hasCardiovascularConditions: string;
+  injuries: string;
+  
+  // Workout-specific
+  focus?: string;
+  duration?: number;
+  equipment?: string[];
+  energyLevel?: number;
+  sorenessAreas?: string[];
+  location?: string;
+  timeOfDay?: string;
+  noiseLevel?: string;
+  spaceLimitations?: string[];
+  weather?: string;
+  temperature?: string;
+  previousWorkout?: string;
+  dietaryRestrictions?: string;
+  intensity?: string;
+}
+
+export interface FocusData {
+  focus?: string;
+  focusLabel?: string;
+  label?: string;
+}
+
+export interface SorenessVariables {
+  hasSoreness: boolean;
+  sorenessCount: number;
+}
+
+export interface EquipmentVariables {
+  hasEquipment: boolean;
+  equipmentCount: number;
+}
+
+export interface ExperienceLevelFlags {
+  isMinimal: boolean;
+  isSimple: boolean; 
+  isStandard: boolean;
+  isAdvanced: boolean;
+}
+
+export interface DurationAdjustment {
+  durationAdjusted: boolean;
+  originalDuration?: number;
+  adjustmentReason?: string;
+}
+
+export interface ValidationResult {
+  isValid: boolean;
+  missingRequired: string[];
+  totalFields: number;
+  populatedFields: number;
+}
+
+export interface AdditionalContext {
+  [key: string]: string | number | boolean | string[] | undefined;
+}
 
 /**
  * Centralized data transformer for workout generation prompts
@@ -11,7 +99,7 @@ export class PromptDataTransformer {
    * Transform ProfileData to prompt variables with guaranteed completeness
    * This is the single source of truth for profile data mapping
    */
-  static transformProfileData(profileData: ProfileData): Record<string, any> {
+  static transformProfileData(profileData: ProfileData): Partial<PromptVariables> {
     // Defensive validation - this should never fail if ReviewPage validation passed
     if (!profileData) {
       console.error('❌ ProfileData is null in PromptDataTransformer');
@@ -61,7 +149,7 @@ export class PromptDataTransformer {
   /**
    * Transform workout focus data to prompt variables with enhanced focus extraction
    */
-  static transformWorkoutFocusData(workoutFocusData: PerWorkoutOptions): Record<string, any> {
+  static transformWorkoutFocusData(workoutFocusData: PerWorkoutOptions): Partial<PromptVariables> {
     // Defensive validation - this should never fail if ReviewPage validation passed
     if (!workoutFocusData) {
       console.error('❌ WorkoutFocusData is null in PromptDataTransformer');
@@ -69,7 +157,7 @@ export class PromptDataTransformer {
     }
 
     // Extract focus value properly - handle both string and object formats
-    const extractFocusValue = (focusData: any): string => {
+    const extractFocusValue = (focusData: string | WorkoutFocusConfigurationData | FocusData | undefined): string => {
       if (!focusData) return 'general';
       
       // If it's already a string, return it
@@ -78,17 +166,17 @@ export class PromptDataTransformer {
       }
       
       // If it's an object (WorkoutFocusConfigurationData), extract the focus property
-      if (typeof focusData === 'object' && focusData.focus) {
+      if (typeof focusData === 'object' && 'focus' in focusData && focusData.focus) {
         return focusData.focus;
       }
       
       // If it's an object with focusLabel, use that
-      if (typeof focusData === 'object' && focusData.focusLabel) {
+      if (typeof focusData === 'object' && 'focusLabel' in focusData && focusData.focusLabel) {
         return focusData.focusLabel;
       }
       
       // If it's an object with label, use that
-      if (typeof focusData === 'object' && focusData.label) {
+      if (typeof focusData === 'object' && 'label' in focusData && focusData.label) {
         return focusData.label;
       }
       
@@ -98,65 +186,95 @@ export class PromptDataTransformer {
     
     const focus = extractFocusValue(workoutFocusData.customization_focus);
     
-    // 🔍 DEBUG: Log the focus extraction for consistency check
-    console.log('🔍 PromptDataTransformer - Focus extraction:', {
-      originalFocus: workoutFocusData.customization_focus,
-      originalType: typeof workoutFocusData.customization_focus,
-      extractedFocus: focus,
-      isObject: typeof workoutFocusData.customization_focus === 'object'
-    });
-
-    // Transform soreness data
-    const sorenessAreas = workoutFocusData.customization_soreness ? 
-      Object.keys(workoutFocusData.customization_soreness)
-        .filter(key => (workoutFocusData.customization_soreness as any)?.[key]?.selected)
-        .map(key => `${key} (Level ${(workoutFocusData.customization_soreness as any)?.[key]?.rating || 0})`) :
-      [];
-
+    // Extract duration value properly
+    const extractDurationValue = (durationData: number | { duration: number } | undefined): number => {
+      if (!durationData) return 30; // Default duration
+      
+      if (typeof durationData === 'number') {
+        return durationData;
+      }
+      
+      if (typeof durationData === 'object' && 'duration' in durationData) {
+        return durationData.duration;
+      }
+      
+      return 30; // Fallback
+    };
+    
+    const duration = extractDurationValue(workoutFocusData.customization_duration);
+    
+    // Extract energy level from CategoryRatingData
+    const extractEnergyLevel = (energyData: CategoryRatingData | number | undefined): number => {
+      if (!energyData) return 5; // Default energy level
+      
+      if (typeof energyData === 'number') {
+        return energyData;
+      }
+      
+      if (typeof energyData === 'object' && 'rating' in energyData) {
+        return energyData.rating;
+      }
+      
+      return 5; // Fallback
+    };
+    
+    const energyLevel = extractEnergyLevel(workoutFocusData.customization_energy);
+    
+    // Extract soreness areas from CategoryRatingData
+    const extractSorenessAreas = (sorenessData: CategoryRatingData | string[] | undefined): string[] => {
+      if (!sorenessData) return [];
+      
+      if (Array.isArray(sorenessData)) {
+        return sorenessData;
+      }
+      
+      if (typeof sorenessData === 'object' && 'categories' in sorenessData) {
+        return sorenessData.categories;
+      }
+      
+      return [];
+    };
+    
+    const sorenessAreas = extractSorenessAreas(workoutFocusData.customization_soreness);
+    
     return {
-      energyLevel: workoutFocusData.customization_energy,
-      duration: workoutFocusData.customization_duration,
-      focus: focus, // Use extracted focus value
-      sorenessAreas: sorenessAreas,
-      equipment: Array.isArray(workoutFocusData.customization_equipment) ? 
-        workoutFocusData.customization_equipment :
-        ['Body Weight']
+      focus,
+      duration,
+      energyLevel,
+      sorenessAreas,
+      equipment: workoutFocusData.customization_equipment ?? ['Body Weight'],
+      location: workoutFocusData.customization_location ?? 'Home',
+      intensity: workoutFocusData.customization_intensity ?? 'moderate'
     };
   }
 
   /**
-   * Combine all data sources into complete prompt variables
-   * This is the main method used by workout generation
+   * Transform profile and workout data to prompt variables with additional context
    */
   static transformToPromptVariables(
     profileData: ProfileData,
     workoutFocusData: PerWorkoutOptions,
-    additionalContext?: Record<string, any>
-  ): Record<string, any> {
+    additionalContext?: AdditionalContext
+  ): PromptVariables {
     const profileVars = this.transformProfileData(profileData);
     const workoutVars = this.transformWorkoutFocusData(workoutFocusData);
     
-    // 🔍 DEBUG: Log data source counts
-    console.log(`🔍 PromptDataTransformer: ${Object.keys(profileVars).length} profile + ${Object.keys(workoutVars).length} workout + ${Object.keys(additionalContext || {}).length} context variables`);
-    
-    // 🔍 DEBUG: Log specific profile transformation results
-    console.log('🔍 PromptDataTransformer - Profile transformation:');
-    console.log('  INPUT  experienceLevel:', profileData.experienceLevel);
-    console.log('  INPUT  primaryGoal:', profileData.primaryGoal);
-    console.log('  OUTPUT experienceLevel:', profileVars.experienceLevel);
-    console.log('  OUTPUT primaryGoal:', profileVars.primaryGoal);
+    // Log data source counts for debugging
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🔍 PromptDataTransformer: ${Object.keys(profileVars).length} profile + ${Object.keys(workoutVars).length} workout + ${Object.keys(additionalContext || {}).length} context variables`);
+    }
     
     // Extract location properly from available locations array
     const locationValue = Array.isArray(profileData.availableLocations) ? 
-      profileData.availableLocations[0] || 'Home' : 
-      (profileVars.availableLocations || 'Home');
+      profileData.availableLocations[0] ?? 'Home' : 
+      (profileVars.availableLocations ?? 'Home');
     
-    // 🔍 DEBUG: Check what additionalContext contains that might override profile data
-    console.log('🔍 PromptDataTransformer - Field conflict check:');
-    console.log('  additionalContext has experienceLevel:', 'experienceLevel' in (additionalContext || {}));
-    console.log('  additionalContext has primaryGoal:', 'primaryGoal' in (additionalContext || {}));
-    console.log('  profileVars.experienceLevel:', profileVars.experienceLevel);
-    console.log('  profileVars.primaryGoal:', profileVars.primaryGoal);
+    // Check for field conflicts in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 PromptDataTransformer - Field conflict check:');
+      console.log('  additionalContext has experienceLevel:', 'experienceLevel' in (additionalContext || {}));
+      console.log('  additionalContext has primaryGoal:', 'primaryGoal' in (additionalContext || {}));
+    }
 
     // ✅ FIXED: Apply equipment filtering to ensure AI gets the correctly filtered equipment
     // This matches exactly what ReviewPage displays to the user
@@ -170,11 +288,13 @@ export class PromptDataTransformer {
           profileData.availableLocations
         );
         
-        console.log('🔍 PromptDataTransformer - Equipment filtering:');
-        console.log('  INPUT focus:', workoutFocusData.customization_focus);
-        console.log('  INPUT availableEquipment:', profileData.availableEquipment);
-        console.log('  INPUT availableLocations:', profileData.availableLocations);
-        console.log('  OUTPUT filteredEquipment:', filteredEquipment);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔍 PromptDataTransformer - Equipment filtering:');
+          console.log('  INPUT focus:', workoutFocusData.customization_focus);
+          console.log('  INPUT availableEquipment:', profileData.availableEquipment);
+          console.log('  INPUT availableLocations:', profileData.availableLocations);
+          console.log('  OUTPUT filteredEquipment:', filteredEquipment);
+        }
       } catch (error) {
         console.warn('⚠️ Equipment filtering failed, using fallback:', error);
         filteredEquipment = ['Body Weight'];
@@ -205,337 +325,226 @@ export class PromptDataTransformer {
       // Additional context (highest priority - can override profile/workout data)
       // CAREFUL: This can override profile data if there are conflicting keys
       ...additionalContext
-    };
+    } as PromptVariables;
 
-    // 🔍 DEBUG: Check if the critical fields got overridden  
-    console.log('🔍 PromptDataTransformer - After merge check:');
-    console.log('  result.experienceLevel:', (result as any).experienceLevel);
-    console.log('  result.primaryGoal:', (result as any).primaryGoal);
-    console.log('  result.equipment:', (result as any).equipment);
-    console.log('  experienceLevel overridden?', (result as any).experienceLevel !== profileVars.experienceLevel);
-    console.log('  primaryGoal overridden?', (result as any).primaryGoal !== profileVars.primaryGoal);
-    console.log('  equipment filtered?', JSON.stringify((result as any).equipment) !== JSON.stringify(workoutVars.equipment));
-    
-    // 🔍 DEBUG: Log critical fields only
-    console.log('🔍 PromptDataTransformer - Critical fields:', {
-      experienceLevel: (result as any).experienceLevel ? '✅' : '❌',
-      fitnessLevel: (result as any).fitnessLevel ? '✅' : '❌',
-      primaryGoal: (result as any).primaryGoal ? '✅' : '❌',
-      energyLevel: (result as any).energyLevel ? '✅' : '❌',
-      focus: (result as any).focus ? '✅' : '❌',
-      duration: (result as any).duration ? '✅' : '❌',
-      sorenessAreas: (result as any).sorenessAreas ? '✅' : '❌',
-      equipment: (result as any).equipment ? '✅' : '❌'
-    });
-    
-    // ✅ NEW: Compute derived variables required by QuickWorkoutSetup feature
-    const originalDuration = typeof workoutFocusData.customization_duration === 'number' 
-      ? workoutFocusData.customization_duration 
-      : (workoutFocusData.customization_duration as any)?.duration || (result as any).duration;
-    const derivedVariables = this.computeDerivedVariables(result, originalDuration);
-    
-    // 🔍 DEBUG: Log derived variables
-    console.log('🔍 PromptDataTransformer - Derived variables:', {
-      hasSoreness: derivedVariables.hasSoreness ? '✅' : '❌',
-      sorenessCount: `✅ (${derivedVariables.sorenessCount})`,
-      hasEquipment: derivedVariables.hasEquipment ? '✅' : '❌',
-      equipmentCount: `✅ (${derivedVariables.equipmentCount})`,
-      isMinimal: derivedVariables.isMinimal ? '✅' : '❌',
-      isSimple: derivedVariables.isSimple ? '✅' : '❌',
-      isStandard: derivedVariables.isStandard ? '✅' : '❌',
-      isAdvanced: derivedVariables.isAdvanced ? '✅' : '❌',
-      durationAdjusted: derivedVariables.durationAdjusted ? '✅' : '❌'
-    });
-    
-    return {
-      ...result,
-      ...derivedVariables
-    };
+    // Check if the critical fields got overridden in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 PromptDataTransformer - After merge check:');
+      console.log('  result.experienceLevel:', result.experienceLevel);
+      console.log('  result.primaryGoal:', result.primaryGoal);
+      console.log('  result.equipment:', result.equipment);
+      console.log('  experienceLevel overridden?', result.experienceLevel !== profileVars.experienceLevel);
+      console.log('  primaryGoal overridden?', result.primaryGoal !== profileVars.primaryGoal);
+      console.log('  equipment filtered?', JSON.stringify(result.equipment) !== JSON.stringify(workoutVars.equipment));
+      
+      // Log critical fields only
+      console.log('🔍 PromptDataTransformer - Critical fields:', {
+        experienceLevel: result.experienceLevel ? '✅' : '❌',
+        fitnessLevel: result.fitnessLevel ? '✅' : '❌',
+        primaryGoal: result.primaryGoal ? '✅' : '❌',
+        energyLevel: result.energyLevel ? '✅' : '❌',
+        focus: result.focus ? '✅' : '❌',
+        duration: result.duration ? '✅' : '❌',
+        sorenessAreas: result.sorenessAreas ? '✅' : '❌',
+        equipment: result.equipment ? '✅' : '❌'
+      });
+    }
+
+    return result;
   }
 
   /**
-   * Compute derived variables required by QuickWorkoutSetup feature
-   * These variables are computed from base data and are required by new system prompts
+   * Compute derived variables from base prompt variables
    */
   static computeDerivedVariables(
-    variables: Record<string, any>,
+    variables: Partial<PromptVariables>,
     originalDuration?: number
-  ): Record<string, any> {
-    try {
-      // 1. Compute soreness-derived variables
-      const sorenessVars = this.computeSorenessVariables(variables.sorenessAreas);
-      
-      // 2. Compute equipment-derived variables  
-      const equipmentVars = this.computeEquipmentVariables(variables.equipment);
-      
-      // 3. Compute experience level complexity flags
-      const experienceVars = this.computeExperienceLevelFlags(
-        variables.experienceLevel, 
-        variables.duration
-      );
-      
-      // 4. Compute duration adjustment flag
-      const durationVars = this.computeDurationAdjustment(
-        originalDuration || variables.duration,
-        variables.duration
-      );
-      
-      return {
-        ...sorenessVars,
-        ...equipmentVars, 
-        ...experienceVars,
-        ...durationVars
-      };
-      
-    } catch (error) {
-      console.warn('⚠️ PromptDataTransformer: Error computing derived variables, using defaults:', error);
-      
-      // Return safe defaults if computation fails
-      return {
-        hasSoreness: false,
-        sorenessCount: 0,
-        hasEquipment: false,
-        equipmentCount: 0,
-        isMinimal: true,  // Default to safest complexity
-        isSimple: false,
-        isStandard: false,
-        isAdvanced: false,
-        durationAdjusted: false
-      };
+  ): Partial<PromptVariables> {
+    const derived: Partial<PromptVariables> = {};
+    
+    // Compute experience level flags
+    if (variables.experienceLevel && variables.duration) {
+      const flags = this.computeExperienceLevelFlags(variables.experienceLevel, variables.duration);
+      Object.assign(derived, flags);
     }
+    
+    // Compute soreness variables
+    if (variables.sorenessAreas) {
+      const sorenessVars = this.computeSorenessVariables(variables.sorenessAreas);
+      Object.assign(derived, sorenessVars);
+    }
+    
+    // Compute equipment variables
+    if (variables.equipment) {
+      const equipmentVars = this.computeEquipmentVariables(variables.equipment);
+      Object.assign(derived, equipmentVars);
+    }
+    
+    // Compute duration adjustment
+    if (variables.duration && originalDuration) {
+      const durationAdj = this.computeDurationAdjustment(variables.duration, originalDuration);
+      Object.assign(derived, durationAdj);
+    }
+    
+    return derived;
   }
 
   /**
    * Compute soreness-related variables
    */
-  static computeSorenessVariables(sorenessAreas: any): {
-    hasSoreness: boolean;
-    sorenessCount: number;
-  } {
-    // Handle both array and object formats from different data sources
-    let areas: string[] = [];
-    
-    if (Array.isArray(sorenessAreas)) {
-      areas = sorenessAreas;
-    } else if (typeof sorenessAreas === 'object' && sorenessAreas !== null) {
-      // Handle object format like { "lower back": { selected: true, rating: 3 } }
-      areas = Object.keys(sorenessAreas).filter(key => 
-        sorenessAreas[key]?.selected || sorenessAreas[key] === true
-      );
-    } else if (typeof sorenessAreas === 'string' && sorenessAreas.trim() !== '') {
-      areas = [sorenessAreas];
-    }
-    
+  static computeSorenessVariables(sorenessAreas: string[]): SorenessVariables {
     return {
-      hasSoreness: areas.length > 0,
-      sorenessCount: areas.length
+      hasSoreness: sorenessAreas.length > 0,
+      sorenessCount: sorenessAreas.length
     };
   }
 
   /**
    * Compute equipment-related variables
    */
-  static computeEquipmentVariables(equipment: any): {
-    hasEquipment: boolean;
-    equipmentCount: number;
-  } {
-    // Handle array or fallback to bodyweight
-    let equipmentArray: string[] = [];
-    
-    if (Array.isArray(equipment)) {
-      equipmentArray = equipment;
-    } else if (typeof equipment === 'string' && equipment.trim() !== '') {
-      equipmentArray = [equipment];
-    } else {
-      equipmentArray = ['Body Weight'];
-    }
-    
-    // Exclude 'Body Weight' from count since it's the default
-    const realEquipment = equipmentArray.filter(item => 
-      item && item.toLowerCase() !== 'body weight' && item.toLowerCase() !== 'bodyweight'
-    );
-    
+  static computeEquipmentVariables(equipment: string[]): EquipmentVariables {
     return {
-      hasEquipment: realEquipment.length > 0,
-      equipmentCount: realEquipment.length
+      hasEquipment: equipment.length > 0 && !equipment.includes('Body Weight'),
+      equipmentCount: equipment.length
     };
   }
 
   /**
-   * Compute experience level complexity flags
+   * Compute experience level flags based on experience and duration
    */
-  static computeExperienceLevelFlags(experienceLevel: any, duration: any): {
-    isMinimal: boolean;
-    isSimple: boolean; 
-    isStandard: boolean;
-    isAdvanced: boolean;
-  } {
-    // Safe defaults if inputs are invalid
-    const safeExperienceLevel = String(experienceLevel || 'new to exercise').toLowerCase();
-    const safeDuration = Number(duration) || 30;
-    
-    // Map duration to complexity level (based on duration-constants.ts patterns)
+  static computeExperienceLevelFlags(experienceLevel: string, duration: number): ExperienceLevelFlags {
     const getComplexityFromDuration = (dur: number): string => {
-      if (dur <= 5) return 'minimal';
-      if (dur <= 10) return 'simple'; 
-      if (dur <= 20) return 'standard';
-      if (dur <= 30) return 'comprehensive';
+      if (dur <= 20) return 'minimal';
+      if (dur <= 45) return 'simple';
+      if (dur <= 90) return 'standard';
       return 'advanced';
     };
     
-    // Map experience level to complexity preference
     const mapExperienceToComplexity = (exp: string): string => {
-      if (exp.includes('new to exercise') || exp.includes('beginner')) return 'simple';
-      if (exp.includes('some experience') || exp.includes('intermediate')) return 'standard';
-      if (exp.includes('advanced athlete') || exp.includes('advanced')) return 'advanced';
-      return 'standard'; // Default to standard
+      switch (exp.toLowerCase()) {
+        case 'new to exercise': return 'minimal';
+        case 'some experience': return 'simple';
+        case 'advanced athlete': return 'advanced';
+        default: return 'standard';
+      }
     };
     
-    const durationComplexity = getComplexityFromDuration(safeDuration);
-    const experienceComplexity = mapExperienceToComplexity(safeExperienceLevel);
-    
-    // Use the more conservative of the two (lower complexity wins for safety)
-    const complexityOrder = ['minimal', 'simple', 'standard', 'comprehensive', 'advanced'];
-    const durationIndex = complexityOrder.indexOf(durationComplexity);
-    const experienceIndex = complexityOrder.indexOf(experienceComplexity);
-    
-    const finalComplexityIndex = Math.min(durationIndex, experienceIndex);
-    const finalComplexity = complexityOrder[finalComplexityIndex];
+    const durationComplexity = getComplexityFromDuration(duration);
+    const experienceComplexity = mapExperienceToComplexity(experienceLevel);
     
     return {
-      isMinimal: finalComplexity === 'minimal',
-      isSimple: finalComplexity === 'simple',
-      isStandard: finalComplexity === 'standard' || finalComplexity === 'comprehensive', 
-      isAdvanced: finalComplexity === 'advanced'
+      isMinimal: durationComplexity === 'minimal' || experienceComplexity === 'minimal',
+      isSimple: durationComplexity === 'simple' || experienceComplexity === 'simple',
+      isStandard: durationComplexity === 'standard' || experienceComplexity === 'standard',
+      isAdvanced: durationComplexity === 'advanced' || experienceComplexity === 'advanced'
     };
   }
 
   /**
-   * Compute duration adjustment flag
+   * Compute duration adjustment information
    */
-  static computeDurationAdjustment(requestedDuration: any, actualDuration: any): {
-    durationAdjusted: boolean;
-    originalDuration?: number;
-    adjustmentReason?: string;
-  } {
-    const requested = Number(requestedDuration) || 30;
-    const actual = Number(actualDuration) || 30;
-    const isAdjusted = requested !== actual;
+  static computeDurationAdjustment(requestedDuration: number, actualDuration: number): DurationAdjustment {
+    const tolerance = 5; // 5 minute tolerance
+    const adjusted = Math.abs(requestedDuration - actualDuration) > tolerance;
     
     return {
-      durationAdjusted: isAdjusted,
-      ...(isAdjusted && {
-        originalDuration: requested,
-        adjustmentReason: `Adjusted from ${requested} to ${actual} minutes for optimal workout structure`
-      })
+      durationAdjusted: adjusted,
+      originalDuration: adjusted ? requestedDuration : undefined,
+      adjustmentReason: adjusted ? 'AI optimization' : undefined
     };
   }
 
   /**
-   * Validate that all required prompt variables are present
-   * Used for debugging and ensuring data completeness
+   * Validate prompt variables for completeness
    */
-  static validatePromptVariables(variables: Record<string, any>): {
-    isValid: boolean;
-    missingRequired: string[];
-    totalFields: number;
-    populatedFields: number;
-  } {
-    const requiredFields = [
-      'experienceLevel', 'fitnessLevel', 'primaryGoal', 'energyLevel', 
-      'sorenessAreas', 'duration', 'focus', 'equipment'
+  static validatePromptVariables(variables: Partial<PromptVariables>): ValidationResult {
+    const requiredFields: (keyof PromptVariables)[] = [
+      'experienceLevel',
+      'fitnessLevel', 
+      'primaryGoal',
+      'age',
+      'height',
+      'weight',
+      'gender'
     ];
-
-    const missingRequired = requiredFields.filter(field => 
-      !variables[field] || variables[field] === 'Not specified'
-    );
-
-    const allExpectedFields = [
-      // Profile fields (15)
-      'experienceLevel', 'physicalActivity', 'fitnessLevel',
-      'preferredDuration', 'timeCommitment', 'intensityLevel',
-      'preferredActivities', 'availableLocations', 'availableEquipment',
-      'primaryGoal', 'goalTimeline', 'age', 'height', 'weight', 'gender',
-      'hasCardiovascularConditions', 'injuries',
-      // Workout focus fields (4)
-      'energyLevel', 'duration', 'focus', 'sorenessAreas'
-    ];
-
-    const populatedFields = allExpectedFields.filter(field => 
-      variables[field] && variables[field] !== 'Not specified' && variables[field] !== ''
-    ).length;
-
+    
+    const missingRequired = requiredFields.filter(field => !variables[field]);
+    const totalFields = Object.keys(variables).length;
+    const populatedFields = totalFields - missingRequired.length;
+    
     return {
       isValid: missingRequired.length === 0,
       missingRequired,
-      totalFields: allExpectedFields.length,
+      totalFields,
       populatedFields
     };
   }
 
   /**
-   * Debug method to log transformation results
+   * Debug transformation process
    */
   static debugTransformation(
     profileData: ProfileData,
     workoutFocusData: PerWorkoutOptions
   ): void {
     console.log('🔍 PromptDataTransformer Debug:');
+    console.log('Profile Data:', {
+      experienceLevel: profileData.experienceLevel,
+      primaryGoal: profileData.primaryGoal,
+      age: profileData.age,
+      availableEquipment: profileData.availableEquipment
+    });
     
-    try {
-      const variables = this.transformToPromptVariables(profileData, workoutFocusData);
-      const validation = this.validatePromptVariables(variables);
-      
-      console.log(`✅ Transformation successful: ${validation.populatedFields}/${validation.totalFields} fields populated`);
-      
-      if (validation.missingRequired.length > 0) {
-        console.warn('⚠️ Missing required fields:', validation.missingRequired);
-      }
-      
-      console.log('📋 Transformed variables - CRITICAL FIELDS:');
-      console.log('  experienceLevel:', variables.experienceLevel);
-      console.log('  primaryGoal:', variables.primaryGoal);
-      console.log('  fitnessLevel:', variables.fitnessLevel);
-      console.log('  focus:', variables.focus);
-      console.log('  duration:', variables.duration);
-      console.log('  energyLevel:', variables.energyLevel);
-      console.log('  equipment (filtered):', variables.equipment);
-      console.log('  availableEquipment (raw):', variables.availableEquipment);
-      
-    } catch (error) {
-      console.error('❌ Transformation failed:', error);
-    }
+    console.log('Workout Focus Data:', {
+      focus: workoutFocusData.customization_focus,
+      duration: workoutFocusData.customization_duration,
+      equipment: workoutFocusData.customization_equipment
+    });
+    
+    const result = this.transformToPromptVariables(profileData, workoutFocusData);
+    console.log('Transformed Result:', {
+      experienceLevel: result.experienceLevel,
+      primaryGoal: result.primaryGoal,
+      focus: result.focus,
+      duration: result.duration,
+      equipment: result.equipment
+    });
   }
 
   /**
-   * Test equipment filtering with sample data - useful for debugging
+   * Test equipment filtering functionality
    */
   static testEquipmentFiltering(): void {
     console.log('🧪 Testing Equipment Filtering:');
     
-    const sampleProfile: Partial<ProfileData> = {
-      availableEquipment: ['Dumbbells', 'Resistance Bands', 'Kettlebells'],
-      availableLocations: ['Home', 'Gym']
-    };
+    const testCases = [
+      {
+        focus: 'strength',
+        availableEquipment: ['Body Weight', 'Dumbbells', 'Resistance Bands'],
+        expected: ['Dumbbells', 'Resistance Bands']
+      },
+      {
+        focus: 'cardio',
+        availableEquipment: ['Body Weight', 'Treadmill', 'Bike'],
+        expected: ['Treadmill', 'Bike']
+      }
+    ];
     
-    const sampleWorkout: Partial<PerWorkoutOptions> = {
-      customization_focus: 'Quick Sweat'
-    };
-    
-    try {
-      const filteredEquipment = filterAvailableEquipment(
-        String(sampleWorkout.customization_focus),
-        sampleProfile.availableEquipment || [],
-        sampleProfile.availableLocations
-      );
-      
-      console.log('  Focus:', sampleWorkout.customization_focus);
-      console.log('  Available Equipment:', sampleProfile.availableEquipment);
-      console.log('  Available Locations:', sampleProfile.availableLocations);
-      console.log('  Filtered Equipment:', filteredEquipment);
-      console.log('  ✅ Equipment filtering working correctly');
-    } catch (error) {
-      console.error('  ❌ Equipment filtering failed:', error);
-    }
+    testCases.forEach((testCase, index) => {
+      try {
+        const result = filterAvailableEquipment(
+          testCase.focus,
+          testCase.availableEquipment,
+          ['Home']
+        );
+        console.log(`Test ${index + 1}:`, {
+          input: testCase,
+          output: result,
+          passed: JSON.stringify(result) === JSON.stringify(testCase.expected)
+        });
+      } catch (error) {
+        console.error(`Test ${index + 1} failed:`, error);
+      }
+    });
   }
 } 

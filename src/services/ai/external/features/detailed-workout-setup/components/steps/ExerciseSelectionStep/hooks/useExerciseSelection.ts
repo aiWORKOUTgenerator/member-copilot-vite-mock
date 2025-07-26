@@ -1,10 +1,9 @@
 import { useCallback, useMemo } from 'react';
-import { PerWorkoutOptions } from 'src/types/core';
 
 interface UseExerciseSelectionProps {
   selectedInclude: string[];
   selectedExclude: string[];
-  onChange: (key: string | number | symbol, value: any) => void;
+  onChange: (key: string | number | symbol, value: unknown) => void;
   disabled?: boolean;
 }
 

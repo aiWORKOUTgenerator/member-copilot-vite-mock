@@ -11,10 +11,12 @@ import WorkoutResultsPage from './components/WorkoutResultsPage';
 import type { WorkoutResultsPageProps } from './components/WorkoutResultsPage';
 import { AIProvider, AIDevTools, useAI } from './contexts/AIContext';
 import { EnvironmentValidationBanner } from './components/shared';
+import AIContextHealthDashboard from './components/shared/AIContextHealthDashboard';
 import { useWorkoutGeneration } from './hooks/useWorkoutGeneration';
 import type { UseWorkoutGenerationReturn } from './hooks/useWorkoutGeneration';
 import { GeneratedWorkout } from './services/ai/external/types/external-ai.types';
 import { PerWorkoutOptions } from './types/core';
+import { aiContextRollbackManager } from './services/ai/monitoring/AIContextRollbackManager';
 
 // Define WorkoutType locally since it's used throughout the app
 type WorkoutType = 'quick' | 'detailed';
@@ -90,6 +92,14 @@ function AppContent() {
   // AI service initialization
   const { initialize, serviceStatus } = useAI();
 
+  // Start AIContext monitoring system
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      aiContextRollbackManager.startMonitoring();
+      console.log('🔍 AIContext monitoring system activated');
+    }
+  }, []);
+
   // Load profile data from localStorage when it changes
   useEffect(() => {
     const loadProfileData = () => {
@@ -122,18 +132,67 @@ function AppContent() {
           
           if (parsed.data) {
             // Validate that the data is complete before setting it
-            const hasRequiredFields = !!(parsed.data.experienceLevel && parsed.data.primaryGoal);
+            const hasRequiredFields = !!(
+              parsed.data.experienceLevel && 
+              parsed.data.primaryGoal &&
+              parsed.data.preferredActivities &&
+              Array.isArray(parsed.data.preferredActivities) &&
+              parsed.data.preferredActivities.length > 0
+            );
             
             console.log('🔍 App.tsx - Data validation:', {
               hasRequiredFields,
               experienceLevel: parsed.data.experienceLevel,
-              primaryGoal: parsed.data.primaryGoal
+              primaryGoal: parsed.data.primaryGoal,
+              preferredActivities: parsed.data.preferredActivities,
+              hasPreferredActivities: !!(parsed.data.preferredActivities && Array.isArray(parsed.data.preferredActivities) && parsed.data.preferredActivities.length > 0)
             });
             
-            setAppState(prev => ({
-              ...prev,
-              profileData: parsed.data
-            }));
+            // If data is incomplete, try to provide fallbacks
+            if (!hasRequiredFields) {
+              console.warn('🔍 App.tsx - Incomplete profile data detected, providing fallbacks...');
+              const fallbackData = {
+                ...parsed.data,
+                preferredActivities: parsed.data.preferredActivities && Array.isArray(parsed.data.preferredActivities) && parsed.data.preferredActivities.length > 0
+                  ? parsed.data.preferredActivities
+                  : ['Walking/Power Walking', 'Yoga'] as Array<'Walking/Power Walking' | 'Running/Jogging' | 'Swimming' | 'Cycling/Mountain Biking' |
+                    'Rock Climbing/Bouldering' | 'Yoga' | 'Pilates' | 'Hiking' | 'Dancing' |
+                    'Team Sports' | 'Golf' | 'Martial Arts'>,
+                availableLocations: parsed.data.availableLocations && Array.isArray(parsed.data.availableLocations) && parsed.data.availableLocations.length > 0
+                  ? parsed.data.availableLocations
+                  : ['Home'] as Array<'Gym' | 'Home Gym' | 'Home' | 'Parks/Outdoor Spaces' | 'Swimming Pool' | 'Running Track'>,
+                availableEquipment: parsed.data.availableEquipment && Array.isArray(parsed.data.availableEquipment) && parsed.data.availableEquipment.length > 0
+                  ? parsed.data.availableEquipment
+                  : ['Body Weight'] as Array<'Barbells & Weight Plates' | 'Strength Machines' |
+                    'Cardio Machines (Treadmill, Elliptical, Bike)' | 'Functional Training Area (Kettlebells, Resistance Bands, TRX)' |
+                    'Stretching & Mobility Zone (Yoga Mats, Foam Rollers)' | 'Pool (If available)' |
+                    'Dumbbells' | 'Resistance Bands' | 'Kettlebells' |
+                    'Cardio Machine (Treadmill, Bike)' | 'Yoga Mat & Stretching Space' |
+                    'Body Weight' | 'Yoga Mat' | 'Suspension Trainer/TRX' | 'No equipment required'>
+              };
+              
+              // Save the corrected data back to localStorage
+              try {
+                const correctedData = {
+                  ...parsed,
+                  data: fallbackData
+                };
+                localStorage.setItem('profileData', JSON.stringify(correctedData));
+                console.log('✅ App.tsx: Corrected profile data saved to localStorage');
+              } catch (error) {
+                console.error('❌ App.tsx: Failed to save corrected profile data:', error);
+              }
+              
+              setAppState(prev => ({
+                ...prev,
+                profileData: fallbackData
+              }));
+            } else {
+              setAppState(prev => ({
+                ...prev,
+                profileData: parsed.data
+              }));
+            }
             
             // 🔍 DEBUG: Log what we're setting in state
             console.log('🔍 App.tsx - Setting profileData in state:', {
@@ -201,8 +260,52 @@ function AppContent() {
           return;
         }
 
+        // Check for preferred activities with better error handling
         if (!appState.profileData.preferredActivities || appState.profileData.preferredActivities.length === 0) {
           console.error('❌ App.tsx: Missing preferred activities in profile data');
+          console.error('App.tsx: Profile data debug info:', {
+            hasProfileData: !!appState.profileData,
+            profileDataKeys: appState.profileData ? Object.keys(appState.profileData) : 'null',
+            preferredActivities: appState.profileData?.preferredActivities,
+            preferredActivitiesType: typeof appState.profileData?.preferredActivities,
+            isArray: Array.isArray(appState.profileData?.preferredActivities)
+          });
+          
+          // Try to provide a fallback for missing preferred activities
+          if (appState.profileData) {
+            console.log('🔄 App.tsx: Attempting to provide fallback preferred activities...');
+            const fallbackActivities: Array<'Walking/Power Walking' | 'Running/Jogging' | 'Swimming' | 'Cycling/Mountain Biking' |
+              'Rock Climbing/Bouldering' | 'Yoga' | 'Pilates' | 'Hiking' | 'Dancing' |
+              'Team Sports' | 'Golf' | 'Martial Arts'> = ['Walking/Power Walking', 'Yoga'];
+            const updatedProfileData = {
+              ...appState.profileData,
+              preferredActivities: fallbackActivities
+            };
+            
+            // Update the state with fallback data
+            setAppState(prev => ({ ...prev, profileData: updatedProfileData }));
+            
+            // Save to localStorage
+            try {
+              const existingData = localStorage.getItem('profileData');
+              const parsed = existingData ? JSON.parse(existingData) : {};
+              const updatedData = {
+                ...parsed,
+                data: updatedProfileData
+              };
+              localStorage.setItem('profileData', JSON.stringify(updatedData));
+              console.log('✅ App.tsx: Fallback preferred activities saved');
+              
+              // Continue with the updated data
+              const userProfile = profileTransformers.convertProfileToUserProfileSimple(updatedProfileData);
+              await initialize(userProfile);
+              console.log('✅ App.tsx: AI service initialization completed with fallback data');
+              return;
+            } catch (error) {
+              console.error('❌ App.tsx: Failed to save fallback data:', error);
+              return;
+            }
+          }
           return;
         }
 
@@ -438,6 +541,11 @@ function AppContent() {
           </p>
         </div>
       </footer>
+      {/* AI Dev Tools (development only) */}
+      <AIDevTools />
+      
+      {/* AIContext Health Dashboard (development only) */}
+      <AIContextHealthDashboard isVisible={process.env.NODE_ENV === 'development'} />
     </div>
   );
 }

@@ -1,1 +1,2 @@
-export { usePhysicalStateValidation } from './usePhysicalStateValidation'; 
+export { usePhysicalStateValidation } from './usePhysicalStateValidation';
+export { useExerciseSelectionValidation } from './useExerciseSelectionValidation'; 

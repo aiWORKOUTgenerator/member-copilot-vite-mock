@@ -30,7 +30,7 @@ export const ExerciseGrid: React.FC<ExerciseGridProps> = ({
           <h3 className="text-lg font-semibold text-gray-900">Loading exercises...</h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[...Array(6)].map((_, index) => (
+          {[...Array(6)].map((_, index) => ( // eslint-disable-line no-magic-numbers
             <div
               key={index}
               className="p-4 border border-gray-200 rounded-lg animate-pulse"

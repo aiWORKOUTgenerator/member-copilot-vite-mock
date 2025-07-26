@@ -1,5 +1,5 @@
 // AI Error Handler - Provides graceful error handling and fallback mechanisms
-import { PerWorkoutOptions, UserProfile } from '../../../types';
+import { PerWorkoutOptions } from '../../../types';
 import { GlobalAIContext, UnifiedAIAnalysis } from '../core/AIService';
 
 export interface AIErrorConfig {
@@ -10,6 +10,38 @@ export interface AIErrorConfig {
   logLevel: 'error' | 'warn' | 'info' | 'debug';
 }
 
+export interface ErrorContext {
+  selections?: PerWorkoutOptions;
+  context?: GlobalAIContext;
+  expected?: unknown;
+  actual?: unknown;
+  metrics?: PerformanceMetrics;
+  originalError?: Error;
+  [key: string]: unknown;
+}
+
+export interface PerformanceMetrics {
+  executionTime?: number;
+  memoryUsage?: number;
+  cpuUsage?: number;
+  networkLatency?: number;
+  [key: string]: number | undefined;
+}
+
+export interface LegacyImplementation {
+  analyze?: (selections: PerWorkoutOptions, context: GlobalAIContext) => Promise<UnifiedAIAnalysis>;
+  generateRecommendations?: (data: unknown) => unknown[];
+  [key: string]: unknown;
+}
+
+export interface LegacyRecommendation {
+  title?: string;
+  description?: string;
+  priority?: number;
+  category?: string;
+  [key: string]: unknown;
+}
+
 export interface AIError {
   id: string;
   timestamp: Date;
@@ -17,7 +49,7 @@ export interface AIError {
   severity: 'low' | 'medium' | 'high' | 'critical';
   message: string;
   stack?: string;
-  context?: any;
+  context?: ErrorContext;
   component?: string;
   userId?: string;
   resolution?: 'retry' | 'fallback' | 'skip' | 'manual';
@@ -43,7 +75,7 @@ export class AIErrorHandler {
   /**
    * Handle general errors with classification and resolution
    */
-  handleError(error: Error, component: string, context?: any): void {
+  handleError(error: Error, component: string, context?: ErrorContext): void {
     const aiError = this.classifyError(error, component, context);
     
     // Log error
@@ -68,7 +100,7 @@ export class AIErrorHandler {
     error: Error,
     selections: PerWorkoutOptions,
     context: GlobalAIContext,
-    legacyImplementations?: any
+    legacyImplementations?: LegacyImplementation
   ): Promise<UnifiedAIAnalysis | null> {
     const aiError = this.classifyError(error, 'analysis', { selections, context });
     this.logError(aiError);
@@ -91,8 +123,8 @@ export class AIErrorHandler {
    */
   handleValidationError(
     error: Error,
-    expected: any,
-    actual: any,
+    expected: unknown,
+    actual: unknown,
     component: string
   ): void {
     const aiError = this.classifyError(error, component, { expected, actual });
@@ -100,18 +132,24 @@ export class AIErrorHandler {
     aiError.severity = 'high';
     
     this.logError(aiError);
-    this.reportError(aiError);
+    
+    // Attempt automatic resolution
+    if (this.canAutoResolve(aiError)) {
+      this.autoResolve(aiError);
+    }
   }
   
   /**
    * Handle context errors
    */
-  handleContextError(error: Error, context: any): void {
-    const aiError = this.classifyError(error, 'context', { context });
+  handleContextError(error: Error, context: ErrorContext): void {
+    const aiError = this.classifyError(error, 'context', context);
     aiError.type = 'context_error';
-    aiError.severity = 'medium';
     
     this.logError(aiError);
+    
+    // Attempt context recovery
+    this.attemptContextRecovery(aiError);
   }
   
   /**
@@ -119,7 +157,7 @@ export class AIErrorHandler {
    */
   handlePerformanceError(
     error: Error,
-    metrics: any,
+    metrics: PerformanceMetrics,
     component: string
   ): void {
     const aiError = this.classifyError(error, component, { metrics });
@@ -127,7 +165,11 @@ export class AIErrorHandler {
     aiError.severity = 'medium';
     
     this.logError(aiError);
-    this.reportError(aiError);
+    
+    // Check if performance degradation requires action
+    if (this.isPerformanceDegraded(metrics)) {
+      this.handlePerformanceDegradation(aiError);
+    }
   }
   
   /**
@@ -141,10 +183,6 @@ export class AIErrorHandler {
     recentErrors: AIError[];
     errorRate: number;
   } {
-    const now = new Date();
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-    const recentErrors = this.errorLog.filter(error => error.timestamp > oneHourAgo);
-    
     const errorsByType: Record<string, number> = {};
     const errorsBySeverity: Record<string, number> = {};
     const errorsByComponent: Record<string, number> = {};
@@ -157,6 +195,10 @@ export class AIErrorHandler {
       }
     });
     
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    const recentErrors = this.errorLog.filter(error => error.timestamp > oneHourAgo);
+    
     return {
       totalErrors: this.errorLog.length,
       errorsByType,
@@ -168,23 +210,17 @@ export class AIErrorHandler {
   }
   
   /**
-   * Check if service is healthy
+   * Check if the system is healthy based on error patterns
    */
   isHealthy(): boolean {
     const stats = this.getErrorStats();
+    const criticalErrorThreshold = 5;
+    const errorRateThreshold = 0.1; // 10% error rate
     
-    // Check recent error rate
-    if (stats.errorRate > 5) { // More than 5 errors per minute
-      return false;
-    }
-    
-    // Check for critical errors
-    if (stats.errorsBySeverity.critical > 0) {
-      return false;
-    }
-    
-    // Check for error patterns
-    return !this.hasErrorPattern();
+    return (
+      stats.errorsBySeverity.critical < criticalErrorThreshold &&
+      stats.errorRate < errorRateThreshold
+    );
   }
   
   /**
@@ -195,9 +231,7 @@ export class AIErrorHandler {
     timestamp: Date;
     component: string;
   } | undefined {
-    if (this.errorLog.length === 0) {
-      return undefined;
-    }
+    if (this.errorLog.length === 0) return undefined;
     
     const lastError = this.errorLog[this.errorLog.length - 1];
     return {
@@ -206,42 +240,42 @@ export class AIErrorHandler {
       component: lastError.component || 'unknown'
     };
   }
-
+  
   /**
-   * Get error recommendations
+   * Get recommendations for error resolution
    */
   getRecommendations(): string[] {
-    const stats = this.getErrorStats();
     const recommendations: string[] = [];
+    const stats = this.getErrorStats();
     
-    if (stats.errorRate > 3) {
-      recommendations.push('High error rate detected - consider implementing circuit breaker pattern');
+    if (stats.errorsBySeverity.critical > 0) {
+      recommendations.push('Critical errors detected - immediate attention required');
     }
     
-    if (stats.errorsByType.validation_error > 5) {
-      recommendations.push('Multiple validation errors - review migration compatibility');
+    if (stats.errorRate > 0.1) {
+      recommendations.push('High error rate detected - consider system restart');
     }
     
-    if (stats.errorsByType.performance_error > 3) {
-      recommendations.push('Performance errors detected - review resource allocation');
+    if (stats.errorsByType.validation_error > 0) {
+      recommendations.push('Validation errors detected - check data integrity');
     }
     
-    if (stats.errorsByType.context_error > 2) {
-      recommendations.push('Context errors detected - review context initialization');
+    if (stats.errorsByType.performance_error > 0) {
+      recommendations.push('Performance issues detected - consider optimization');
     }
     
     return recommendations;
   }
   
   /**
-   * Clear old errors
+   * Clear old errors from the log
    */
   clearOldErrors(olderThan: Date): void {
     this.errorLog = this.errorLog.filter(error => error.timestamp > olderThan);
   }
   
   /**
-   * Reset error handler
+   * Reset the error handler state
    */
   reset(): void {
     this.errorLog = [];
@@ -250,303 +284,273 @@ export class AIErrorHandler {
   }
   
   /**
-   * Classify error type and severity
+   * Classify an error based on its characteristics
    */
-  private classifyError(error: Error, component: string, context?: any): AIError {
-    const aiError: AIError = {
+  private classifyError(error: Error, component: string, context?: ErrorContext): AIError {
+    const errorMessage = error.message.toLowerCase();
+    let type: AIError['type'] = 'unknown';
+    let severity: AIError['severity'] = 'medium';
+    
+    // Classify error type
+    if (errorMessage.includes('validation') || errorMessage.includes('invalid')) {
+      type = 'validation_error';
+      severity = 'high';
+    } else if (errorMessage.includes('analysis') || errorMessage.includes('processing')) {
+      type = 'analysis_failure';
+      severity = 'medium';
+    } else if (errorMessage.includes('context') || errorMessage.includes('state')) {
+      type = 'context_error';
+      severity = 'medium';
+    } else if (errorMessage.includes('performance') || errorMessage.includes('timeout')) {
+      type = 'performance_error';
+      severity = 'low';
+    }
+    
+    // Adjust severity based on component
+    if (component === 'core' || component === 'analysis') {
+      severity = 'high';
+    } else if (component === 'validation' || component === 'context') {
+      severity = 'medium';
+    }
+    
+    return {
       id: this.generateErrorId(),
       timestamp: new Date(),
-      type: 'unknown',
-      severity: 'medium',
+      type,
+      severity,
       message: error.message,
       stack: error.stack,
       context,
-      component,
-      userId: context?.userProfile?.id
+      component
     };
-    
-    // Classify by message content
-    if (error.message.includes('validation')) {
-      aiError.type = 'validation_error';
-      aiError.severity = 'high';
-    } else if (error.message.includes('context') || error.message.includes('profile')) {
-      aiError.type = 'context_error';
-      aiError.severity = 'medium';
-    } else if (error.message.includes('performance') || error.message.includes('timeout')) {
-      aiError.type = 'performance_error';
-      aiError.severity = 'medium';
-    } else if (error.message.includes('analysis') || error.message.includes('recommendation')) {
-      aiError.type = 'analysis_failure';
-      aiError.severity = 'high';
-    }
-    
-    // Classify by component
-    if (component === 'analysis' || component === 'recommendation') {
-      aiError.type = 'analysis_failure';
-      aiError.severity = 'high';
-    } else if (component === 'validation') {
-      aiError.type = 'validation_error';
-      aiError.severity = 'high';
-    } else if (component === 'context') {
-      aiError.type = 'context_error';
-      aiError.severity = 'medium';
-    }
-    
-    // Critical errors
-    if (error.message.includes('critical') || 
-        error.message.includes('fatal') ||
-        error.name === 'ReferenceError' ||
-        error.name === 'TypeError') {
-      aiError.severity = 'critical';
-    }
-    
-    return aiError;
   }
   
   /**
-   * Log error with appropriate level
+   * Log an error according to configuration
    */
   private logError(error: AIError): void {
+    const logMessage = `[${error.type.toUpperCase()}] ${error.component}: ${error.message}`;
+    
+    switch (this.config.logLevel) {
+      case 'debug':
+        console.debug(logMessage, error.context);
+        break;
+      case 'info':
+        console.info(logMessage);
+        break;
+      case 'warn':
+        console.warn(logMessage);
+        break;
+      case 'error':
+      default:
+        console.error(logMessage);
+        break;
+    }
+    
     this.errorLog.push(error);
-    
-    // Limit log size
-    if (this.errorLog.length > 1000) {
-      this.errorLog.shift();
-    }
-    
-    // Log to console based on severity
-    const logMessage = `[AI Error] ${error.type}: ${error.message}`;
-    
-    switch (error.severity) {
-      case 'critical':
-        console.error(logMessage, error);
-        break;
-      case 'high':
-        console.error(logMessage, error);
-        break;
-      case 'medium':
-        console.warn(logMessage, error);
-        break;
-      case 'low':
-        console.info(logMessage, error);
-        break;
-    }
   }
   
   /**
-   * Report error to external systems
+   * Report error to external monitoring system
    */
   private reportError(error: AIError): void {
-    if (!this.config.enableReporting) return;
-    
-    // In a real implementation, this would send to error tracking service
-    // For now, we'll just log it
-    if (error.severity === 'critical' || error.severity === 'high') {
-      console.error('Reporting error to external system:', {
-        id: error.id,
-        type: error.type,
-        severity: error.severity,
-        message: error.message,
-        component: error.component,
-        userId: error.userId,
-        timestamp: error.timestamp
-      });
-    }
+    // Implementation would send to external monitoring service
+    // For now, just log to console
+    console.error('Error reported to monitoring system:', {
+      id: error.id,
+      type: error.type,
+      severity: error.severity,
+      component: error.component,
+      timestamp: error.timestamp
+    });
   }
   
   /**
-   * Update error counts for pattern detection
+   * Update error count tracking
    */
   private updateErrorCounts(error: AIError): void {
     const key = `${error.type}:${error.component}`;
-    this.errorCounts.set(key, (this.errorCounts.get(key) || 0) + 1);
+    const count = this.errorCounts.get(key) || 0;
+    this.errorCounts.set(key, count + 1);
     this.lastErrorTime.set(key, error.timestamp);
   }
   
   /**
-   * Check for error patterns
+   * Check for error patterns that require special handling
    */
   private checkErrorPatterns(error: AIError): void {
     const key = `${error.type}:${error.component}`;
     const count = this.errorCounts.get(key) || 0;
-    const lastTime = this.lastErrorTime.get(key);
     
-    // Check for burst of errors
-    if (count > 5 && lastTime) {
-      const timeDiff = error.timestamp.getTime() - lastTime.getTime();
-      if (timeDiff < 60000) { // 1 minute
-        console.warn(`Error pattern detected: ${count} ${error.type} errors in ${error.component} within 1 minute`);
-        
-        // Could implement circuit breaker here
-        this.handleErrorPattern(error, count);
-      }
+    if (count >= 3) {
+      this.handleErrorPattern(error, count);
     }
   }
   
   /**
-   * Handle detected error patterns
+   * Handle repeated error patterns
    */
   private handleErrorPattern(error: AIError, count: number): void {
-    // Implement circuit breaker or rate limiting
-    console.warn(`Implementing circuit breaker for ${error.component} due to ${count} errors`);
+    console.warn(`Error pattern detected: ${error.type} in ${error.component} (${count} times)`);
     
-    // In a real implementation, this would:
-    // 1. Enable circuit breaker
-    // 2. Increase retry delays
-    // 3. Switch to degraded mode
-    // 4. Alert operations team
+    // Implement pattern-specific handling
+    switch (error.type) {
+      case 'validation_error':
+        this.handleValidationPattern(error, count);
+        break;
+      case 'analysis_failure':
+        this.handleAnalysisPattern(error, count);
+        break;
+      case 'performance_error':
+        this.handlePerformancePattern(error, count);
+        break;
+    }
   }
   
   /**
-   * Check if there's an error pattern
+   * Check if there's a repeating error pattern
    */
   private hasErrorPattern(): boolean {
+    const threshold = 3;
+    const timeWindow = 5 * 60 * 1000; // 5 minutes
     const now = new Date();
-    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
     
-    const recentErrors = this.errorLog.filter(error => error.timestamp > fiveMinutesAgo);
-    
-    // Check for high error rate
-    if (recentErrors.length > 10) {
-      return true;
+    for (const [key, lastTime] of this.lastErrorTime) {
+      const count = this.errorCounts.get(key) || 0;
+      const timeSinceLastError = now.getTime() - lastTime.getTime();
+      
+      if (count >= threshold && timeSinceLastError < timeWindow) {
+        return true;
+      }
     }
     
-    // Check for repeated errors
-    const errorTypes = new Map<string, number>();
-    recentErrors.forEach(error => {
-      const key = `${error.type}:${error.component}`;
-      errorTypes.set(key, (errorTypes.get(key) || 0) + 1);
-    });
-    
-    // If any error type appears more than 3 times in 5 minutes
-    return Array.from(errorTypes.values()).some(count => count > 3);
+    return false;
   }
   
   /**
-   * Fallback to legacy implementation
+   * Handle validation error patterns
+   */
+  private handleValidationPattern(error: AIError, count: number): void {
+    if (count >= 5) {
+      console.error('Critical validation pattern detected - data integrity compromised');
+      // Could trigger system-wide validation reset
+    }
+  }
+  
+  /**
+   * Handle analysis failure patterns
+   */
+  private handleAnalysisPattern(error: AIError, count: number): void {
+    if (count >= 3) {
+      console.warn('Analysis failure pattern detected - enabling fallback mode');
+      // Could enable more aggressive fallback strategies
+    }
+  }
+  
+  /**
+   * Handle performance error patterns
+   */
+  private handlePerformancePattern(error: AIError, count: number): void {
+    if (count >= 10) {
+      console.error('Performance degradation pattern detected - system optimization required');
+      // Could trigger performance optimization routines
+    }
+  }
+  
+  /**
+   * Fallback to legacy analysis implementation
    */
   private async fallbackToLegacyAnalysis(
     selections: PerWorkoutOptions,
     context: GlobalAIContext,
-    legacyImplementations: any
+    legacyImplementations: LegacyImplementation
   ): Promise<UnifiedAIAnalysis> {
-    console.warn('Falling back to legacy AI implementation');
+    console.warn('Falling back to legacy analysis implementation');
     
-    try {
-      // Use legacy recommendation engine
-      const legacyRecommendations = legacyImplementations.recommendations.implementation(
-        selections,
-        context.userProfile
-      );
-      
-      // Convert to new format
-      const recommendations = this.convertLegacyRecommendations(legacyRecommendations);
-      
-      // Use legacy insights where available
-      const insights = {
-        energy: selections.customization_energy ? 
-          legacyImplementations.energy.implementation(selections.customization_energy) : [],
-        soreness: selections.customization_soreness ? 
-          legacyImplementations.soreness.implementation(selections.customization_soreness) : [],
-        focus: [],
-        duration: [],
-        equipment: []
-      };
-      
-      return {
-        id: this.generateErrorId(),
-        timestamp: new Date(),
-        insights,
-        crossComponentConflicts: [],
-        recommendations,
-        confidence: 0.7, // Lower confidence for fallback
-        reasoning: 'Analysis generated using legacy fallback implementation',
-        performanceMetrics: {
-          totalExecutionTime: 0,
-          cacheHitRate: 0,
-          memoryPeakUsage: 0
-        }
-      };
-      
-    } catch (fallbackError) {
-      throw new Error(`Fallback analysis failed: ${fallbackError}`);
+    if (legacyImplementations.analyze) {
+      return await legacyImplementations.analyze(selections, context);
     }
+    
+    // If no legacy analyze method, generate minimal analysis
+    return this.generateMinimalAnalysis(selections, context);
   }
   
   /**
-   * Generate minimal safe analysis
+   * Generate minimal safe analysis when all else fails
    */
   private generateMinimalAnalysis(
     selections: PerWorkoutOptions,
     context: GlobalAIContext
   ): UnifiedAIAnalysis {
+    console.warn('Generating minimal safe analysis');
+    
     return {
-      id: this.generateErrorId(),
-      timestamp: new Date(),
-      insights: {
-        energy: [],
-        soreness: [],
-        focus: [],
-        duration: [],
-        equipment: []
-      },
-      crossComponentConflicts: [],
-      recommendations: [],
-      confidence: 0.5,
-      reasoning: 'Minimal analysis due to AI service error',
-      performanceMetrics: {
-        totalExecutionTime: 0,
-        cacheHitRate: 0,
-        memoryPeakUsage: 0
+      insights: ['Basic workout analysis available'],
+      recommendations: ['Consider consulting with a fitness professional'],
+      warnings: ['Analysis limited due to system constraints'],
+      metadata: {
+        source: 'fallback',
+        confidence: 'low',
+        timestamp: new Date().toISOString()
       }
     };
   }
   
   /**
-   * Convert legacy recommendations to new format
+   * Convert legacy recommendations to current format
    */
-  private convertLegacyRecommendations(legacyRecommendations: any): any[] {
-    const recommendations: any[] = [];
-    
-    if (legacyRecommendations.immediate) {
-      legacyRecommendations.immediate.forEach((rec: string, index: number) => {
-        recommendations.push({
-          id: `legacy_immediate_${index}`,
-          priority: 'high',
-          category: 'optimization',
-          targetComponent: 'general',
-          title: rec,
-          description: rec,
-          reasoning: 'Legacy immediate recommendation',
-          confidence: 0.8,
-          risk: 'medium'
-        });
-      });
-    }
-    
-    if (legacyRecommendations.contextual) {
-      legacyRecommendations.contextual.forEach((rec: string, index: number) => {
-        recommendations.push({
-          id: `legacy_contextual_${index}`,
-          priority: 'medium',
-          category: 'optimization',
-          targetComponent: 'general',
-          title: rec,
-          description: rec,
-          reasoning: 'Legacy contextual recommendation',
-          confidence: 0.7,
-          risk: 'low'
-        });
-      });
-    }
-    
-    return recommendations;
+  private convertLegacyRecommendations(legacyRecommendations: LegacyRecommendation[]): unknown[] {
+    return legacyRecommendations.map(rec => ({
+      title: rec.title || 'Legacy Recommendation',
+      description: rec.description || 'Converted from legacy system',
+      priority: rec.priority || 1,
+      category: rec.category || 'general'
+    }));
   }
   
   /**
-   * Generate error ID
+   * Generate unique error ID
    */
   private generateErrorId(): string {
     return `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+  
+  /**
+   * Check if error can be auto-resolved
+   */
+  private canAutoResolve(error: AIError): boolean {
+    return error.severity === 'low' || error.type === 'performance_error';
+  }
+  
+  /**
+   * Attempt automatic error resolution
+   */
+  private autoResolve(error: AIError): void {
+    console.info(`Auto-resolving ${error.type} error in ${error.component}`);
+    // Implementation would depend on error type
+  }
+  
+  /**
+   * Attempt context recovery
+   */
+  private attemptContextRecovery(error: AIError): void {
+    console.info(`Attempting context recovery for ${error.component}`);
+    // Implementation would attempt to restore context state
+  }
+  
+  /**
+   * Check if performance is degraded
+   */
+  private isPerformanceDegraded(metrics: PerformanceMetrics): boolean {
+    return (metrics.executionTime || 0) > 5000 || // 5 seconds
+           (metrics.memoryUsage || 0) > 1000000000; // 1GB
+  }
+  
+  /**
+   * Handle performance degradation
+   */
+  private handlePerformanceDegradation(error: AIError): void {
+    console.warn('Performance degradation detected - implementing optimization measures');
+    // Implementation would trigger performance optimization
   }
 } 

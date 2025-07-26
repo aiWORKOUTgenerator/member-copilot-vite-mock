@@ -9,11 +9,44 @@ import {
 } from '../types/core';
 import { ProfileData } from '../components/Profile/types/profile.types';
 import { UserProfile, FitnessLevel } from '../types/user';
-import {
-  isValidProfileData,
-  isValidUserProfile,
-  validateProfileConversion
-} from '../types/guards';
+
+// Type definitions for data transformation
+export type SorenessData = string[] | CategoryRatingData | undefined;
+export type DurationData = number | DurationConfigurationData | undefined;
+export type FocusData = string | WorkoutFocusConfigurationData | undefined;
+export type EquipmentData = string[] | OptionDefinition | undefined;
+export type AreasData = string[] | OptionDefinition | undefined;
+export type TrainingLoadDataInput = TrainingLoadData | undefined;
+
+export interface LegacyDataFormat {
+  energy?: number;
+  soreness?: string[] | Record<string, { selected: boolean; rating: number }>;
+  focus?: string;
+  duration?: number;
+  equipment?: string[];
+  areas?: string[];
+  trainingLoad?: {
+    activities?: Array<{ type: string; intensity: string; duration: number; date: string }>;
+    volume?: number;
+    intensity?: string;
+  };
+  [key: string]: unknown;
+}
+
+export interface LegacyOutputFormat {
+  energy: number;
+  soreness: string[];
+  focus: string;
+  duration: number;
+  equipment: string[];
+  areas: string[];
+  trainingLoad: {
+    recentActivities: Array<{ type: string; intensity: string; duration: number; date: string }>;
+    weeklyVolume: number;
+    averageIntensity: string;
+  };
+  [key: string]: unknown;
+}
 
 /**
  * Data transformation utilities for converting between different PerWorkoutOptions formats
@@ -24,7 +57,7 @@ export const dataTransformers = {
   /**
    * Extract soreness areas from CategoryRatingData or string array
    */
-  extractSorenessAreas: (data: string[] | CategoryRatingData | undefined): string[] => {
+  extractSorenessAreas: (data: SorenessData): string[] => {
     if (!data) return [];
 
     if (Array.isArray(data)) {
@@ -79,7 +112,7 @@ export const dataTransformers = {
   /**
    * Extract duration value from number or DurationConfigurationData
    */
-  extractDurationValue: (data: number | DurationConfigurationData | undefined): number => {
+  extractDurationValue: (data: DurationData): number => {
     if (!data) return 0;
 
     if (typeof data === 'number') {
@@ -87,8 +120,8 @@ export const dataTransformers = {
     }
 
     // Handle DurationConfigurationData format
-    if (typeof data === 'object' && data !== null && 'totalDuration' in data) {
-      return data.totalDuration || 0;
+    if (typeof data === 'object' && data !== null && 'duration' in data) {
+      return (data as DurationConfigurationData).duration || 0;
     }
 
     return 0;
@@ -97,8 +130,8 @@ export const dataTransformers = {
   /**
    * Extract focus value from string or WorkoutFocusConfigurationData
    */
-  extractFocusValue: (data: string | WorkoutFocusConfigurationData | undefined): string => {
-    if (!data) return '';
+  extractFocusValue: (data: FocusData): string => {
+    if (!data) return 'strength';
 
     if (typeof data === 'string') {
       return data;
@@ -106,28 +139,27 @@ export const dataTransformers = {
 
     // Handle WorkoutFocusConfigurationData format
     if (typeof data === 'object' && data !== null && 'focus' in data) {
-      return data.focus || '';
+      return data.focus || 'strength';
     }
 
-    return '';
+    return 'strength';
   },
 
   /**
-   * Extract equipment list from string array or EquipmentSelectionData
+   * Extract equipment list from string array or OptionDefinition
    */
-  extractEquipmentList: (data: string[] | OptionDefinition | undefined): string[] => {
+  extractEquipmentList: (data: EquipmentData): string[] => {
     if (!data) return [];
 
     if (Array.isArray(data)) {
       return data;
     }
 
-    // Handle EquipmentSelectionData format
+    // Handle OptionDefinition format
     if (typeof data === 'object' && data !== null) {
       if ('specificEquipment' in data && Array.isArray(data.specificEquipment)) {
         return data.specificEquipment;
       }
-
       if ('equipment' in data && Array.isArray(data.equipment)) {
         return data.equipment;
       }
@@ -137,21 +169,20 @@ export const dataTransformers = {
   },
 
   /**
-   * Extract areas list from string array or HierarchicalSelectionData
+   * Extract areas list from string array or OptionDefinition
    */
-  extractAreasList: (data: string[] | OptionDefinition | undefined): string[] => {
+  extractAreasList: (data: AreasData): string[] => {
     if (!data) return [];
 
     if (Array.isArray(data)) {
       return data;
     }
 
-    // Handle HierarchicalSelectionData format
+    // Handle OptionDefinition format
     if (typeof data === 'object' && data !== null) {
       if ('selectedAreas' in data && Array.isArray(data.selectedAreas)) {
         return data.selectedAreas;
       }
-
       if ('areas' in data && Array.isArray(data.areas)) {
         return data.areas;
       }
@@ -161,16 +192,26 @@ export const dataTransformers = {
   },
 
   /**
-   * Normalize PerWorkoutOptions to ensure consistent format
+   * Normalize PerWorkoutOptions to ensure consistent structure
    */
   normalizePerWorkoutOptions: (options: Partial<PerWorkoutOptions>): PerWorkoutOptions => {
-    // Extract injury regions and use them for areas if injury data is present
-    const injuryRegions = dataTransformers.extractInjuryRegions(options.customization_injury);
-    const areas = injuryRegions.length > 0 ? injuryRegions : dataTransformers.extractAreasList(options.customization_areas);
+    const areas = dataTransformers.extractAreasList(options.customization_areas);
+    
+    // Convert primitive energy to CategoryRatingData format
+    const energyData: CategoryRatingData = typeof options.customization_energy === 'number' 
+      ? { rating: options.customization_energy, categories: [] }
+      : options.customization_energy || { rating: 3, categories: [] };
+    
+    // Convert primitive soreness to CategoryRatingData format
+    const sorenessAreas = dataTransformers.extractSorenessAreas(options.customization_soreness);
+    const sorenessData: CategoryRatingData = {
+      rating: sorenessAreas.length > 0 ? 5 : 1,
+      categories: sorenessAreas
+    };
     
     return {
-      customization_energy: typeof options.customization_energy === 'number' ? options.customization_energy : 3,
-      customization_soreness: dataTransformers.extractSorenessAreas(options.customization_soreness) as any,
+      customization_energy: energyData,
+      customization_soreness: sorenessData,
       customization_focus: dataTransformers.extractFocusValue(options.customization_focus),
       customization_duration: dataTransformers.extractDurationValue(options.customization_duration),
       customization_equipment: dataTransformers.extractEquipmentList(options.customization_equipment),
@@ -184,7 +225,7 @@ export const dataTransformers = {
    * Validate data structure and return safe defaults if invalid
    */
   validateAndTransform: {
-    soreness: (data: any): string[] => {
+    soreness: (data: SorenessData): string[] => {
       try {
         return dataTransformers.extractSorenessAreas(data);
       } catch (error) {
@@ -193,7 +234,7 @@ export const dataTransformers = {
       }
     },
 
-    duration: (data: any): number => {
+    duration: (data: DurationData): number => {
       try {
         const result = dataTransformers.extractDurationValue(data);
         return result || 30; // Return 30 if result is 0 or undefined
@@ -203,7 +244,7 @@ export const dataTransformers = {
       }
     },
 
-    focus: (data: any): string => {
+    focus: (data: FocusData): string => {
       try {
         return dataTransformers.extractFocusValue(data);
       } catch (error) {
@@ -212,7 +253,7 @@ export const dataTransformers = {
       }
     },
 
-    equipment: (data: any): string[] => {
+    equipment: (data: EquipmentData): string[] => {
       try {
         return dataTransformers.extractEquipmentList(data);
       } catch (error) {
@@ -221,7 +262,7 @@ export const dataTransformers = {
       }
     },
 
-    areas: (data: any): string[] => {
+    areas: (data: AreasData): string[] => {
       try {
         return dataTransformers.extractAreasList(data);
       } catch (error) {
@@ -230,7 +271,7 @@ export const dataTransformers = {
       }
     },
 
-    trainingLoad: (data: any): TrainingLoadData => {
+    trainingLoad: (data: TrainingLoadDataInput): TrainingLoadData => {
       try {
         if (!data) {
           return {
@@ -270,7 +311,7 @@ export const dataTransformers = {
    * Check if data has valid structure for specific type
    */
   isValidFormat: {
-    soreness: (data: any): data is string[] | CategoryRatingData => {
+    soreness: (data: SorenessData): data is string[] | CategoryRatingData => {
       if (!data) return false;
       if (Array.isArray(data)) return true;
       if (typeof data === 'object' && data !== null) {
@@ -281,7 +322,7 @@ export const dataTransformers = {
       return false;
     },
 
-    duration: (data: any): data is number | DurationConfigurationData => {
+    duration: (data: DurationData): data is number | DurationConfigurationData => {
       if (!data) return false;
       if (typeof data === 'number') return true;
       if (typeof data === 'object' && data !== null) {
@@ -290,7 +331,7 @@ export const dataTransformers = {
       return false;
     },
 
-    focus: (data: any): data is string | WorkoutFocusConfigurationData => {
+    focus: (data: FocusData): data is string | WorkoutFocusConfigurationData => {
       if (!data) return false;
       if (typeof data === 'string') return true;
       if (typeof data === 'object' && data !== null) {
@@ -299,7 +340,7 @@ export const dataTransformers = {
       return false;
     },
 
-    equipment: (data: any): data is string[] | OptionDefinition => {
+    equipment: (data: EquipmentData): data is string[] | OptionDefinition => {
       if (!data) return false;
       if (Array.isArray(data)) return true;
       if (typeof data === 'object' && data !== null) {
@@ -309,7 +350,7 @@ export const dataTransformers = {
       return false;
     },
 
-    areas: (data: any): data is string[] | OptionDefinition => {
+    areas: (data: AreasData): data is string[] | OptionDefinition => {
       if (!data) return false;
       if (Array.isArray(data)) return true;
       if (typeof data === 'object' && data !== null) {
@@ -319,7 +360,7 @@ export const dataTransformers = {
       return false;
     },
 
-    trainingLoad: (data: any): data is TrainingLoadData => {
+    trainingLoad: (data: TrainingLoadDataInput): data is TrainingLoadData => {
       if (!data) return false;
       if (typeof data === 'object' && data !== null) {
         return (
@@ -593,8 +634,8 @@ export const profileTransformers = {
       const workoutStyle = profileTransformers.convertGoalToWorkoutStyle(profileData.primaryGoal);
       const intensityPreference = profileData.calculatedWorkoutIntensity;
       const timeConstraints = profileTransformers.convertDurationToTimeConstraints(profileData.preferredDuration || '30-45 min');
-      const equipmentConstraints = profileTransformers.convertEquipmentToNormalized(profileData.availableEquipment || ['bodyweight']);
-      const locationConstraints = profileTransformers.convertLocationsToNormalized(profileData.availableLocations || ['home']);
+      const equipmentConstraints = profileTransformers.convertEquipmentToNormalized(profileData.availableEquipment || ['Body Weight']);
+      const locationConstraints = profileTransformers.convertLocationsToNormalized(profileData.availableLocations || ['Home']);
       const injuries = profileTransformers.convertInjuriesToFiltered(profileData.injuries || []);
 
       // Create transformed profile with all required fields
@@ -724,24 +765,33 @@ export const legacyTransformers = {
   /**
    * Convert old format to new format (for migration)
    */
-  convertLegacyFormat: (legacyData: any): Partial<PerWorkoutOptions> => {
+  convertLegacyFormat: (legacyData: LegacyDataFormat): Partial<PerWorkoutOptions> => {
     const converted: Partial<PerWorkoutOptions> = {};
 
     // Handle legacy energy format
     if (legacyData.energy !== undefined) {
-      converted.customization_energy = typeof legacyData.energy === 'number' ? legacyData.energy : 3;
+      const energyValue = typeof legacyData.energy === 'number' ? legacyData.energy : 3;
+      converted.customization_energy = { rating: energyValue, categories: [] };
     }
 
     // Handle legacy soreness format
     if (legacyData.soreness !== undefined) {
+      let sorenessCategories: string[] = [];
       if (Array.isArray(legacyData.soreness)) {
-        converted.customization_soreness = legacyData.soreness as any;
-      } else if (typeof legacyData.soreness === 'object') {
+        sorenessCategories = legacyData.soreness;
+      } else if (typeof legacyData.soreness === 'object' && legacyData.soreness !== null) {
         // Convert object format to array
-        converted.customization_soreness = Object.keys(legacyData.soreness).filter(
-          key => legacyData.soreness[key] === true
-        ) as any;
+        sorenessCategories = Object.keys(legacyData.soreness).filter(
+          key => {
+            const sorenessObj = legacyData.soreness as Record<string, { selected: boolean; rating: number }>;
+            return sorenessObj[key] && sorenessObj[key].selected === true;
+          }
+        );
       }
+      converted.customization_soreness = { 
+        rating: sorenessCategories.length > 0 ? 5 : 1, 
+        categories: sorenessCategories 
+      };
     }
 
     // Handle legacy focus format
@@ -770,14 +820,19 @@ export const legacyTransformers = {
   /**
    * Convert new format to legacy format (for backward compatibility)
    */
-  convertToLegacyFormat: (newData: PerWorkoutOptions): any => {
+  convertToLegacyFormat: (newData: PerWorkoutOptions): LegacyOutputFormat => {
     return {
-      energy: newData.customization_energy,
-      soreness: newData.customization_soreness,
-      focus: newData.customization_focus,
-      duration: newData.customization_duration,
-      equipment: newData.customization_equipment,
-      areas: newData.customization_areas
+      energy: newData.customization_energy?.rating || 3,
+      soreness: newData.customization_soreness?.categories || [],
+      focus: dataTransformers.extractFocusValue(newData.customization_focus),
+      duration: dataTransformers.extractDurationValue(newData.customization_duration),
+      equipment: newData.customization_equipment || [],
+      areas: newData.customization_areas || [],
+      trainingLoad: {
+        recentActivities: newData.customization_trainingLoad?.recentActivities || [],
+        weeklyVolume: newData.customization_trainingLoad?.weeklyVolume || 0,
+        averageIntensity: newData.customization_trainingLoad?.averageIntensity || 'moderate'
+      }
     };
   }
 };

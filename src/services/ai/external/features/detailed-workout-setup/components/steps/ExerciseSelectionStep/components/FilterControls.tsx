@@ -16,6 +16,92 @@ interface FilterControlsProps {
   resultCount: number;
 }
 
+interface FilterPanelProps {
+  selectedCategory: string;
+  selectedDifficulty: string;
+  onCategoryChange: (category: string) => void;
+  onDifficultyChange: (difficulty: string) => void;
+  disabled?: boolean;
+}
+
+const FilterPanel: React.FC<FilterPanelProps> = ({
+  selectedCategory,
+  selectedDifficulty,
+  onCategoryChange,
+  onDifficultyChange,
+  disabled = false
+}) => {
+  return (
+    <div className="p-4 bg-gray-50 rounded-lg space-y-4">
+      {/* Category Filter */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Category
+        </label>
+        <select
+          value={selectedCategory}
+          onChange={(e) => onCategoryChange(e.target.value)}
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500"
+          disabled={disabled}
+        >
+          {CATEGORIES.map(category => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Difficulty Filter */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Difficulty
+        </label>
+        <select
+          value={selectedDifficulty}
+          onChange={(e) => onDifficultyChange(e.target.value)}
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500"
+          disabled={disabled}
+        >
+          {DIFFICULTIES.map(difficulty => (
+            <option key={difficulty} value={difficulty}>
+              {difficulty === 'All' ? 'All Difficulties' : difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Active Filters Summary */}
+      {(selectedCategory !== 'All' || selectedDifficulty !== 'All') && (
+        <div className="flex flex-wrap gap-2 pt-2">
+          {selectedCategory !== 'All' && (
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+              Category: {selectedCategory}
+              <button
+                onClick={() => onCategoryChange('All')}
+                className="ml-1 hover:text-purple-600"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+          {selectedDifficulty !== 'All' && (
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+              Difficulty: {selectedDifficulty}
+              <button
+                onClick={() => onDifficultyChange('All')}
+                className="ml-1 hover:text-purple-600"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const FilterControls: React.FC<FilterControlsProps> = ({
   searchTerm,
   selectedCategory,
@@ -76,73 +162,13 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
 
       {/* Filter Panel */}
       {showFilters && (
-        <div className="p-4 bg-gray-50 rounded-lg space-y-4">
-          {/* Category Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Category
-            </label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => onCategoryChange(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500"
-              disabled={disabled}
-            >
-              {CATEGORIES.map(category => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Difficulty Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Difficulty
-            </label>
-            <select
-              value={selectedDifficulty}
-              onChange={(e) => onDifficultyChange(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500"
-              disabled={disabled}
-            >
-              {DIFFICULTIES.map(difficulty => (
-                <option key={difficulty} value={difficulty}>
-                  {difficulty === 'All' ? 'All Difficulties' : difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Active Filters Summary */}
-          {(selectedCategory !== 'All' || selectedDifficulty !== 'All') && (
-            <div className="flex flex-wrap gap-2 pt-2">
-              {selectedCategory !== 'All' && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
-                  Category: {selectedCategory}
-                  <button
-                    onClick={() => onCategoryChange('All')}
-                    className="ml-1 hover:text-purple-600"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              )}
-              {selectedDifficulty !== 'All' && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
-                  Difficulty: {selectedDifficulty}
-                  <button
-                    onClick={() => onDifficultyChange('All')}
-                    className="ml-1 hover:text-purple-600"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              )}
-            </div>
-          )}
-        </div>
+        <FilterPanel
+          selectedCategory={selectedCategory}
+          selectedDifficulty={selectedDifficulty}
+          onCategoryChange={onCategoryChange}
+          onDifficultyChange={onDifficultyChange}
+          disabled={disabled}
+        />
       )}
     </div>
   );
