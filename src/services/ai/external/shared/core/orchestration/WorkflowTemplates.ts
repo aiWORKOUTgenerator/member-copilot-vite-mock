@@ -431,7 +431,7 @@ export const MULTI_USER_GROUP_WORKOUT: WorkflowConfig = {
   name: 'Multi-User Group Workout',
   description: 'Generate coordinated workout for multiple users with different capabilities',
   version: '1.0.0',
-  timeout: 30000,
+  timeout: 120000, // Increased from 30s to 120s
   retryPolicy: AGGRESSIVE_RETRY_POLICY,
   errorHandling: RESILIENT_ERROR_HANDLING,
   maxConcurrency: 10, // High concurrency for multiple users

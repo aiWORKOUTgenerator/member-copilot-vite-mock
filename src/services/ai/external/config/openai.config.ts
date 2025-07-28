@@ -31,7 +31,7 @@ export const openAIConfig = (): ExternalAIServiceConfig => {
     },
     performance: {
       maxRequestsPerMinute: 60,
-      timeoutMs: 30000,
+      timeoutMs: 120000, // Increased from 30s to 120s
       retryAttempts: 3,
       cacheTimeoutMs: 3600000
     },
@@ -97,8 +97,8 @@ export const getConfigHealth = (config: ExternalAIServiceConfig): {
   }
   
   // Check timeout settings
-  if (config.performance.timeoutMs > 30000) { // Assuming a default timeoutMs for health check
-    recommendations.push('Long timeout may impact user experience');
+  if (config.performance.timeoutMs > 120000) { // Updated threshold for health check
+    recommendations.push('Very long timeout may impact user experience');
   }
   
   // Check fallback configuration

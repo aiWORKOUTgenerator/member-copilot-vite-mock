@@ -193,7 +193,7 @@ export const QUICK_WORKOUT_CONSTANTS = {
   
   // Performance settings
   CACHE_TIMEOUT_MS: 10 * 60 * 1000, // 10 minutes
-  REQUEST_TIMEOUT_MS: 30 * 1000,    // 30 seconds
+  REQUEST_TIMEOUT_MS: 120 * 1000,   // 120 seconds (increased from 30s)
   
   // Helper functions
   getDurationConfig,

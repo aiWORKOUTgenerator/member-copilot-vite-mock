@@ -269,7 +269,7 @@ export class FeatureBus {
       feature,
       operation,
       data,
-      timeout: options.timeout || 30000,
+      timeout: options.timeout || 120000, // Increased from 30s to 120s
       priority: options.priority || 'normal',
       correlationId: options.correlationId,
       metadata: { retries: options.retries || 0 }

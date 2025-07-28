@@ -4,7 +4,7 @@ export const WORKOUT_GENERATION_CONSTANTS = {
   ONE_SECOND_MS: 1000,
   ONE_MINUTE_MS: 60 * 1000,
   CACHE_TIMEOUT_MS: 5 * 60 * 1000, // 5 minutes
-  REQUEST_TIMEOUT_MS: 30 * 1000, // 30 seconds
+  REQUEST_TIMEOUT_MS: 120 * 1000, // 120 seconds (increased from 30s)
   RETRY_DELAY_MS: 1000, // 1 second
   
   // Retry configuration
