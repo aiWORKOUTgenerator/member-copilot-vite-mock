@@ -1,5 +1,6 @@
 // AI Performance Monitor - Tracks service health and performance metrics
-import { AIInteraction } from '../core/AIService';
+import { AIInteraction } from '../../types/ai-context.types';
+import { aiLogger } from '../logging/AILogger';
 
 export interface PerformanceMetrics {
   averageExecutionTime: number;
@@ -367,9 +368,21 @@ export class AIPerformanceMonitor {
     
     // Log critical alerts
     if (alert.severity === 'critical') {
-      console.error('AI Performance Alert:', alert);
+      aiLogger.error({
+        error: new Error(alert.message),
+        context: 'performance_alert',
+        component: 'AIPerformanceMonitor',
+        severity: 'critical',
+        userImpact: true,
+        timestamp: new Date().toISOString()
+      });
     } else {
-      console.warn('AI Performance Alert:', alert);
+      aiLogger.warn(`Performance alert: ${alert.message}`, {
+        type: alert.type,
+        severity: alert.severity,
+        metrics: alert.metrics,
+        timestamp: new Date().toISOString()
+      });
     }
   }
 } 

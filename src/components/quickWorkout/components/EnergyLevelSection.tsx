@@ -4,7 +4,7 @@ import { SectionProps } from '../types/quick-workout.types';
 import { RatingScaleWrapper } from '../../customization/rating';
 import { AIInsight } from '../../../types/insights';
 import { logger } from '../../../utils/logger';
-import { useAI } from '../../../contexts/AIContext';
+import { useAIService } from '../../../contexts/composition/AIServiceProvider';
 
 // Removed unused constant
 
@@ -12,10 +12,10 @@ export const EnergyLevelSection: React.FC<SectionProps> = ({
   focusData,
   onInputChange,
   viewMode,
-  _aiContext, // Prefix with _ to indicate intentionally unused
+  _aiContext,
   userProfile
 }) => {
-  const { getEnergyInsights, serviceStatus } = useAI();
+  const { serviceStatus } = useAIService();
 
   // Early return if focusData is null or undefined
   if (!focusData) {
@@ -34,7 +34,7 @@ export const EnergyLevelSection: React.FC<SectionProps> = ({
     logger.debug('Energy AI Insight:', insight);
   };
 
-  // Generate AI insights using the new service
+  // Generate AI insights using the service
   const generateEnergyInsights = (value: number): AIInsight[] => {
     if (serviceStatus !== 'ready') {
       // Fallback to basic insights if service isn't ready
@@ -52,8 +52,47 @@ export const EnergyLevelSection: React.FC<SectionProps> = ({
     }
 
     try {
-      // Use the AIContext method instead of calling aiService directly
-      const insights = getEnergyInsights(value);
+      // Basic energy insights based on level
+      const insights: AIInsight[] = [];
+      
+      if (value <= 3) {
+        insights.push({
+          id: `energy_low_${Date.now()}`,
+          type: 'warning',
+          title: 'Low Energy Detected',
+          content: 'Consider a lighter workout or focus on mobility and recovery',
+          priority: 'high',
+          category: 'performance',
+          metadata: {
+            recommendation: 'Focus on gentle stretching and recovery'
+          }
+        });
+      } else if (value <= 5) {
+        insights.push({
+          id: `energy_moderate_${Date.now()}`,
+          type: 'optimization',
+          title: 'Moderate Energy',
+          content: 'Light to moderate intensity workouts recommended',
+          priority: 'medium',
+          category: 'performance',
+          metadata: {
+            recommendation: 'Consider moderate intensity exercises'
+          }
+        });
+      } else if (value >= 8) {
+        insights.push({
+          id: `energy_high_${Date.now()}`,
+          type: 'encouragement',
+          title: 'High Energy - Ready to Train',
+          content: 'Great! You\'re ready for a more intense workout',
+          priority: 'low',
+          category: 'performance',
+          metadata: {
+            recommendation: 'You can safely increase workout intensity'
+          }
+        });
+      }
+
       return insights;
     } catch (error) {
       logger.error('Failed to generate energy insights:', error);
@@ -133,9 +172,22 @@ export const EnergyLevelSection: React.FC<SectionProps> = ({
       }}
       enableAI={viewMode === 'complex'}
       userProfile={userProfile}
-      aiContext={{
+      aiContext={_aiContext ? {
+        ..._aiContext,
         currentSelections: {
-          customization_energy: currentEnergyLevel
+          ..._aiContext.currentSelections,
+          customization_energy: {
+            rating: currentEnergyLevel,
+            categories: ['general']
+          }
+        },
+        generateInsights: generateEnergyInsights
+      } : {
+        currentSelections: {
+          customization_energy: {
+            rating: currentEnergyLevel,
+            categories: ['general']
+          }
         },
         userProfile: userProfile ?? {
           fitnessLevel: 'intermediate' as const,

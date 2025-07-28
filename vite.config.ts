@@ -23,4 +23,8 @@ export default defineConfig({
     include: ['lucide-react'], // Pre-bundle lucide-react
     exclude: ['lucide-react/icons'] // Don't pre-bundle individual icons
   },
+  define: {
+    // Ensure process.env is available in the browser
+    'process.env': process.env
+  }
 });

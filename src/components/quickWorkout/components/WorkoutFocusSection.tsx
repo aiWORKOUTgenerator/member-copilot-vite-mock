@@ -3,7 +3,7 @@ import { Zap, AlignCenter, Smile, Flame, Heart, Dumbbell, Target, Lightbulb } fr
 import { SectionProps } from '../types/quick-workout.types';
 import { OptionGrid } from '../../shared/DRYComponents';
 import { OptionDefinition } from '../../../types/core';
-import { useAI } from '../../../contexts/AIContext';
+import { useAIService } from '../../../contexts/composition/AIServiceProvider';
 import { AIInsight } from '../../../types/insights';
 import { logger } from '../../../utils/logger';
 import { WORKOUT_FOCUS_MUSCLE_GROUPS, WorkoutFocusOption } from '../../../types/workout-focus.types';
@@ -96,7 +96,7 @@ export const WorkoutFocusSection: React.FC<SectionProps> = ({
   _aiContext, // Prefix with _ to indicate intentionally unused
   userProfile
 }) => {
-  const { serviceStatus } = useAI();
+  const { serviceStatus } = useAIService();
 
   // Early return if focusData is null or undefined
   if (!focusData) {

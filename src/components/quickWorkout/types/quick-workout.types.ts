@@ -10,8 +10,8 @@ export interface QuickWorkoutFormProps {
 }
 
 export interface SectionProps {
-  focusData: any; // TODO: Type this properly based on your data structure
-  onInputChange: (field: string, value: any) => void;
+  focusData: WorkoutFocusData | null;
+  onInputChange: (field: string, value: number | string | boolean) => void;
   viewMode: 'simple' | 'complex';
   userProfile?: UserProfile;
   _aiContext?: AIRecommendationContext; // Optional and marked as unused

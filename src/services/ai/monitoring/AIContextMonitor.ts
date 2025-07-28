@@ -7,7 +7,8 @@
  * CRITICAL: This monitoring system must be active during AIContext refactoring.
  */
 
-import { UserProfile } from '../../types';
+import { UserProfile } from '../../../types';
+import { aiLogger } from '../logging/AILogger';
 
 export interface AIContextHealthMetrics {
   // Service Status Metrics
@@ -65,6 +66,12 @@ export class AIContextMonitor {
   private statusHistory: Array<{ status: string; timestamp: Date }> = [];
   private errorHistory: Array<{ error: string; timestamp: Date; type: string }> = [];
   private performanceHistory: Array<{ operation: string; duration: number; timestamp: Date }> = [];
+  
+  // Migration callbacks for Phase 4C
+  private migrationCallbacks: {
+    onSuccess?: () => void;
+    onFailure?: (error: string) => void;
+  } | null = null;
   
   // Alert thresholds
   private readonly ERROR_RATE_THRESHOLD = 0.1; // 10% error rate
@@ -343,9 +350,18 @@ export class AIContextMonitor {
     
     // Log critical alerts
     if (newAlert.severity === 'critical') {
-      console.error('🚨 CRITICAL AIContext Alert:', newAlert.message, newAlert.context);
+      aiLogger.error({
+        error: new Error(newAlert.message),
+        context: 'health_alert',
+        component: 'AIContextMonitor',
+        severity: 'critical',
+        userImpact: true
+      });
     } else if (newAlert.severity === 'high') {
-      console.warn('⚠️ HIGH AIContext Alert:', newAlert.message, newAlert.context);
+      aiLogger.warn(`High severity AIContext alert: ${newAlert.message}`, {
+        context: newAlert.context,
+        severity: 'high'
+      });
     }
   }
 
@@ -389,6 +405,89 @@ export class AIContextMonitor {
     this.errorHistory = [];
     this.performanceHistory = [];
     this.startTime = new Date();
+  }
+
+  // Migration Callbacks for Phase 4C
+  public registerMigrationCallback(callbacks: {
+    onSuccess?: () => void;
+    onFailure?: (error: string) => void;
+  }): void {
+    this.migrationCallbacks = callbacks;
+    aiLogger.info('🔄 AIContextMonitor - Migration callbacks registered');
+  }
+
+  public unregisterMigrationCallback(): void {
+    this.migrationCallbacks = null;
+    aiLogger.info('🔄 AIContextMonitor - Migration callbacks unregistered');
+  }
+
+  public triggerMigrationSuccess(): void {
+    if (this.migrationCallbacks?.onSuccess) {
+      this.migrationCallbacks.onSuccess();
+    }
+  }
+
+  public triggerMigrationFailure(error: string): void {
+    if (this.migrationCallbacks?.onFailure) {
+      this.migrationCallbacks.onFailure(error);
+    }
+  }
+
+  // Provider Composition Monitoring
+  public recordProviderComposition(data: {
+    providers: string[];
+    timestamp: Date;
+    initializationTime: number;
+  }): void {
+    this.performanceHistory.push({
+      operation: 'provider_composition',
+      duration: data.initializationTime,
+      timestamp: data.timestamp
+    });
+
+    // Generate alert for slow composition
+    if (data.initializationTime > this.RESPONSE_TIME_THRESHOLD) {
+      this.generateAlert({
+        type: 'warning',
+        message: `Slow provider composition: ${data.initializationTime}ms`,
+        severity: 'medium',
+        context: { 
+          providers: data.providers,
+          initializationTime: data.initializationTime,
+          threshold: this.RESPONSE_TIME_THRESHOLD
+        }
+      });
+    }
+
+    aiLogger.info('AIComposedProvider: Provider composition recorded', {
+      providers: data.providers,
+      initializationTime: data.initializationTime
+    });
+  }
+
+  public recordCompositionHealth(): void {
+    const compositionHealth = {
+      isHealthy: this.isHealthy(),
+      activeProviders: this.metrics.activeConsumers,
+      errorRate: this.metrics.errorRate,
+      averageResponseTime: this.metrics.averageResponseTime,
+      memoryUsage: this.metrics.memoryUsage,
+      timestamp: new Date()
+    };
+
+    // Generate alert for unhealthy composition
+    if (!compositionHealth.isHealthy) {
+      this.generateAlert({
+        type: 'warning',
+        message: 'Provider composition health check failed',
+        severity: 'high',
+        context: compositionHealth
+      });
+    }
+
+    if (process.env.NODE_ENV === 'development') {
+      aiLogger.debug('AIComposedProvider: Health check recorded', compositionHealth);
+    }
   }
 
   // Export for debugging

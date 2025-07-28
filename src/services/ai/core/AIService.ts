@@ -207,6 +207,14 @@ export class AIService {
    */
   async generateWorkout(request: any): Promise<any> {
     try {
+      console.log('🔍 DEBUG - AIService.generateWorkout called with:', {
+        requestType: typeof request,
+        requestKeys: Object.keys(request),
+        hasUserProfile: !!request.userProfile,
+        hasSelections: !!request.selections,
+        hasWorkoutFocusData: !!request.workoutFocusData
+      });
+
       // Extract workoutData from request or use request directly
       const workoutData = request.workoutFocusData || request;
       
@@ -290,9 +298,28 @@ export class AIService {
         throw new Error('OpenAI strategy not configured');
       }
       
+      console.log('🔍 DEBUG - AIService calling OpenAI strategy with request:', {
+        requestType: typeof request,
+        requestKeys: Object.keys(request)
+      });
+      
       // Generate workout using OpenAI strategy directly
-      return await this.openAIStrategy.generateWorkout(request);
+      const result = await this.openAIStrategy.generateWorkout(request);
+      
+      console.log('🔍 DEBUG - AIService OpenAI strategy returned:', {
+        hasResult: !!result,
+        resultType: typeof result,
+        resultKeys: result ? Object.keys(result) : 'null'
+      });
+      
+      return result;
     } catch (error) {
+      console.error('🔍 CRITICAL - AIService.generateWorkout error:', {
+        error: error,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : 'No stack trace'
+      });
+      
       this.errorHandler.handleError(error as Error, 'generateWorkout', { request });
       throw error;
     }

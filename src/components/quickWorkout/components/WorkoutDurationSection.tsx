@@ -2,7 +2,8 @@ import React from 'react';
 import { Clock, Lightbulb } from 'lucide-react';
 import { OptionGrid } from '../../shared/DRYComponents';
 import { SectionProps } from '../types/quick-workout.types';
-import { useAI } from '../../../contexts/AIContext';
+import { useAIService } from '../../../contexts/composition/AIServiceProvider';
+import { useAIFeatureFlags } from '../../../contexts/composition/AIFeatureFlagsProvider';
 import { AIInsight } from '../../../types/insights';
 import { logger } from '../../../utils/logger';
 
@@ -21,7 +22,8 @@ export const WorkoutDurationSection: React.FC<SectionProps> = ({
   viewMode,
   userProfile
 }) => {
-  const { aiService, serviceStatus, isFeatureEnabled } = useAI();
+  const { aiService, serviceStatus } = useAIService();
+  const { isFeatureEnabled } = useAIFeatureFlags();
 
   // Early return if focusData is null or undefined
   if (!focusData) {

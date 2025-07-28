@@ -1,6 +1,7 @@
 // AI Error Handler - Provides graceful error handling and fallback mechanisms
-import { PerWorkoutOptions } from '../../../types';
-import { GlobalAIContext, UnifiedAIAnalysis } from '../core/AIService';
+import { PerWorkoutOptions } from '../../types/quick-workout.types';
+import { GlobalAIContext, UnifiedAIAnalysis } from '../../types/ai-context.types';
+import { aiLogger } from '../logging/AILogger';
 
 export interface AIErrorConfig {
   enableReporting: boolean;
@@ -326,24 +327,31 @@ export class AIErrorHandler {
   }
   
   /**
-   * Log an error according to configuration
+   * Log error based on configured log level
    */
   private logError(error: AIError): void {
     const logMessage = `[${error.type.toUpperCase()}] ${error.component}: ${error.message}`;
     
     switch (this.config.logLevel) {
       case 'debug':
-        console.debug(logMessage, error.context);
+        aiLogger.debug(logMessage, error.context);
         break;
       case 'info':
-        console.info(logMessage);
+        aiLogger.info(logMessage);
         break;
       case 'warn':
-        console.warn(logMessage);
+        aiLogger.warn(logMessage);
         break;
       case 'error':
       default:
-        console.error(logMessage);
+        aiLogger.error({
+          error: new Error(error.message),
+          context: 'error_handling',
+          component: error.component || 'AIErrorHandler',
+          severity: error.severity,
+          userImpact: error.severity === 'high' || error.severity === 'critical',
+          timestamp: new Date().toISOString()
+        });
         break;
     }
     
@@ -356,12 +364,13 @@ export class AIErrorHandler {
   private reportError(error: AIError): void {
     // Implementation would send to external monitoring service
     // For now, just log to console
-    console.error('Error reported to monitoring system:', {
-      id: error.id,
-      type: error.type,
-      severity: error.severity,
-      component: error.component,
-      timestamp: error.timestamp
+    aiLogger.error({
+      error: new Error(`Error reported to monitoring system: ${error.message}`),
+      context: 'error_reporting',
+      component: 'AIErrorHandler',
+      severity: 'high',
+      userImpact: true,
+      timestamp: new Date().toISOString()
     });
   }
   
@@ -391,7 +400,12 @@ export class AIErrorHandler {
    * Handle repeated error patterns
    */
   private handleErrorPattern(error: AIError, count: number): void {
-    console.warn(`Error pattern detected: ${error.type} in ${error.component} (${count} times)`);
+    aiLogger.warn(`Error pattern detected: ${error.type} in ${error.component} (${count} times)`, {
+      errorType: error.type,
+      component: error.component,
+      count,
+      timestamp: new Date().toISOString()
+    });
     
     // Implement pattern-specific handling
     switch (error.type) {
@@ -432,7 +446,14 @@ export class AIErrorHandler {
    */
   private handleValidationPattern(error: AIError, count: number): void {
     if (count >= 5) {
-      console.error('Critical validation pattern detected - data integrity compromised');
+      aiLogger.error({
+        error: new Error('Critical validation pattern detected - data integrity compromised'),
+        context: 'validation_pattern',
+        component: 'AIErrorHandler',
+        severity: 'critical',
+        userImpact: true,
+        timestamp: new Date().toISOString()
+      });
       // Could trigger system-wide validation reset
     }
   }
@@ -442,7 +463,12 @@ export class AIErrorHandler {
    */
   private handleAnalysisPattern(error: AIError, count: number): void {
     if (count >= 3) {
-      console.warn('Analysis failure pattern detected - enabling fallback mode');
+      aiLogger.warn('Analysis failure pattern detected - enabling fallback mode', {
+        errorType: error.type,
+        component: error.component,
+        count,
+        timestamp: new Date().toISOString()
+      });
       // Could enable more aggressive fallback strategies
     }
   }
@@ -452,7 +478,14 @@ export class AIErrorHandler {
    */
   private handlePerformancePattern(error: AIError, count: number): void {
     if (count >= 10) {
-      console.error('Performance degradation pattern detected - system optimization required');
+      aiLogger.error({
+        error: new Error('Performance degradation pattern detected - system optimization required'),
+        context: 'performance_pattern',
+        component: 'AIErrorHandler',
+        severity: 'critical',
+        userImpact: true,
+        timestamp: new Date().toISOString()
+      });
       // Could trigger performance optimization routines
     }
   }
@@ -465,7 +498,7 @@ export class AIErrorHandler {
     context: GlobalAIContext,
     legacyImplementations: LegacyImplementation
   ): Promise<UnifiedAIAnalysis> {
-    console.warn('Falling back to legacy analysis implementation');
+    aiLogger.warn('Falling back to legacy analysis implementation');
     
     if (legacyImplementations.analyze) {
       return await legacyImplementations.analyze(selections, context);
@@ -482,7 +515,7 @@ export class AIErrorHandler {
     selections: PerWorkoutOptions,
     context: GlobalAIContext
   ): UnifiedAIAnalysis {
-    console.warn('Generating minimal safe analysis');
+    aiLogger.warn('Generating minimal safe analysis');
     
     return {
       insights: ['Basic workout analysis available'],
@@ -526,7 +559,7 @@ export class AIErrorHandler {
    * Attempt automatic error resolution
    */
   private autoResolve(error: AIError): void {
-    console.info(`Auto-resolving ${error.type} error in ${error.component}`);
+    aiLogger.info(`Auto-resolving ${error.type} error in ${error.component}`);
     // Implementation would depend on error type
   }
   
@@ -534,7 +567,7 @@ export class AIErrorHandler {
    * Attempt context recovery
    */
   private attemptContextRecovery(error: AIError): void {
-    console.info(`Attempting context recovery for ${error.component}`);
+    aiLogger.info(`Attempting context recovery for ${error.component}`);
     // Implementation would attempt to restore context state
   }
   
@@ -550,7 +583,7 @@ export class AIErrorHandler {
    * Handle performance degradation
    */
   private handlePerformanceDegradation(error: AIError): void {
-    console.warn('Performance degradation detected - implementing optimization measures');
+    aiLogger.warn('Performance degradation detected - implementing optimization measures');
     // Implementation would trigger performance optimization
   }
 } 

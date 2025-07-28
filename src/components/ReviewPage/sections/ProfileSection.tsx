@@ -13,6 +13,7 @@ import {
 } from '../utils';
 import { calculateWorkoutIntensity, getFitnessLevelDescription, getWorkoutIntensityDetails } from '../../../utils/fitnessLevelCalculator';
 import { mapExperienceLevelToFitnessLevel } from '../../../utils/configUtils';
+import { aiLogger } from '../../../services/ai/logging/AILogger';
 
 interface ProfileSectionProps {
   profileData: ProfileData;
@@ -135,7 +136,13 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({ profileData }) =
                   </div>
                 );
               } catch (error) {
-                console.error('Error calculating time investment:', error);
+                aiLogger.error({
+                  error: error instanceof Error ? error : new Error(String(error)),
+                  context: 'time investment calculation',
+                  component: 'ProfileSection',
+                  severity: 'low',
+                  userImpact: false
+                });
                 return 'Error calculating time investment';
               }
             })()}
@@ -183,7 +190,13 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({ profileData }) =
                   environments.join(' • ') : 
                   'Body Weight';
               } catch (error) {
-                console.error('Error getting environment description:', error);
+                aiLogger.error({
+                  error: error instanceof Error ? error : new Error(String(error)),
+                  context: 'environment description',
+                  component: 'ProfileSection',
+                  severity: 'low',
+                  userImpact: false
+                });
                 return 'Body Weight';
               }
             })()}
@@ -195,7 +208,13 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({ profileData }) =
               try {
                 return getTrainingStyle(profileData.preferredActivities || [], profileData.availableEquipment || []);
               } catch (error) {
-                console.error('Error getting training style:', error);
+                aiLogger.error({
+                  error: error instanceof Error ? error : new Error(String(error)),
+                  context: 'training style calculation',
+                  component: 'ProfileSection',
+                  severity: 'low',
+                  userImpact: false
+                });
                 return 'Not calculated';
               }
             })()}

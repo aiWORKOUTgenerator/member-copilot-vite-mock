@@ -7,8 +7,9 @@
  * CRITICAL: This system must be active during AIContext refactoring.
  */
 
-import { aiContextMonitor } from './AIContextMonitor';
 import { refactoringFeatureFlags } from '../featureFlags/RefactoringFeatureFlags';
+import { aiContextMonitor } from './AIContextMonitor';
+import { aiLogger } from '../logging/AILogger';
 
 export interface RollbackThresholds {
   // Error Rate Thresholds
@@ -204,7 +205,7 @@ export class AIContextRollbackManager {
       this.checkTriggers();
     }, 5000); // Check every 5 seconds
 
-    console.log('🔄 AIContext Rollback Manager: Monitoring started');
+    aiLogger.info('🔄 AIContext Rollback Manager: Monitoring started');
   }
 
   // Stop monitoring
@@ -217,7 +218,7 @@ export class AIContextRollbackManager {
       this.monitoringInterval = undefined;
     }
 
-    console.log('🔄 AIContext Rollback Manager: Monitoring stopped');
+    aiLogger.info('🔄 AIContext Rollback Manager: Monitoring stopped');
   }
 
   // Check all triggers
@@ -295,7 +296,7 @@ export class AIContextRollbackManager {
     if (this.lastRollbackTime) {
       const timeSinceLastRollback = Date.now() - this.lastRollbackTime.getTime();
       if (timeSinceLastRollback < this.thresholds.maxRollbackCooldown) {
-        console.log(`🔄 AIContext Rollback Manager: Cooldown active (${Math.round(timeSinceLastRollback / 1000)}s remaining)`);
+        aiLogger.info(`🔄 AIContext Rollback Manager: Cooldown active (${Math.round(timeSinceLastRollback / 1000)}s remaining)`);
         return;
       }
     }
@@ -308,41 +309,44 @@ export class AIContextRollbackManager {
 
   // Execute rollback
   private executeRollback(reasons: string[]): void {
-    console.error('🚨 AIContext Automated Rollback Executed!');
-    console.error('Reasons:', reasons);
+     aiLogger.error({
+      error: new Error('AIContext Automated Rollback Executed'),
+      context: 'rollback_execution',
+      component: 'AIContextRollbackManager',
+      severity: 'critical',
+      userImpact: true,
+      timestamp: new Date().toISOString()
+    });
     
     this.lastRollbackTime = new Date();
     
-    // Trigger rollback through feature flags
-    refactoringFeatureFlags.triggerRollback('automated_threshold_exceeded');
+    // Disable refactoring
+    refactoringFeatureFlags.setFlag('aicontext_refactoring_enabled', false);
     
-    // Log rollback event
-    aiContextMonitor.recordError('automated_rollback', new Error(`Automated rollback triggered: ${reasons.join(', ')}`));
-    
-    // Notify stakeholders (in production, this would send alerts)
+    // Notify stakeholders
     this.notifyStakeholders(reasons);
   }
 
-  // Notify stakeholders
+  // Notify stakeholders about rollback
   private notifyStakeholders(reasons: string[]): void {
-    const message = `🚨 AIContext Automated Rollback Executed\n\nReasons:\n${reasons.map(r => `• ${r}`).join('\n')}\n\nTime: ${new Date().toISOString()}`;
+    const message = `🚨 AIContext Rollback Alert: ${reasons.join(', ')}`;
     
     // In production, this would send to Slack, email, etc.
-    console.error(message);
+    aiLogger.error({
+      error: new Error(message),
+      context: 'stakeholder_notification',
+      component: 'AIContextRollbackManager',
+      severity: 'high',
+      userImpact: true,
+      timestamp: new Date().toISOString()
+    });
     
     // Could also send to monitoring services
-    if (typeof window !== 'undefined' && window.gtag) {
-      window.gtag('event', 'aicontext_rollback', {
-        event_category: 'safety',
-        event_label: reasons.join('|'),
-        value: reasons.length
-      });
-    }
   }
 
   // Manual rollback trigger
   public triggerManualRollback(reason: string): void {
-    console.warn(`🚨 AIContext Manual Rollback Triggered: ${reason}`);
+    aiLogger.warn(`🚨 AIContext Manual Rollback Triggered: ${reason}`);
     this.executeRollback([`Manual rollback: ${reason}`]);
   }
 
@@ -388,7 +392,7 @@ export class AIContextRollbackManager {
       }
     });
     
-    console.log('🔄 AIContext Rollback Manager: Thresholds updated', newThresholds);
+    aiLogger.info('🔄 AIContext Rollback Manager: Thresholds updated', newThresholds);
   }
 
   // Enable/disable specific triggers
@@ -396,7 +400,7 @@ export class AIContextRollbackManager {
     const trigger = this.triggers.get(triggerId);
     if (trigger) {
       trigger.isActive = isActive;
-      console.log(`🔄 AIContext Rollback Manager: Trigger ${triggerId} ${isActive ? 'enabled' : 'disabled'}`);
+      aiLogger.info(`🔄 AIContext Rollback Manager: Trigger ${triggerId} ${isActive ? 'enabled' : 'disabled'}`);
     }
   }
 

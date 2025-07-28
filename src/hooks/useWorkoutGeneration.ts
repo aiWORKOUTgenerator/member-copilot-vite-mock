@@ -1,13 +1,19 @@
 // Custom hook for workout generation workflow
 import { useState, useCallback, useRef, useMemo } from 'react';
-import { useAI } from '../contexts/AIContext';
+import { useAIService } from './useAIService';
+import { useAIAnalytics } from '../contexts/composition/AIAnalyticsProvider';
 import { 
   WorkoutGenerationRequest,
 } from '../types/workout-generation.types';
+import { AIInteractionData } from '../types/ai-context.types';
 import { GeneratedWorkout } from '../services/ai/external/types/external-ai.types';
 import { FitnessLevel } from '../types/user';
 import { logger } from '../utils/logger';
 import { PromptVariableComposer } from '../services/ai/external/DataTransformer';
+import { WorkoutFocusData } from '../services/ai/external/DataTransformer/transformers/WorkoutFocusTransformer';
+import { DEFAULT_VALUES } from '../services/ai/external/DataTransformer/constants/DefaultValues';
+import { WorkoutFocusConfigurationData, PerWorkoutOptions, CategoryRatingData } from '../types/core';
+import { profileTransformers } from '../utils/dataTransformers';
 
 // Helper function to map FitnessLevel to GeneratedWorkout difficulty
 const mapFitnessLevelToDifficulty = (fitnessLevel: FitnessLevel): 'new to exercise' | 'some experience' | 'advanced athlete' => {
@@ -37,13 +43,6 @@ interface WorkoutGenerationState {
 }
 
 type WorkoutGenerationStatus = 'idle' | 'validating' | 'generating' | 'enhancing' | 'complete' | 'error';
-
-// Define WorkoutFocusData type to match the transformer's expectations
-interface WorkoutFocusData {
-  customization_focus: string;
-  customization_duration: number;
-  customization_energy: number;
-}
 
 // Enhanced return type interface
 export interface UseWorkoutGenerationReturn {
@@ -84,11 +83,18 @@ export interface WorkoutGenerationOptions {
 }
 
 // Fallback workout generation function
-const generateFallbackWorkout = (userProfile: { fitnessLevel: FitnessLevel; goals: string[] }, workoutOptions: WorkoutFocusData): GeneratedWorkout => {
+const generateFallbackWorkout = (
+  userProfile: { fitnessLevel: FitnessLevel; goals: string[] }, 
+  workoutOptions: {
+    customization_focus: string | WorkoutFocusConfigurationData;
+    customization_duration: number;
+    customization_energy: number;
+  }
+): GeneratedWorkout => {
   console.log('🔄 Generating fallback workout due to AI service unavailability');
   
   const focusArea = workoutOptions.customization_focus || 'strength';
-  const duration = workoutOptions.customization_duration || 45;
+  const duration = workoutOptions.customization_duration || DEFAULT_VALUES.workout.customization_duration;
   
   // Create a basic workout structure
   const exercises = [
@@ -162,7 +168,7 @@ const generateFallbackWorkout = (userProfile: { fitnessLevel: FitnessLevel; goal
 
   return {
     id: `fallback-${Date.now()}`,
-    title: `Basic ${focusArea} Workout`,
+    title: `Basic ${typeof focusArea === 'string' ? focusArea : focusArea.focus} Workout`,
     description: 'A simple, effective workout using bodyweight exercises.',
     totalDuration: duration,
     estimatedCalories: Math.round(duration * 8), // Rough estimate
@@ -237,7 +243,7 @@ const generateFallbackWorkout = (userProfile: { fitnessLevel: FitnessLevel; goal
     generatedAt: new Date(),
     aiModel: 'fallback',
     confidence: 0.6, // Lower confidence for fallback
-    tags: ['fallback', 'bodyweight', focusArea, 'basic']
+    tags: ['fallback', 'bodyweight', typeof focusArea === 'string' ? focusArea : focusArea.focus, 'basic']
   };
 };
 
@@ -353,7 +359,8 @@ const withTimeout = <T>(
 };
 
 export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
-  const { generateWorkout: aiGenerateWorkout, serviceStatus } = useAI();
+  const { generateWorkout: aiGenerateWorkout, aiService } = useAIService();
+  const { trackAIInteraction } = useAIAnalytics();
   
   // Initialize the PromptVariableComposer with debug mode
   const composer = useMemo(() => new PromptVariableComposer(true), []);
@@ -390,20 +397,13 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
       return getErrorDetails('INSUFFICIENT_DATA', new Error('Missing experience level or primary goal'));
     }
 
-    if (serviceStatus === 'error') {
+    const healthStatus = aiService.getHealthStatus();
+    if (healthStatus.status === 'unhealthy') {
       return getErrorDetails('SERVICE_UNAVAILABLE', new Error('AI service is in error state'));
     }
 
-    if (serviceStatus === 'initializing') {
-      return getErrorDetails('API_ERROR', new Error('AI service is still initializing'));
-    }
-
-    if (serviceStatus !== 'ready') {
-      return getErrorDetails('API_ERROR', new Error('AI service is not ready'));
-    }
-
     return null;
-  }, [serviceStatus]);
+  }, [aiService]);
 
   // Update generation progress
   const updateProgress = useCallback((progress: number) => {
@@ -462,9 +462,19 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
       updateProgress(10);
 
       // Transform data using the new PromptVariableComposer
+      const focus = request.workoutFocusData.customization_focus || DEFAULT_VALUES.workout.customization_focus;
+      const focusValue = typeof focus === 'string' ? focus : (focus as WorkoutFocusConfigurationData).focus || DEFAULT_VALUES.workout.customization_focus;
+      const energyValue = Number(request.workoutFocusData.customization_energy || DEFAULT_VALUES.workout.customization_energy);
+      
       const promptVariables = composer.transformToPromptVariables(
         request.profileData,
-        request.workoutFocusData as WorkoutFocusData,
+        {
+          customization_focus: focusValue,
+          customization_duration: Number(request.workoutFocusData.customization_duration || DEFAULT_VALUES.workout.customization_duration),
+          customization_energy: energyValue,
+          customization_equipment: request.workoutFocusData.customization_equipment || DEFAULT_VALUES.workout.customization_equipment,
+          customization_soreness: request.workoutFocusData.customization_soreness
+        } as WorkoutFocusData,
         request.additionalContext
       );
       
@@ -482,6 +492,22 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
       
       updateProgress(30);
 
+      // Track generation attempt
+      const analyticsData: AIInteractionData = {
+        focus: focusValue,
+        duration: Number(request.workoutFocusData.customization_duration || DEFAULT_VALUES.workout.customization_duration),
+        energy: energyValue,
+        success: true,
+        experienceLevel: request.profileData.experienceLevel,
+        primaryGoal: request.profileData.primaryGoal
+      };
+
+      trackAIInteraction({
+        type: 'workout_request',
+        component: 'workout_generation',
+        data: analyticsData
+      });
+
       // Enhanced generation with retry logic and timeout
       const generationOperation = async (): Promise<GeneratedWorkout> => {
         if (enableDetailedLogging) {
@@ -493,13 +519,31 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
         }
         
         // Pass the complete request with transformed data
+        const selections: PerWorkoutOptions = {
+          customization_focus: focusValue,
+          customization_duration: Number(request.workoutFocusData.customization_duration || DEFAULT_VALUES.workout.customization_duration),
+          customization_energy: {
+            rating: energyValue,
+            categories: energyValue <= 3 ? ['low_energy'] : energyValue >= 7 ? ['high_energy'] : ['moderate_energy']
+          },
+          customization_equipment: request.workoutFocusData.customization_equipment || [...DEFAULT_VALUES.workout.customization_equipment],
+          customization_soreness: request.workoutFocusData.customization_soreness
+        };
+        
+        console.log('🔍 DEBUG - About to call aiGenerateWorkout with selections:', selections);
+        
+        // Transform ProfileData to UserProfile
+        const userProfile = profileTransformers.convertProfileToUserProfile(request.profileData);
+        
         const generatedWorkout = await aiGenerateWorkout({
-          workoutType: request.workoutType,
-          profileData: request.profileData,
-          waiverData: request.waiverData,
-          workoutFocusData: request.workoutFocusData,
-          promptVariables, // ✅ Pass the transformed variables
-          userProfile: request.userProfile
+          userProfile: userProfile,
+          selections: selections
+        });
+        
+        console.log('🔍 DEBUG - aiGenerateWorkout returned:', {
+          hasWorkout: !!generatedWorkout,
+          workoutType: typeof generatedWorkout,
+          workoutKeys: generatedWorkout ? Object.keys(generatedWorkout) : 'null'
         });
         
         if (abortControllerRef.current?.signal.aborted) {
@@ -515,6 +559,16 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
         retryAttempts,
         retryDelay
       );
+
+      // Track successful generation
+      trackAIInteraction({
+        type: 'workout_success',
+        component: 'workout_generation',
+        data: {
+          workoutId: generatedWorkout.id,
+          duration: generatedWorkout.totalDuration
+        }
+      });
 
       // 🔍 DEBUG: Log successful generation
       console.log('🔍 useWorkoutGeneration - Workout generated successfully:', {
@@ -586,6 +640,17 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
       return enhancedWorkout;
 
     } catch (error) {
+      // 🔍 CRITICAL DEBUG: Log the original error details
+      console.error('🔍 CRITICAL - Original error details:', {
+        error: error,
+        errorType: typeof error,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : 'No stack trace',
+        errorCode: (error as any)?.code,
+        errorTypeName: (error as any)?.type,
+        errorDetails: (error as any)?.details
+      });
+
       const isAbortError = error instanceof Error && error.name === 'AbortError';
       const isTimeoutError = error instanceof Error && error.message.includes('timed out');
       const isNetworkError = error instanceof Error && (
@@ -609,6 +674,17 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
       }
 
       const workoutError = getErrorDetails(errorCode, error);
+
+      // Track generation error
+      trackAIInteraction({
+        type: 'workout_error',
+        component: 'workout_generation',
+        data: {
+          error: workoutError.message,
+          code: workoutError.code,
+          retryable: workoutError.retryable
+        }
+      });
       
       // Update state with error information
       setState((prev: WorkoutGenerationState) => ({
@@ -628,10 +704,20 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
         try {
           console.log('🔄 Attempting fallback workout generation...');
           
+          const focus = lastRequestRef.current.workoutFocusData.customization_focus || DEFAULT_VALUES.workout.customization_focus;
+          const focusValue = typeof focus === 'string' ? focus : (focus as WorkoutFocusConfigurationData).focus || DEFAULT_VALUES.workout.customization_focus;
+          const energyValue = Number(lastRequestRef.current.workoutFocusData.customization_energy || DEFAULT_VALUES.workout.customization_energy);
+          
           // Transform data for fallback using the new composer
           const promptVariables = composer.transformToPromptVariables(
             lastRequestRef.current.profileData,
-            lastRequestRef.current.workoutFocusData as WorkoutFocusData
+            {
+              customization_focus: focusValue,
+              customization_duration: Number(lastRequestRef.current.workoutFocusData.customization_duration || DEFAULT_VALUES.workout.customization_duration),
+              customization_energy: energyValue,
+              customization_equipment: lastRequestRef.current.workoutFocusData.customization_equipment || DEFAULT_VALUES.workout.customization_equipment,
+              customization_soreness: lastRequestRef.current.workoutFocusData.customization_soreness
+            } as WorkoutFocusData
           );
           
           const fallbackWorkout = generateFallbackWorkout(
@@ -640,9 +726,9 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
               goals: [promptVariables.primaryGoal] 
             },
             {
-              customization_focus: String(lastRequestRef.current.workoutFocusData.customization_focus),
-              customization_duration: Number(lastRequestRef.current.workoutFocusData.customization_duration),
-              customization_energy: Number(lastRequestRef.current.workoutFocusData.customization_energy)
+              customization_focus: focusValue,
+              customization_duration: Number(lastRequestRef.current.workoutFocusData.customization_duration || DEFAULT_VALUES.workout.customization_duration),
+              customization_energy: energyValue
             }
           );
           
@@ -669,7 +755,7 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
     } finally {
       abortControllerRef.current = null;
     }
-  }, [aiGenerateWorkout, validateRequest, updateProgress, logger, composer]);
+  }, [aiGenerateWorkout, validateRequest, updateProgress, logger, composer, trackAIInteraction]);
 
   // Enhanced retry with exponential backoff
   const retryGeneration = useCallback(async (): Promise<GeneratedWorkout | null> => {

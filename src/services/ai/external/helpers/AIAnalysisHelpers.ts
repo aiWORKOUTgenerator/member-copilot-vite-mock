@@ -1,7 +1,7 @@
 // AI Analysis Helpers - Phase 3D
-import { GlobalAIContext } from '../../core/AIService';
-import { AIInsight } from '../../../../types/insights';
-import { UserPreferenceAnalysis } from '../types/external-ai.types';
+import { GlobalAIContext, AIInsight } from '../../../types/ai-context.types';
+import { UserPreferenceAnalysis } from '../../../types/ai-insights.types';
+import { aiLogger } from '../../logging/AILogger';
 
 /**
  * Create prompt for enhancing insights with AI
@@ -67,7 +67,12 @@ export const parseEnhancedInsights = (
 
     return enhancedInsights;
   } catch (error) {
-    console.warn('Failed to parse enhanced insights:', error);
+    aiLogger.warn('Failed to parse enhanced insights', {
+      error: error instanceof Error ? error.message : String(error),
+      context: 'insight_parsing',
+      component: 'AIAnalysisHelpers',
+      timestamp: new Date().toISOString()
+    });
     return originalInsights;
   }
 };
@@ -106,7 +111,12 @@ export const parseUserAnalysis = (
       ]
     };
   } catch (error) {
-    console.warn('Failed to parse user analysis:', error);
+    aiLogger.warn('Failed to parse user analysis', {
+      error: error instanceof Error ? error.message : String(error),
+      context: 'user_analysis_parsing',
+      component: 'AIAnalysisHelpers',
+      timestamp: new Date().toISOString()
+    });
     return createBasicUserAnalysis(context);
   }
 };

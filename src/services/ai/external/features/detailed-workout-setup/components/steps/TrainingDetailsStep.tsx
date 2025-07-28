@@ -5,6 +5,7 @@ import { ValidationFeedback } from '../shared/ValidationFeedback';
 import { ConflictWarning } from '../shared/ConflictWarning';
 import { DetailedWorkoutFeature } from '../../DetailedWorkoutFeature';
 import { AIRecommendationPanel } from '../shared/AIRecommendationPanel';
+import { aiLogger } from 'src/services/ai/logging/AILogger';
 
 interface TrainingDetailsStepProps {
   options: PerWorkoutOptions;
@@ -114,7 +115,13 @@ export const TrainingDetailsStep: React.FC<TrainingDetailsStepProps> = ({
       // Set empty recommendations for now - workout generation happens in final step
       setRecommendations([]);
     } catch (error) {
-      console.error('Error validating training details:', error);
+      aiLogger.error({
+        error: error instanceof Error ? error : new Error(String(error)),
+        context: 'training details validation',
+        component: 'TrainingDetailsStep',
+        severity: 'medium',
+        userImpact: false
+      });
     }
   }, [options, workoutFeature, processValidationConflicts]);
 
@@ -139,7 +146,7 @@ export const TrainingDetailsStep: React.FC<TrainingDetailsStepProps> = ({
         // Handle alternative equipment suggestions
         break;
       default:
-        console.warn('Unhandled recommendation type:', type);
+        aiLogger.warn('Unhandled recommendation type', { type });
     }
   }, [options.customization_equipment, onChange]);
 

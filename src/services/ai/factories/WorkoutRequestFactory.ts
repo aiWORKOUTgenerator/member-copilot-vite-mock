@@ -1,13 +1,9 @@
-import { 
-  WorkoutGenerationRequest,
-  WorkoutPreferences,
-  WorkoutConstraints,
-  EnvironmentalFactors
-} from '../../../types/workout-generation.types';
-import { UserProfile } from '../../../types/user';
-import { PerWorkoutOptions } from '../../../types/core';
-import { WORKOUT_GENERATION_CONSTANTS } from '../external/constants/workout-generation-constants';
-import { ProfileData } from '../../../components/Profile/types/profile.types';
+import { UserProfile } from '../../types/profile.types';
+import { PerWorkoutOptions } from '../../types/quick-workout.types';
+import { ProfileData } from '../../types/profile.types';
+import { WorkoutGenerationRequest, WorkoutPreferences, WorkoutConstraints, EnvironmentalFactors } from '../../types/workout-generation.types';
+import { WORKOUT_GENERATION_CONSTANTS } from '../../constants/workout-generation.constants';
+import { aiLogger } from '../logging/AILogger';
 
 export class WorkoutRequestFactory {
   /**
@@ -56,7 +52,7 @@ export class WorkoutRequestFactory {
    */
   private static createDefaultPreferences(workoutFocusData: PerWorkoutOptions): WorkoutPreferences {
     // 🔍 DEBUG: Log the workout focus data
-    console.log('🔍 DEBUG: WorkoutRequestFactory - workoutFocusData:', {
+    aiLogger.debug('WorkoutRequestFactory - workoutFocusData:', {
       workoutFocusData,
       customization_duration: workoutFocusData.customization_duration,
       durationType: typeof workoutFocusData.customization_duration,
@@ -70,7 +66,7 @@ export class WorkoutRequestFactory {
         ? (workoutFocusData.customization_duration as { duration: number }).duration 
         : WORKOUT_GENERATION_CONSTANTS.DEFAULT_WORKOUT_DURATION;
     
-    console.log('🔍 DEBUG: WorkoutRequestFactory - Extracted duration:', duration);
+    aiLogger.debug('WorkoutRequestFactory - Extracted duration:', duration);
     
     return {
       duration,

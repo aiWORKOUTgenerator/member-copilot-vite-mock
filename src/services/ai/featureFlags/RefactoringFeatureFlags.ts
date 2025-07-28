@@ -7,12 +7,19 @@
  * CRITICAL: These flags must be active during AIContext refactoring.
  */
 
+import { aiLogger } from '../logging/AILogger';
+
 export interface RefactoringFeatureFlags {
   // Core Refactoring Flags
   aicontext_refactoring_enabled: boolean;
   aicontext_new_implementation: boolean;
   aicontext_gradual_migration: boolean;
   aicontext_rollback_enabled: boolean;
+  
+  // Phase 4C Migration Flags
+  migrateToComposedContext: boolean;
+  migrateToComposedContextPercentage: number;
+  migrateToComposedContextUserSegments: string[];
   
   // Component Migration Flags
   aicontext_migrate_core_context: boolean;
@@ -50,6 +57,11 @@ export const DEFAULT_REFACTORING_FLAGS: RefactoringFeatureFlags = {
   aicontext_new_implementation: false,
   aicontext_gradual_migration: false,
   aicontext_rollback_enabled: true, // Always enabled for safety
+  
+  // Phase 4C Migration Flags - START DISABLED
+  migrateToComposedContext: false,
+  migrateToComposedContextPercentage: 0,
+  migrateToComposedContextUserSegments: [],
   
   // Component Migration Flags - START DISABLED
   aicontext_migrate_core_context: false,
@@ -111,7 +123,7 @@ export class RefactoringFeatureFlagManager {
       this.flagHistory.shift();
     }
     
-    console.log(`🔄 AIContext Refactoring Flag Changed: ${flag} = ${value} (was ${oldValue})`);
+    aiLogger.info(`🔄 AIContext Refactoring Flag Changed: ${flag} = ${value} (was ${oldValue})`);
     
     // Trigger rollback if critical flag is disabled
     if (flag === 'aicontext_refactoring_enabled' && value === false) {
@@ -146,6 +158,39 @@ export class RefactoringFeatureFlagManager {
     }
 
     return this.flags.aicontext_new_implementation;
+  }
+
+  // Phase 4C Migration Strategy
+  public shouldUseComposedContext(userId?: string): boolean {
+    if (!this.flags.migrateToComposedContext) {
+      return false;
+    }
+
+    // Check percentage rollout
+    if (this.flags.migrateToComposedContextPercentage > 0) {
+      return this.isComposedContextRolloutUser(userId);
+    }
+
+    // Check user segments
+    if (this.flags.migrateToComposedContextUserSegments.length > 0) {
+      return this.isComposedContextTargetedUser(userId);
+    }
+
+    // If no specific targeting, use the flag directly
+    return this.flags.migrateToComposedContext;
+  }
+
+  private isComposedContextRolloutUser(userId?: string): boolean {
+    if (!userId) return false;
+    const hash = this.hashUserId(userId);
+    return (hash % 100) < this.flags.migrateToComposedContextPercentage;
+  }
+
+  private isComposedContextTargetedUser(userId?: string): boolean {
+    if (!userId) return false;
+    return this.flags.migrateToComposedContextUserSegments.some(segment => 
+      userId.includes(segment) || userId.startsWith(segment)
+    );
   }
 
   private isCanaryUser(userId?: string): boolean {
@@ -183,19 +228,38 @@ export class RefactoringFeatureFlagManager {
   }
 
   public triggerRollback(reason: string): void {
-    console.warn(`🚨 AIContext Refactoring Rollback Triggered: ${reason}`);
+    aiLogger.warn(`🚨 AIContext Refactoring Rollback Triggered: ${reason}`);
     
-    // Disable refactoring
-    this.setFlag('aicontext_refactoring_enabled', false);
-    this.setFlag('aicontext_new_implementation', false);
+    // Disable refactoring directly without triggering setFlag logic
+    this.flags.aicontext_refactoring_enabled = false;
+    this.flags.aicontext_new_implementation = false;
+    
+    // Record the rollback in history
+    this.flagHistory.push({
+      flag: 'aicontext_refactoring_enabled',
+      value: false,
+      timestamp: new Date()
+    });
+    this.flagHistory.push({
+      flag: 'aicontext_new_implementation',
+      value: false,
+      timestamp: new Date()
+    });
     
     // Execute rollback callbacks
     this.rollbackTriggers.forEach((callback, triggerId) => {
       try {
         callback();
-        console.log(`✅ Rollback executed for trigger: ${triggerId}`);
+        aiLogger.info(`✅ Rollback executed for trigger: ${triggerId}`);
       } catch (error) {
-        console.error(`❌ Rollback failed for trigger: ${triggerId}`, error);
+        aiLogger.error({
+          error: error instanceof Error ? error : new Error(String(error)),
+          context: 'rollback_execution',
+          component: 'RefactoringFeatureFlagManager',
+          severity: 'high',
+          userImpact: true,
+          timestamp: new Date().toISOString()
+        });
       }
     });
   }

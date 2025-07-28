@@ -30,9 +30,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">76.92% </span>
+                <span class="strong">92.85% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>10/13</span>
+                <span class='fraction'>13/14</span>
             </div>
         
             
@@ -149,40 +149,21 @@
 <a name='L84'></a><a href='#L84'>84</a>
 <a name='L85'></a><a href='#L85'>85</a>
 <a name='L86'></a><a href='#L86'>86</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">22x</span>
+<span class="cline-any cline-yes">22x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -199,8 +180,9 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">22x</span>
+<span class="cline-any cline-yes">22x</span>
+<span class="cline-any cline-yes">22x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -217,8 +199,26 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">22x</span>
+<span class="cline-any cline-yes">22x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">22x</span>
+<span class="cline-any cline-yes">22x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -250,7 +250,7 @@ export const CONTEXTUAL_RULES: FocusInsightRule[] = [
       const energyLevel = context.currentSelections.customization_energy;
       return !!value &amp;&amp; value === 'strength' &amp;&amp; typeof energyLevel === 'number' &amp;&amp; energyLevel &lt;= 2;
     },
-    generateInsight: (_value, _context) =&gt; ({
+    generateInsight: <span class="fstat-no" title="function not covered" >(_</span>value, _context) =&gt; (<span class="cstat-no" title="statement not covered" >{</span>
       id: generateInsightId('strength_low_energy'),
       type: 'warning',
       message: 'Strength focus with low energy - consider lighter loads or mobility',
@@ -285,9 +285,9 @@ export const CONTEXTUAL_RULES: FocusInsightRule[] = [
   {
     condition: (value, context) =&gt; {
       const timeOfDay = context.environmentalFactors?.timeOfDay;
-      return !!value &amp;&amp; value === 'power' &amp;&amp; <span class="branch-2 cbranch-no" title="branch not covered" >timeOfDay === 'evening';</span>
+      return !!value &amp;&amp; value === 'power' &amp;&amp; timeOfDay === 'evening';
     },
-    generateInsight: <span class="fstat-no" title="function not covered" >(_</span>value, _context) =&gt; (<span class="cstat-no" title="statement not covered" >{</span>
+    generateInsight: (_value, _context) =&gt; ({
       id: generateInsightId('power_evening'),
       type: 'optimization',
       message: 'Power focus in evening - may affect sleep quality',
@@ -303,12 +303,12 @@ export const CONTEXTUAL_RULES: FocusInsightRule[] = [
   {
     condition: (value, context) =&gt; {
       const fitnessLevel = context.userProfile.fitnessLevel;
-      return !!value &amp;&amp; value === 'power' &amp;&amp; <span class="branch-2 cbranch-no" title="branch not covered" >fitnessLevel === 'new to exercise';</span>
+      return !!value &amp;&amp; value === 'power' &amp;&amp; (fitnessLevel === 'beginner' || fitnessLevel === 'novice');
     },
     generateInsight: <span class="fstat-no" title="function not covered" >(_</span>value, _context) =&gt; (<span class="cstat-no" title="statement not covered" >{</span>
-      id: generateInsightId('power_new_to_exercise'),
+      id: generateInsightId('power_beginner'),
       type: 'warning',
-      message: 'Power focus as someone new to exercise - ensure proper form foundation first',
+      message: 'Power focus as a beginner - ensure proper form foundation first',
       confidence: 0.9,
       actionable: true,
       relatedFields: ['customization_focus'],
@@ -325,7 +325,7 @@ export const CONTEXTUAL_RULES: FocusInsightRule[] = [
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-07-19T17:26:31.119Z
+                at 2025-07-27T21:25:05.411Z
             </div>
         <script src="../../../../../prettify.js"></script>
         <script>

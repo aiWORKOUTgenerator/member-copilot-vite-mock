@@ -5,6 +5,7 @@ import { FocusForm } from '../forms/FocusForm';
 import { ValidationFeedback } from '../shared/ValidationFeedback';
 import { ConflictWarning } from '../shared/ConflictWarning';
 import { DetailedWorkoutFeature } from '../../DetailedWorkoutFeature';
+import { aiLogger } from 'src/services/ai/logging/AILogger';
 
 interface TrainingStructureStepProps {
   options: PerWorkoutOptions;
@@ -88,7 +89,13 @@ export const TrainingStructureStep: React.FC<TrainingStructureStepProps> = ({
         setConflicts([]);
       }
     } catch (error) {
-      console.error('Error validating workout structure:', error);
+      aiLogger.error({
+        error: error instanceof Error ? error : new Error(String(error)),
+        context: 'workout structure validation',
+        component: 'TrainingStructureStep',
+        severity: 'medium',
+        userImpact: false
+      });
     }
   }, [options.customization_duration, options.customization_focus, workoutFeature, onChange]);
 

@@ -4,18 +4,22 @@ import { SectionProps } from '../types/quick-workout.types';
 import { RatingScaleWrapper } from '../../customization/rating';
 import { AIInsight } from '../../../types/insights';
 import { logger } from '../../../utils/logger';
-import { useAI } from '../../../contexts/AIContext';
+import { useAIService } from '../../../contexts/composition/AIServiceProvider';
 
-// Removed unused constant
+// Constants
+const HIGH_SORENESS_THRESHOLD = 8;
 
 export const MuscleSorenessSection: React.FC<SectionProps> = ({
   focusData,
   onInputChange,
   viewMode,
-  _aiContext, // Prefix with _ to indicate intentionally unused
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _aiContext,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   userProfile
 }) => {
-  const { getSorenessInsights, serviceStatus } = useAI();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { serviceStatus } = useAIService();
 
   // Early return if focusData is null or undefined
   if (!focusData) {
@@ -34,7 +38,7 @@ export const MuscleSorenessSection: React.FC<SectionProps> = ({
     logger.debug('Soreness AI Insight:', insight);
   };
 
-  // Generate AI insights using the new service
+  // Generate AI insights using the service
   const generateSorenessInsights = (value: number): AIInsight[] => {
     if (serviceStatus !== 'ready') {
       // Fallback to basic insights if service isn't ready
@@ -52,9 +56,47 @@ export const MuscleSorenessSection: React.FC<SectionProps> = ({
     }
 
     try {
-      // Use the AIContext method instead of calling aiService directly
-      // The AIContext handles the conversion from number to array format internally
-      const insights = getSorenessInsights(value);
+      // Basic soreness insights based on level
+      const insights: AIInsight[] = [];
+      
+      if (value >= 8) {
+        insights.push({
+          id: `soreness_high_${Date.now()}`,
+          type: 'warning',
+          title: 'High Soreness Detected',
+          content: 'Consider a recovery day or very light mobility work',
+          priority: 'high',
+          category: 'recovery',
+          metadata: {
+            recommendation: 'Focus on gentle stretching and recovery'
+          }
+        });
+      } else if (value >= 5) {
+        insights.push({
+          id: `soreness_moderate_${Date.now()}`,
+          type: 'optimization',
+          title: 'Moderate Soreness',
+          content: 'Light to moderate intensity workouts recommended',
+          priority: 'medium',
+          category: 'recovery',
+          metadata: {
+            recommendation: 'Consider lower impact exercises'
+          }
+        });
+      } else if (value <= 2) {
+        insights.push({
+          id: `soreness_low_${Date.now()}`,
+          type: 'encouragement',
+          title: 'Low Soreness - Ready to Train',
+          content: 'Great! You\'re ready for a more intense workout',
+          priority: 'low',
+          category: 'performance',
+          metadata: {
+            recommendation: 'You can safely increase workout intensity'
+          }
+        });
+      }
+
       return insights;
     } catch (error) {
       logger.error('Failed to generate soreness insights:', error);
@@ -134,9 +176,22 @@ export const MuscleSorenessSection: React.FC<SectionProps> = ({
       }}
       enableAI={viewMode === 'complex'}
       userProfile={userProfile}
-      aiContext={{
+      aiContext={_aiContext ? {
+        ..._aiContext,
         currentSelections: {
-          customization_soreness: currentSorenessLevel
+          ..._aiContext.currentSelections,
+          customization_soreness: {
+            rating: currentSorenessLevel,
+            categories: ['general']
+          }
+        },
+        generateInsights: generateSorenessInsights
+      } : {
+        currentSelections: {
+          customization_soreness: {
+            rating: currentSorenessLevel,
+            categories: ['general']
+          }
         },
         userProfile: userProfile ?? {
           fitnessLevel: 'intermediate' as const,
@@ -193,7 +248,7 @@ export const MuscleSorenessSection: React.FC<SectionProps> = ({
       {renderRatingScale()}
       
       {/* Warning Message Box */}
-      {currentSorenessLevel >= 8 && (
+      {currentSorenessLevel >= HIGH_SORENESS_THRESHOLD && (
         <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
           <h4 className="font-medium text-yellow-800">High muscle soreness detected</h4>
           <p className="mt-1 text-sm text-yellow-700">

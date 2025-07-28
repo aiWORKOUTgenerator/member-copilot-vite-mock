@@ -48,11 +48,10 @@ const mockAIContext = {
 // Mock the useAI hook
 jest.mock('../../../contexts/AIContext', () => ({
   useAI: () => mockAIContext,
-  AIProvider: ({ children }: { children: React.ReactNode }) => React.createElement('div', null, children),
-  AIDevTools: () => React.createElement('div', null, 'AI Debug Panel')
+  AIProvider: ({ children }: { children: React.ReactNode }) => React.createElement('div', null, children)
 }));
 
-import { useAI, AIProvider, AIDevTools } from '../../../contexts/AIContext';
+import { useAI, AIProvider } from '../../../contexts/AIContext';
 
 // Mock components to test AIContext integration
 const MockAIConsumer = ({ testId, hookTest }: { testId: string; hookTest: (context: any) => void }) => {
@@ -374,15 +373,7 @@ describe('AIContext Core Tests - MANDATORY SAFETY', () => {
       expect(typeof context.developmentTools.validateState).toBe('function');
     });
 
-    it('should provide AIDevTools component', () => {
-      render(
-        React.createElement(AIProvider, null,
-          React.createElement(AIDevTools)
-        )
-      );
 
-      expect(screen.getByText('AI Debug Panel')).toBeDefined();
-    });
   });
 
   describe('6. Environment Status', () => {

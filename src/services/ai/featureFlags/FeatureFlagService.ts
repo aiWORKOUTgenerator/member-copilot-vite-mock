@@ -52,7 +52,7 @@ const DEFAULT_AI_FLAGS: FeatureFlag[] = [
     name: 'Unified AI Service',
     description: 'Use the new unified AI service instead of legacy implementations',
     enabled: true,
-    rolloutPercentage: 30, // Increased from 10% to 30% for Quick Workout rollout expansion
+    rolloutPercentage: 100, // Enabled for all users for development
     metadata: {
       experimentId: 'ai_service_migration_2024',
       startDate: new Date(),

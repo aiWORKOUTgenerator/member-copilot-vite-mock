@@ -246,31 +246,81 @@ export class OpenAIStrategy implements AIStrategy {
 
   // ✅ NEW: Convert WorkoutGenerationRequest to QuickWorkoutParams
   private convertToQuickWorkoutParams(request: WorkoutGenerationRequest): QuickWorkoutParams {
-    const extractedDuration = 
-      request.preferences?.duration ||
-      (typeof request.workoutFocusData?.customization_duration === 'number' 
-        ? request.workoutFocusData.customization_duration 
-        : request.workoutFocusData?.customization_duration?.duration) ||
-      30;
-    const extractedFocus = 
-      request.preferences?.focus ||
-      (typeof request.workoutFocusData?.customization_focus === 'string' 
-        ? request.workoutFocusData.customization_focus 
-        : request.workoutFocusData?.customization_focus?.focus) ||
-      'general';
-    const extractedEquipment = 
-      request.preferences?.equipment ||
-      request.workoutFocusData?.customization_equipment ||
-      [];
-    const extractedLocation = 
-      request.preferences?.location ||
-      'home' as const;
-    const extractedIntensity = 
-      request.preferences?.intensity ||
-      'moderate' as const;
-    const energyLevel = request.workoutFocusData?.customization_energy ?? 5;
-    const sorenessAreas = request.workoutFocusData?.customization_soreness ? 
-      Object.keys(request.workoutFocusData.customization_soreness) : [];
+    console.log('🔍 DEBUG - convertToQuickWorkoutParams input:', {
+      hasPreferences: !!request.preferences,
+      preferencesDuration: request.preferences?.duration,
+      hasWorkoutFocusData: !!request.workoutFocusData,
+      hasSelections: !!request.selections,
+      selectionsDuration: request.selections?.customization_duration,
+      workoutFocusDuration: request.workoutFocusData?.customization_duration,
+      durationType: typeof request.workoutFocusData?.customization_duration
+    });
+    
+    // Handle legacy format (selections) vs structured format (workoutFocusData + preferences)
+    let extractedDuration: number;
+    
+    if (request.selections && !request.preferences) {
+      // Legacy format: extract from selections
+      const duration = request.selections.customization_duration;
+      extractedDuration = typeof duration === 'number' ? duration : 30;
+      console.log('🔍 DEBUG - convertToQuickWorkoutParams using legacy format, duration:', extractedDuration);
+    } else {
+      // Structured format: use preferences or workoutFocusData
+      extractedDuration = 
+        request.preferences?.duration ||
+        (typeof request.workoutFocusData?.customization_duration === 'number' 
+          ? request.workoutFocusData.customization_duration 
+          : request.workoutFocusData?.customization_duration?.duration) ||
+        30;
+      console.log('🔍 DEBUG - convertToQuickWorkoutParams using structured format, duration:', extractedDuration);
+    }
+    
+    console.log('🔍 DEBUG - convertToQuickWorkoutParams extracted duration:', extractedDuration);
+    // Handle legacy format (selections) vs structured format (workoutFocusData + preferences)
+    let extractedFocus: string;
+    let extractedEquipment: string[];
+    let extractedLocation: 'home' | 'gym' | 'outdoor';
+    let extractedIntensity: 'low' | 'moderate' | 'high';
+    let energyLevel: number;
+    let sorenessAreas: string[];
+    
+    if (request.selections && !request.preferences) {
+      // Legacy format: extract from selections
+      const focus = request.selections.customization_focus;
+      extractedFocus = typeof focus === 'string' ? focus : 'general';
+      extractedEquipment = Array.isArray(request.selections.customization_equipment) 
+        ? request.selections.customization_equipment 
+        : [];
+      extractedLocation = 'home' as const;
+      extractedIntensity = 'moderate' as const;
+      energyLevel = typeof request.selections.customization_energy === 'number' 
+        ? request.selections.customization_energy 
+        : 5;
+      sorenessAreas = request.selections.customization_soreness 
+        ? Object.keys(request.selections.customization_soreness) 
+        : [];
+    } else {
+      // Structured format: use preferences or workoutFocusData
+      extractedFocus = 
+        request.preferences?.focus ||
+        (typeof request.workoutFocusData?.customization_focus === 'string' 
+          ? request.workoutFocusData.customization_focus 
+          : request.workoutFocusData?.customization_focus?.focus) ||
+        'general';
+      extractedEquipment = 
+        request.preferences?.equipment ||
+        request.workoutFocusData?.customization_equipment ||
+        [];
+      extractedLocation = 
+        request.preferences?.location ||
+        'home' as const;
+      extractedIntensity = 
+        request.preferences?.intensity ||
+        'moderate' as const;
+      energyLevel = request.workoutFocusData?.customization_energy ?? 5;
+      sorenessAreas = request.workoutFocusData?.customization_soreness ? 
+        Object.keys(request.workoutFocusData.customization_soreness) : [];
+    }
     const params = {
       duration: extractedDuration,
       fitnessLevel: this.mapFitnessLevel(request.userProfile.fitnessLevel),

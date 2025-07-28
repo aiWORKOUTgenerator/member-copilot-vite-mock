@@ -11,6 +11,7 @@ import {
 } from '../services/ai/external/features/detailed-workout-setup/components/steps';
 import { DetailedWorkoutFeature } from '../services/ai/external/features/detailed-workout-setup/DetailedWorkoutFeature';
 import { useAI } from '../contexts/AIContext';
+import { aiLogger } from '../services/ai/logging/AILogger';
 
 interface DetailedWorkoutWizardProps {
   onNavigate: (page: 'profile' | 'waiver' | 'focus' | 'review' | 'results') => void;
@@ -71,7 +72,7 @@ export const DetailedWorkoutWizard: React.FC<DetailedWorkoutWizardProps> = ({
   const { aiService } = useAI();
 
   // Initialize DetailedWorkoutFeature
-  const workoutFeature = useMemo(() => {
+  const detailedWorkoutFeature = useMemo(() => {
     try {
       const openAIService = aiService.getOpenAIService();
       return new DetailedWorkoutFeature({
@@ -79,7 +80,9 @@ export const DetailedWorkoutWizard: React.FC<DetailedWorkoutWizardProps> = ({
         logger: console
       });
     } catch (error) {
-      console.warn('Failed to initialize DetailedWorkoutFeature with OpenAIService:', error);
+      aiLogger.warn('Failed to initialize DetailedWorkoutFeature with OpenAIService', { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return new DetailedWorkoutFeature({
         openAIService: undefined,
         logger: console
@@ -133,7 +136,13 @@ export const DetailedWorkoutWizard: React.FC<DetailedWorkoutWizardProps> = ({
       // Navigate to review page
       onNavigate('review');
     } catch (error) {
-      console.error('Error completing detailed workout setup:', error);
+      aiLogger.error({
+        error: error instanceof Error ? error : new Error(String(error)),
+        context: 'detailed workout setup completion',
+        component: 'DetailedWorkoutWizard',
+        severity: 'medium',
+        userImpact: true
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -242,7 +251,7 @@ export const DetailedWorkoutWizard: React.FC<DetailedWorkoutWizardProps> = ({
                 handleStepChange(key, { [key]: value });
               }}
               onValidation={(isValid: boolean) => handleStepValidation(currentStep.id, isValid)}
-              workoutFeature={workoutFeature}
+              workoutFeature={detailedWorkoutFeature}
               disabled={isSubmitting}
             />
           </div>

@@ -3,6 +3,8 @@ import { RatingScale } from '../../shared/DRYComponents';
 import { CustomizationComponentProps } from '../../../types/core';
 import AIEnhancedRatingScale from './AIEnhancedRatingScale';
 import { AIInsight } from '../../../types/insights';
+import { UserProfile } from '../../../types/user';
+import { AIRecommendationContext } from '../../../types/ai';
 
 export interface RatingScaleConfig {
   min: number;
@@ -21,6 +23,8 @@ export interface RatingScaleWrapperProps extends CustomizationComponentProps<num
   config: RatingScaleConfig;
   enableAI?: boolean;
   onAIInsight?: (insight: AIInsight) => void;
+  userProfile?: UserProfile;
+  aiContext?: AIRecommendationContext;
 }
 
 const RatingScaleWrapper: React.FC<RatingScaleWrapperProps> = ({

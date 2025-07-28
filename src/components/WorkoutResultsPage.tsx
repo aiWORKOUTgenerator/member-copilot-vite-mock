@@ -4,6 +4,7 @@ import { GeneratedWorkout } from '../services/ai/external/types/external-ai.type
 import { UseWorkoutGenerationReturn } from '../hooks/useWorkoutGeneration';
 import { WorkoutDisplay } from './WorkoutDisplay';
 import { ErrorBoundary } from './shared/ErrorBoundary';
+import { aiLogger } from '../services/ai/logging/AILogger';
 
 export interface WorkoutResultsPageProps {
   onNavigate: (page: 'profile' | 'waiver' | 'focus' | 'review' | 'results') => void;
@@ -19,7 +20,7 @@ const WorkoutResultsPage: React.FC<WorkoutResultsPageProps> = ({
   onWorkoutUpdate 
 }) => {
   // 🔍 DEBUG: Log what WorkoutResultsPage receives
-  console.log('🔍 WorkoutResultsPage - Component rendered with props:', {
+  aiLogger.debug('WorkoutResultsPage - Component rendered with props', {
     hasGeneratedWorkout: !!generatedWorkout,
     workoutId: generatedWorkout?.id,
     workoutTitle: generatedWorkout?.title,
@@ -43,7 +44,13 @@ const WorkoutResultsPage: React.FC<WorkoutResultsPageProps> = ({
         onWorkoutUpdate(newWorkout);
       }
     } catch (error) {
-      console.error('Regeneration failed:', error);
+      aiLogger.error({
+        error: error instanceof Error ? error : new Error(String(error)),
+        context: 'workout regeneration',
+        component: 'WorkoutResultsPage',
+        severity: 'medium',
+        userImpact: true
+      });
     } finally {
       setIsRegenerating(false);
     }
@@ -93,7 +100,13 @@ Generated on: ${generatedWorkout.generatedAt.toLocaleDateString()}
       setDownloadStatus('complete');
       setTimeout(() => setDownloadStatus('idle'), 2000);
     } catch (error) {
-      console.error('Download failed:', error);
+      aiLogger.error({
+        error: error instanceof Error ? error : new Error(String(error)),
+        context: 'workout download',
+        component: 'WorkoutResultsPage',
+        severity: 'low',
+        userImpact: false
+      });
       setDownloadStatus('idle');
     }
   }, [generatedWorkout]);
@@ -123,7 +136,13 @@ Generated on: ${generatedWorkout.generatedAt.toLocaleDateString()}
       setShareStatus('complete');
       setTimeout(() => setShareStatus('idle'), 2000);
     } catch (error) {
-      console.error('Share failed:', error);
+      aiLogger.error({
+        error: error instanceof Error ? error : new Error(String(error)),
+        context: 'workout sharing',
+        component: 'WorkoutResultsPage',
+        severity: 'low',
+        userImpact: false
+      });
       setShareStatus('idle');
     }
   }, [generatedWorkout]);
@@ -136,7 +155,13 @@ Generated on: ${generatedWorkout.generatedAt.toLocaleDateString()}
         onWorkoutUpdate(newWorkout);
       }
     } catch (error) {
-      console.error('Retry failed:', error);
+      aiLogger.error({
+        error: error instanceof Error ? error : new Error(String(error)),
+        context: 'workout retry generation',
+        component: 'WorkoutResultsPage',
+        severity: 'medium',
+        userImpact: true
+      });
     }
   }, [workoutGeneration, onWorkoutUpdate]);
 
@@ -210,55 +235,12 @@ Generated on: ${generatedWorkout.generatedAt.toLocaleDateString()}
               </button>
               <button
                 onClick={() => onNavigate('review')}
-                className="flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors"
+                className="flex items-center gap-2 px-6 py-3 bg-gray-600 text-white font-medium rounded-xl hover:bg-gray-700 transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
                 Back to Review
               </button>
             </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show placeholder if no workout is available
-  if (!generatedWorkout) {
-    return (
-      <div className="space-y-8">
-        <div className="text-center">
-          <div className="w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
-            <Zap className="w-10 h-10 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">No Workout Generated</h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Please go back and generate a workout to see your personalized routine.
-          </p>
-        </div>
-
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-gray-50 rounded-xl p-8 text-center">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              {[
-                { label: "Duration", value: "--", icon: Clock, color: "text-blue-600" },
-                { label: "Exercises", value: "--", icon: Target, color: "text-green-600" },
-                { label: "Difficulty", value: "--", icon: TrendingUp, color: "text-purple-600" }
-              ].map((stat, index) => (
-                <div key={index} className="text-center p-4 bg-white rounded-xl border border-gray-200">
-                  <stat.icon className={`w-8 h-8 ${stat.color} mx-auto mb-2`} />
-                  <div className="text-2xl font-bold text-gray-400">{stat.value}</div>
-                  <div className="text-sm text-gray-500">{stat.label}</div>
-                </div>
-              ))}
-            </div>
-
-            <button
-              onClick={() => onNavigate('review')}
-              className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl mx-auto"
-            >
-              <ChevronLeft className="w-5 h-5" />
-              Go Back to Generate Workout
-            </button>
           </div>
         </div>
       </div>
@@ -291,38 +273,47 @@ Generated on: ${generatedWorkout.generatedAt.toLocaleDateString()}
       </div>
 
       {/* Workout Display */}
-      <ErrorBoundary
-        onError={(error, errorInfo) => {
-          console.error('WorkoutDisplay error:', error, errorInfo);
-        }}
-        fallback={
-          <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="w-8 h-8 text-red-600" />
+      {generatedWorkout && (
+        <ErrorBoundary
+          onError={(error, errorInfo) => {
+            aiLogger.error({
+              error: error instanceof Error ? error : new Error(String(error)),
+              context: 'WorkoutDisplay error boundary',
+              component: 'WorkoutResultsPage',
+              severity: 'medium',
+              userImpact: true,
+              metadata: { errorInfo }
+            });
+          }}
+          fallback={
+            <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="w-8 h-8 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-red-900 mb-2">Workout Display Error</h3>
+              <p className="text-red-700 mb-4">
+                There was an issue displaying your workout. Please try regenerating it.
+              </p>
+              <button
+                onClick={handleRegenerate}
+                disabled={isRegenerating}
+                className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+                {isRegenerating ? 'Regenerating...' : 'Regenerate Workout'}
+              </button>
             </div>
-            <h3 className="text-lg font-semibold text-red-900 mb-2">Workout Display Error</h3>
-            <p className="text-red-700 mb-4">
-              There was an issue displaying your workout. Please try regenerating it.
-            </p>
-            <button
-              onClick={handleRegenerate}
-              disabled={isRegenerating}
-              className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`} />
-              {isRegenerating ? 'Regenerating...' : 'Regenerate Workout'}
-            </button>
-          </div>
-        }
-      >
-        <WorkoutDisplay
-          workout={generatedWorkout}
-          onRegenerate={handleRegenerate}
-          onDownload={handleDownload}
-          onShare={handleShare}
-          isRegenerating={isRegenerating}
-        />
-      </ErrorBoundary>
+          }
+        >
+          <WorkoutDisplay
+            workout={generatedWorkout}
+            onRegenerate={handleRegenerate}
+            onDownload={handleDownload}
+            onShare={handleShare}
+            isRegenerating={isRegenerating}
+          />
+        </ErrorBoundary>
+      )}
 
       {/* Additional Actions */}
       <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-gray-200/50">

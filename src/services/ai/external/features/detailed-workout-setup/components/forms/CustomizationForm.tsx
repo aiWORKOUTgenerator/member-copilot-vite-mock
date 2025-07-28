@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Settings, Zap, Clock, BarChart } from 'lucide-react';
 import { ValidationResult } from '../../../../../../../types/core';
+import { aiLogger } from '../../../../../../logging/AILogger';
 
 interface CustomizationFormProps {
   value: WorkoutCustomizationData;
@@ -50,16 +51,16 @@ export const CustomizationForm: React.FC<CustomizationFormProps> = ({
   const handleOptionChange = (category: keyof WorkoutCustomizationData, newValue: string) => {
     if (disabled) return;
 
-    console.log('CustomizationForm: handleOptionChange called', { category, newValue });
+    aiLogger.debug('CustomizationForm: handleOptionChange called', { category, newValue });
 
     const updatedValue = {
       ...value,
       [category]: newValue
     };
 
-    console.log('CustomizationForm: calling onChange with updatedValue:', updatedValue);
+    aiLogger.debug('CustomizationForm: calling onChange with updatedValue', { updatedValue });
     onChange(updatedValue as WorkoutCustomizationData);
-    console.log('CustomizationForm: onChange completed');
+    aiLogger.debug('CustomizationForm: onChange completed');
 
     // Validate customization options
     if (onValidation) {

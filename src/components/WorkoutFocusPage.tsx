@@ -8,6 +8,7 @@ import { AIRecommendationContext } from '../types/ai';
 import { UserProfile, TimePreference, AIAssistanceLevel, RecoveryStatus } from '../types/user';
 import { ProfileData } from './Profile/types/profile.types';
 import { profileTransformers } from '../utils/dataTransformers';
+import { aiLogger } from '../services/ai/logging/AILogger';
 
 // Define WorkoutType locally since it's used throughout the app
 type WorkoutType = 'quick' | 'detailed';
@@ -49,7 +50,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({
       // Update parent with the determined workout type
       if (onDataUpdate) {
         onDataUpdate(initialData, workoutType);
-        console.log('WorkoutFocusPage: Initialized with workout type', workoutType);
+        aiLogger.debug('WorkoutFocusPage: Initialized with workout type', { workoutType });
       }
     }
   }, [initialData, onDataUpdate]);
@@ -65,7 +66,7 @@ const WorkoutFocusPage: React.FC<WorkoutFocusPageProps> = ({
     onDataUpdate?.(newOptions, currentWorkoutType);
     
     // Log for debugging
-    console.log('WorkoutFocusPage: Updated options and workout type', {
+    aiLogger.debug('WorkoutFocusPage: Updated options and workout type', {
       key,
       value,
       workoutType: currentWorkoutType,

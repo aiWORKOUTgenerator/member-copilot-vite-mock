@@ -1,11 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle, Lightbulb, TrendingUp } from 'lucide-react';
-import { useAI } from '../../../contexts/AIContext';
+import { useAIService } from '../../../contexts/composition/AIServiceProvider';
+import { useAIFeatureFlags } from '../../../contexts/composition/AIFeatureFlagsProvider';
 import { UserProfile } from '../../../types';
 import { logger } from '../../../utils/logger';
 
 interface CrossComponentAnalysisPanelProps {
-  focusData: any;
+  focusData: {
+    energyLevel?: number;
+    sorenessLevel?: number;
+    workoutDuration?: number;
+    workoutFocus?: string;
+  } | null;
   userProfile?: UserProfile;
   viewMode: 'simple' | 'complex';
 }
@@ -26,16 +32,16 @@ export const CrossComponentAnalysisPanel: React.FC<CrossComponentAnalysisPanelPr
   userProfile,
   viewMode
 }) => {
-  const { isFeatureEnabled, serviceStatus } = useAI();
+  const { serviceStatus } = useAIService();
+  const { isFeatureEnabled } = useAIFeatureFlags();
   const [insights, setInsights] = useState<CrossComponentInsight[]>([]);
-
-  // Early return if focusData is null or undefined
-  if (!focusData) {
-    return null;
-  }
 
   // Generate cross-component insights
   const generateCrossComponentInsights = (): CrossComponentInsight[] => {
+    // Early return if focusData is null or undefined
+    if (!focusData) {
+      return [];
+    }
     if (serviceStatus !== 'ready') return [];
 
     const insights: CrossComponentInsight[] = [];

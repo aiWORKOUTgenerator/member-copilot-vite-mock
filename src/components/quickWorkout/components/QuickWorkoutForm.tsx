@@ -16,6 +16,7 @@ import {
   EQUIPMENT_OPTIONS,
   SORENESS_OPTIONS 
 } from '../../../schemas/workoutFocusSchema';
+import { aiLogger } from '../../../services/ai/logging/AILogger';
 
 interface EnhancedQuickWorkoutFormProps extends QuickWorkoutFormProps {
   userProfile?: UserProfile;
@@ -182,7 +183,7 @@ export const QuickWorkoutForm: React.FC<EnhancedQuickWorkoutFormProps> = ({
   const handleSubmit = () => {
     if (isFormValid) {
       // 🔍 DEBUG: Log the form data before conversion
-      console.log('🔍 DEBUG: QuickWorkoutForm - Form data before conversion:', {
+      aiLogger.debug('QuickWorkoutForm - Form data before conversion', {
         focusData,
         workoutDuration: focusData.workoutDuration,
         isFormValid
@@ -191,7 +192,7 @@ export const QuickWorkoutForm: React.FC<EnhancedQuickWorkoutFormProps> = ({
       // Save final data before navigating
       if (onDataUpdate) {
         const perWorkoutOptions = mapToPerWorkoutOptions(focusData);
-        console.log('🔍 DEBUG: QuickWorkoutForm - Converted to PerWorkoutOptions:', {
+        aiLogger.debug('QuickWorkoutForm - Converted to PerWorkoutOptions', {
           perWorkoutOptions,
           customization_duration: perWorkoutOptions.customization_duration
         });

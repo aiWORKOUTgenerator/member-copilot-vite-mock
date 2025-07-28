@@ -1,4 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { aiLogger } from '../../services/ai/logging/AILogger';
 
 interface Props {
   children: ReactNode;
@@ -23,7 +24,14 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    aiLogger.error({
+      error,
+      context: 'ErrorBoundary componentDidCatch',
+      component: 'ErrorBoundary',
+      severity: 'high',
+      userImpact: true,
+      metadata: { errorInfo }
+    });
     
     // Call the onError callback if provided
     if (this.props.onError) {

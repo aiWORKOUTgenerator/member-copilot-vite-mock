@@ -35,4 +35,13 @@ export type {
 // User types
 export type {
   UserProfile
-} from './user'; 
+} from './user';
+
+// AI types
+export type {
+  AIRecommendationContext,
+  AIRecommendation,
+  AIAnalysis,
+  AIValidation,
+  AILearning
+} from './ai'; 
