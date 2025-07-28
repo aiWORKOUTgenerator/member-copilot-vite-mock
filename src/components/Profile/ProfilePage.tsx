@@ -31,6 +31,17 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
   // State to control auto-save message visibility
   const [showSaveMessage, setShowSaveMessage] = React.useState(false);
 
+  // Show save message when data is saved
+  useEffect(() => {
+    if (!hasUnsavedChanges && lastSaved) {
+      setShowSaveMessage(true);
+      const timer = setTimeout(() => {
+        setShowSaveMessage(false);
+      }, 3000); // Hide after 3 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [hasUnsavedChanges, lastSaved]);
+
   // Simple field change handler
   const handleFieldChange = async (field: keyof ProfileData, value: string | string[]) => {
     await handleInputChange(field, value);
@@ -67,14 +78,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
         return null;
     }
   };
-
-  const stepTitles = [
-    'Experience & Activity',
-    'Time & Commitment',
-    'Preferences & Resources',
-    'Goals & Timeline',
-    'Metrics & Health'
-  ];
 
   // Format last saved time
   const formatLastSaved = () => {

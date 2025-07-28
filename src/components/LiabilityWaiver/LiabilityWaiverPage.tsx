@@ -1,6 +1,6 @@
 import React, { Suspense, useEffect } from 'react';
-import { Shield, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, Save } from 'lucide-react';
-import { PageHeader, SectionNavigation } from '../shared';
+import { Shield, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, Save, Loader2 } from 'lucide-react';
+import { PageHeader, SectionNavigation, ErrorBoundary } from '../shared';
 import { useWaiverForm } from './hooks/useWaiverForm';
 import { LiabilityWaiverPageProps } from './types/liability-waiver.types';
 import { PersonalInfoStep, RiskAcknowledgmentStep, ReleaseSignatureStep } from './components/steps';
@@ -19,10 +19,26 @@ const LiabilityWaiverPage: React.FC<LiabilityWaiverPageProps> = ({ onNavigate })
     setSection,
     isWaiverComplete,
     getTotalProgress,
+    isLoading,
+    error,
     hasUnsavedChanges,
     lastSaved,
     forceSave
   } = useWaiverForm();
+
+  // State to control auto-save message visibility
+  const [showSaveMessage, setShowSaveMessage] = React.useState(false);
+
+  // Show save message when data is saved
+  useEffect(() => {
+    if (!hasUnsavedChanges && lastSaved) {
+      setShowSaveMessage(true);
+      const timer = setTimeout(() => {
+        setShowSaveMessage(false);
+      }, 3000); // Hide after 3 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [hasUnsavedChanges, lastSaved]);
 
   // Clean up any existing backup data
   useEffect(() => {
@@ -44,6 +60,10 @@ const LiabilityWaiverPage: React.FC<LiabilityWaiverPageProps> = ({ onNavigate })
 
   // Removed backup functionality
 
+  if (error) {
+    throw error; // This will be caught by the ErrorBoundary
+  }
+
   const handleSubmit = () => {
     if (isWaiverComplete()) {
       forceSave(); // Ensure all changes are saved before proceeding
@@ -61,43 +81,40 @@ const LiabilityWaiverPage: React.FC<LiabilityWaiverPageProps> = ({ onNavigate })
   }, [setSection, hasUnsavedChanges, forceSave]);
 
   const renderSection = () => {
+    const commonProps = {
+      waiverData,
+      onInputChange: handleInputChange,
+      getFieldError
+    };
+
     switch (currentSection) {
       case 1:
-        return (
-          <PersonalInfoStep
-            waiverData={waiverData}
-            onInputChange={handleInputChange}
-            getFieldError={getFieldError}
-          />
-        );
-
+        return <PersonalInfoStep {...commonProps} />;
       case 2:
-        return (
-          <RiskAcknowledgmentStep
-            waiverData={waiverData}
-            onInputChange={handleInputChange}
-            getFieldError={getFieldError}
-          />
-        );
-
+        return <RiskAcknowledgmentStep {...commonProps} />;
       case 3:
-        return (
-          <ReleaseSignatureStep
-            waiverData={waiverData}
-            onInputChange={handleInputChange}
-            getFieldError={getFieldError}
-          />
-        );
-
+        return <ReleaseSignatureStep {...commonProps} />;
       default:
         return null;
     }
   };
 
+  // Format last saved time
+  const formatLastSaved = () => {
+    if (!lastSaved) return '';
+    const date = new Date(lastSaved);
+    return date.toLocaleTimeString();
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
+    <ErrorBoundary>
+      <div 
+        className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50"
+        role="main"
+        aria-label="Liability Waiver Form"
+      >
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto">
           {/* Header */}
           <PageHeader
             title="Liability Waiver & Release"
@@ -107,19 +124,34 @@ const LiabilityWaiverPage: React.FC<LiabilityWaiverPageProps> = ({ onNavigate })
             className="mb-8"
           />
 
-          {/* Save Status Indicator */}
-          <div className="flex items-center justify-end mb-4 text-sm">
+          {/* Auto-save Status */}
+          <div 
+            className={`fixed top-4 right-4 flex items-center gap-2 px-4 py-2 rounded-lg shadow-lg transition-all duration-300 ${
+              hasUnsavedChanges
+                ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                : showSaveMessage
+                ? 'bg-green-50 text-green-700 border border-green-200'
+                : 'opacity-0 pointer-events-none'
+            }`}
+            role="status"
+            aria-live="polite"
+          >
             {hasUnsavedChanges ? (
-              <span className="text-orange-600 flex items-center gap-1">
-                <Save className="w-4 h-4" />
-                Saving...
-              </span>
-            ) : (
-              <span className="text-gray-600 flex items-center gap-1">
-                <Save className="w-4 h-4" />
-                Last saved: {new Date(lastSaved).toLocaleTimeString()}
-              </span>
-            )}
+              <>
+                <AlertTriangle className="w-4 h-4" aria-hidden="true" />
+                <span>Saving changes...</span>
+              </>
+            ) : showSaveMessage ? (
+              <>
+                <Save className="w-4 h-4" aria-hidden="true" />
+                <span>All changes saved</span>
+                {lastSaved && (
+                  <span className="text-sm text-gray-500 ml-2">
+                    Last saved at {formatLastSaved()}
+                  </span>
+                )}
+              </>
+            ) : null}
           </div>
 
           {/* Section Navigation */}
@@ -162,6 +194,13 @@ const LiabilityWaiverPage: React.FC<LiabilityWaiverPageProps> = ({ onNavigate })
 
           {/* Form Content */}
           <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+            {isLoading && (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-red-600" />
+                <span className="ml-2 text-gray-600">Saving...</span>
+              </div>
+            )}
+
             <Suspense fallback={<div className="text-center py-8">Loading...</div>}>
               {renderSection()}
             </Suspense>
@@ -171,7 +210,8 @@ const LiabilityWaiverPage: React.FC<LiabilityWaiverPageProps> = ({ onNavigate })
           <div className="flex justify-between items-center">
             <button
               onClick={() => currentSection === 1 ? onNavigate('profile') : prevSection()}
-              className="flex items-center gap-2 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-all"
+              disabled={isLoading}
+              className="flex items-center gap-2 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-5 h-5" />
               {currentSection === 1 ? 'Back to Profile' : 'Previous'}
@@ -180,9 +220,9 @@ const LiabilityWaiverPage: React.FC<LiabilityWaiverPageProps> = ({ onNavigate })
             {currentSection === 3 ? (
               <button
                 onClick={handleSubmit}
-                disabled={!isWaiverComplete()}
+                disabled={!isWaiverComplete() || isLoading}
                 className={`flex items-center gap-2 px-8 py-3 rounded-lg font-medium transition-all shadow-lg ${
-                  isWaiverComplete()
+                  isWaiverComplete() && !isLoading
                     ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white hover:from-red-700 hover:to-orange-700'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
@@ -193,9 +233,9 @@ const LiabilityWaiverPage: React.FC<LiabilityWaiverPageProps> = ({ onNavigate })
             ) : (
               <button
                 onClick={nextSection}
-                disabled={!canProceedToNextSection()}
+                disabled={!canProceedToNextSection() || isLoading}
                 className={`flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-600 to-orange-600 text-white rounded-lg font-medium transition-all shadow-lg ${
-                  !canProceedToNextSection() ? 'opacity-50 cursor-not-allowed' : 'hover:from-red-700 hover:to-orange-700'
+                  !canProceedToNextSection() || isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:from-red-700 hover:to-orange-700'
                 }`}
               >
                 Next
@@ -223,6 +263,7 @@ const LiabilityWaiverPage: React.FC<LiabilityWaiverPageProps> = ({ onNavigate })
         </div>
       </div>
     </div>
+    </ErrorBoundary>
   );
 };
 

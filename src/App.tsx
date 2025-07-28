@@ -250,7 +250,18 @@ function AppContent() {
       
       if (waiverData) {
         try {
-          parsedWaiverData = JSON.parse(waiverData);
+          const parsed = JSON.parse(waiverData);
+          
+          // 🔍 DEBUG: Log waiver data structure (similar to profile)
+          aiLogger.debug('Parsed waiver data structure', {
+            hasDataProperty: !!parsed.data,
+            parsedKeys: Object.keys(parsed),
+            dataKeys: parsed.data ? Object.keys(parsed.data) : 'no data property'
+          });
+          
+          if (parsed.data) { // Check for enhanced persisted state format
+            parsedWaiverData = parsed.data;
+          }
         } catch (waiverError) {
           aiLogger.warn('Failed to parse waiver data from localStorage', { error: waiverError instanceof Error ? waiverError.message : String(waiverError) });
         }

@@ -1,50 +1,70 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useEnhancedPersistedState } from '../../../hooks/usePersistedState';
 import { LiabilityWaiverData, WaiverFormHookReturn } from '../types/liability-waiver.types';
-import { calculateCompletionPercentage } from '../utils/waiverHelpers';
 import { defaultWaiverData } from '../schemas/waiverSchema';
 
 export const useWaiverForm = (): WaiverFormHookReturn => {
   const {
-    state: waiverData,
+    state: waiverDataRaw,
     setState: setWaiverData,
     metadata,
     hasUnsavedChanges,
     forceSave
-  } = useEnhancedPersistedState<LiabilityWaiverData>(
+  } = useEnhancedPersistedState<LiabilityWaiverData | null>(
     'waiverData', 
-    defaultWaiverData,
-    { debounceDelay: 500 } // Faster debounce for better responsiveness
+    null,
+    { debounceDelay: 500 }
   );
+
+  // Always provide a fully populated waiverData object
+  const waiverData: LiabilityWaiverData = useMemo(() => {
+    if (!waiverDataRaw) return { ...defaultWaiverData };
+    return { ...defaultWaiverData, ...waiverDataRaw };
+  }, [waiverDataRaw]);
   
   const [currentSection, setCurrentSection] = useState<number>(1);
   const [touchedFields, setTouchedFields] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
-  // Removed backup functionality
-
-  const handleInputChange = useCallback((field: keyof LiabilityWaiverData, value: string | boolean) => {
-    setWaiverData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    
-    // Mark field as touched
-    setTouchedFields(prev => {
-      if (!prev.includes(field as string)) {
-        return [...prev, field as string];
-      }
-      return prev;
-    });
+  // Enhanced input change handler with error handling
+  const handleInputChange = useCallback(async (field: keyof LiabilityWaiverData, value: string | boolean) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      setWaiverData(prev => {
+        const base = prev ? { ...defaultWaiverData, ...prev } : { ...defaultWaiverData };
+        return {
+          ...base,
+          [field]: value
+        };
+      });
+      
+      // Mark field as touched
+      setTouchedFields(prev => {
+        if (!prev.includes(field as string)) {
+          return [...prev, field as string];
+        }
+        return prev;
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('An error occurred while updating the form'));
+    } finally {
+      setIsLoading(false);
+    }
   }, [setWaiverData]);
 
   const resetForm = useCallback(() => {
-    setWaiverData(defaultWaiverData);
+    setWaiverData({ ...defaultWaiverData });
     setTouchedFields([]);
-    forceSave(); // Immediately persist the reset
-  }, [setWaiverData, forceSave]);
+    setError(null);
+  }, [setWaiverData]);
 
-  // Step validation logic
+  // Simplified step validation - only check if required fields exist (matching profile pattern)
   const validateStep = useCallback((step: number): boolean => {
+    if (!waiverData) return false;
+    
     switch (step) {
       case 1:
         return waiverData.physicianApproval === true;
@@ -72,53 +92,27 @@ export const useWaiverForm = (): WaiverFormHookReturn => {
     return [1, 2, 3].every(step => validateStep(step));
   }, [validateStep]);
 
+  // Simple completion percentage (matching profile pattern)
   const getCompletionPercentageValue = useCallback(() => {
-    return calculateCompletionPercentage(waiverData);
-  }, [waiverData]);
+    if (!waiverData) return 0;
+    const completedSteps = [1, 2, 3].filter(step => validateStep(step)).length;
+    return (completedSteps / 3) * 100;
+  }, [waiverData, validateStep]);
 
-  // Step completion status
+  // Simplified step completion - just track if each step is complete (matching profile pattern)
   const stepCompletion = useMemo(() => {
     const completion: Record<number, { isComplete: boolean; progress: number }> = {};
     
-    // Define fields for each step
-    const stepFields = {
-      1: ['fullName', 'dateOfBirth', 'emergencyContactName', 'emergencyContactPhone', 'medicalConditions', 'medications', 'physicianApproval'],
-      2: ['understandRisks', 'assumeResponsibility', 'followInstructions', 'reportInjuries'],
-      3: ['releaseFromLiability', 'signature', 'signatureDate']
-    };
-
     for (let step = 1; step <= 3; step++) {
-      const fields = stepFields[step as keyof typeof stepFields];
-      let completedFields = 0;
-
-      fields.forEach(field => {
-        const value = waiverData[field as keyof LiabilityWaiverData];
-        if (typeof value === 'boolean') {
-          // For boolean fields, we count them as complete if they are true or if they're optional
-          const optionalBooleanFields = ['physicianApproval'];
-          if (optionalBooleanFields.includes(field) || value === true) {
-            completedFields++;
-          }
-        } else if (typeof value === 'string') {
-          // For string fields, count as complete if not empty, or if they're optional
-          const optionalStringFields = ['medicalConditions', 'medications'];
-          if (optionalStringFields.includes(field) || value.trim().length > 0) {
-            completedFields++;
-          }
-        }
-      });
-
-      const progress = Math.round((completedFields / fields.length) * 100);
-      const isComplete = validateStep(step);
-
+      const isStepComplete = validateStep(step);
       completion[step] = {
-        isComplete,
-        progress
+        isComplete: isStepComplete,
+        progress: isStepComplete ? 100 : 0
       };
     }
     
     return completion;
-  }, [waiverData, validateStep]);
+  }, [validateStep]);
 
   // Navigation functions
   const canProceedToNextSection = useCallback(() => {
@@ -148,30 +142,22 @@ export const useWaiverForm = (): WaiverFormHookReturn => {
   }, [validateStep]);
 
   const getFieldError = useCallback((field: keyof LiabilityWaiverData) => {
-    // Simple validation - you can enhance this with more specific error messages
     if (!touchedFields.includes(field as string)) return undefined;
+    if (!waiverData) return undefined;
     
     const value = waiverData[field];
-    
-    // Required string fields
-    const requiredStringFields = ['fullName', 'dateOfBirth', 'emergencyContactName', 'emergencyContactPhone', 'signature', 'signatureDate'];
-    if (requiredStringFields.includes(field as string) && typeof value === 'string' && !value.trim()) {
+    if (typeof value === 'string' && !value.trim()) {
       return 'This field is required';
     }
-    
-    // Required boolean fields (must be true)
-    const requiredBooleanFields = ['understandRisks', 'assumeResponsibility', 'followInstructions', 'reportInjuries', 'releaseFromLiability'];
-    if (requiredBooleanFields.includes(field as string) && typeof value === 'boolean' && !value) {
+    if (typeof value === 'boolean' && !value) {
       return 'This acknowledgment is required';
     }
-    
     return undefined;
   }, [waiverData, touchedFields]);
 
   const getTotalProgress = useCallback(() => {
-    const completedSteps = Object.values(stepCompletion).filter(s => s.isComplete).length;
-    return (completedSteps / 3) * 100;
-  }, [stepCompletion]);
+    return getCompletionPercentageValue();
+  }, [getCompletionPercentageValue]);
 
   return {
     waiverData,
@@ -189,7 +175,9 @@ export const useWaiverForm = (): WaiverFormHookReturn => {
     setSection,
     isWaiverComplete: () => isComplete,
     getTotalProgress,
-    // New enhanced features
+    // Enhanced features matching profile pattern
+    isLoading,
+    error,
     hasUnsavedChanges,
     lastSaved: metadata.lastSaved,
     forceSave

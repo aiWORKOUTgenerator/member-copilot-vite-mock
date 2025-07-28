@@ -1,25 +1,6 @@
-// Liability Waiver data type
-export type LiabilityWaiverData = {
-  // Personal Information
-  fullName: string;
-  dateOfBirth: string;
-  emergencyContactName: string;
-  emergencyContactPhone: string;
-  medicalConditions: string;
-  medications: string;
-  physicianApproval: boolean;
-  
-  // Risk Acknowledgment
-  understandRisks: boolean;
-  assumeResponsibility: boolean;
-  followInstructions: boolean;
-  reportInjuries: boolean;
-  
-  // Release & Signature
-  releaseFromLiability: boolean;
-  signature: string;
-  signatureDate: string;
-};
+// Import the Zod-inferred type from the schema
+import type { LiabilityWaiverData } from '../schemas/waiverSchema';
+export { LiabilityWaiverData };
 
 export type StepValidationErrors = Record<string, string[]>;
 
@@ -66,7 +47,9 @@ export interface WaiverFormHookReturn {
   setSection: (section: number) => void;
   isWaiverComplete: () => boolean;
   getTotalProgress: () => number;
-  // Enhanced persistence features
+  // Enhanced features matching profile pattern
+  isLoading: boolean;
+  error: Error | null;
   hasUnsavedChanges: boolean;
   lastSaved: number;
   forceSave: () => void;

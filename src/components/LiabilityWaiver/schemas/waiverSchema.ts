@@ -116,8 +116,8 @@ export const validateFullWaiver = (data: LiabilityWaiverData): ValidationResult 
 
 // Field-specific validation function
 export const validateField = (field: keyof LiabilityWaiverData, value: any): ValidationResult => {
-  // Create a minimal schema for just this field
-  const fieldSchema = waiverSchema.pick({ [field]: true });
+  // Create a minimal schema for just this field using type assertion
+  const fieldSchema = waiverSchema.pick({ [field]: true } as any);
   const testData = { [field]: value } as Partial<LiabilityWaiverData>;
   
   const result = fieldSchema.safeParse(testData);
