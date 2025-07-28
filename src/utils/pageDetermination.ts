@@ -39,34 +39,31 @@ export const isProfileComplete = (profileData: ProfileData | null): boolean => {
 };
 
 /**
- * Check if waiver data is complete
+ * Check if waiver data is complete - aligned with actual form validation
  */
 export const isWaiverComplete = (waiverData: any): boolean => {
   if (!waiverData) return false;
   
-  // Check if all required fields are filled based on the waiver validation logic
-  const hasPersonalInfo = !!(
-    waiverData.fullName &&
-    waiverData.dateOfBirth &&
-    waiverData.emergencyContactName &&
-    waiverData.emergencyContactPhone &&
-    waiverData.physicianApproval === true
-  );
+  // Step 1: Only requires physicianApproval (other fields are optional)
+  const step1Complete = waiverData.physicianApproval === true;
   
-  const hasRiskAcknowledgment = !!(
+  // Step 2: All 4 boolean fields must be true
+  const step2Complete = !!(
     waiverData.understandRisks &&
     waiverData.assumeResponsibility &&
     waiverData.followInstructions &&
     waiverData.reportInjuries
   );
   
-  const hasReleaseSignature = !!(
+  // Step 3: Release, signature, and date must be filled
+  const step3Complete = !!(
     waiverData.releaseFromLiability &&
     waiverData.signature &&
     waiverData.signatureDate
   );
   
-  return hasPersonalInfo && hasRiskAcknowledgment && hasReleaseSignature;
+  // All 3 steps must be complete
+  return step1Complete && step2Complete && step3Complete;
 };
 
 /**
@@ -153,10 +150,26 @@ export const determineInitialPage = async (appState: AppState): Promise<PageType
     }
     
     if (!isWaiverComplete(appState.waiverData)) {
+      // Debug waiver validation step by step
+      const waiverData = appState.waiverData;
+      const step1Complete = waiverData?.physicianApproval === true;
+      const step2Complete = !!(waiverData?.understandRisks && waiverData?.assumeResponsibility && waiverData?.followInstructions && waiverData?.reportInjuries);
+      const step3Complete = !!(waiverData?.releaseFromLiability && waiverData?.signature && waiverData?.signatureDate);
+      
       aiLogger.info('Waiver incomplete - navigating to waiver page', {
         hasWaiverData: !!appState.waiverData,
         waiverFields: appState.waiverData ? Object.keys(appState.waiverData) : [],
-        waiverComplete: isWaiverComplete(appState.waiverData)
+        step1Complete,
+        step2Complete,
+        step3Complete,
+        physicianApproval: waiverData?.physicianApproval,
+        understandRisks: waiverData?.understandRisks,
+        assumeResponsibility: waiverData?.assumeResponsibility,
+        followInstructions: waiverData?.followInstructions,
+        reportInjuries: waiverData?.reportInjuries,
+        releaseFromLiability: waiverData?.releaseFromLiability,
+        signature: waiverData?.signature ? 'filled' : 'empty',
+        signatureDate: waiverData?.signatureDate
       });
       return 'waiver';
     }
