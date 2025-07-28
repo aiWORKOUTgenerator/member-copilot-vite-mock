@@ -235,23 +235,36 @@ function AppContent() {
     // Load initial state from localStorage
     try {
       const profileData = localStorage.getItem('profileData');
+      const waiverData = localStorage.getItem('waiverData');
       const workoutType = localStorage.getItem('workoutType') as WorkoutType | null;
+      
+      let parsedProfileData = null;
+      let parsedWaiverData = null;
       
       if (profileData) {
         const parsed = JSON.parse(profileData);
-        
         if (parsed.data) { // Check for enhanced persisted state format
-          return {
-            profileData: parsed.data,
-            waiverData: null,
-            workoutFocusData: null,
-            workoutType: workoutType,
-            generatedWorkout: null
-          };
+          parsedProfileData = parsed.data;
         }
       }
+      
+      if (waiverData) {
+        try {
+          parsedWaiverData = JSON.parse(waiverData);
+        } catch (waiverError) {
+          aiLogger.warn('Failed to parse waiver data from localStorage', { error: waiverError instanceof Error ? waiverError.message : String(waiverError) });
+        }
+      }
+      
+      return {
+        profileData: parsedProfileData,
+        waiverData: parsedWaiverData,
+        workoutFocusData: null,
+        workoutType: workoutType,
+        generatedWorkout: null
+      };
     } catch (error) {
-      aiLogger.warn('Failed to load profile data from localStorage', { error: error instanceof Error ? error.message : String(error) });
+      aiLogger.warn('Failed to load data from localStorage', { error: error instanceof Error ? error.message : String(error) });
     }
     
     return {
@@ -279,8 +292,12 @@ function AppContent() {
           hasWaiverData: !!appState.waiverData
         });
       } catch (error) {
-        aiLogger.error('Failed to determine initial page, defaulting to profile', {
-          error: error instanceof Error ? error.message : String(error)
+        aiLogger.error({
+          error: error instanceof Error ? error : new Error(String(error)),
+          context: 'page determination',
+          component: 'App.tsx',
+          severity: 'medium',
+          userImpact: false
         });
         setCurrentPage('profile');
       }

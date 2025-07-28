@@ -44,12 +44,29 @@ export const isProfileComplete = (profileData: ProfileData | null): boolean => {
 export const isWaiverComplete = (waiverData: any): boolean => {
   if (!waiverData) return false;
   
-  // Add specific waiver validation logic here
-  return !!(
-    waiverData.agreedToTerms &&
-    waiverData.acknowledgedRisks &&
-    waiverData.confirmedAge
+  // Check if all required fields are filled based on the waiver validation logic
+  const hasPersonalInfo = !!(
+    waiverData.fullName &&
+    waiverData.dateOfBirth &&
+    waiverData.emergencyContactName &&
+    waiverData.emergencyContactPhone &&
+    waiverData.physicianApproval === true
   );
+  
+  const hasRiskAcknowledgment = !!(
+    waiverData.understandRisks &&
+    waiverData.assumeResponsibility &&
+    waiverData.followInstructions &&
+    waiverData.reportInjuries
+  );
+  
+  const hasReleaseSignature = !!(
+    waiverData.releaseFromLiability &&
+    waiverData.signature &&
+    waiverData.signatureDate
+  );
+  
+  return hasPersonalInfo && hasRiskAcknowledgment && hasReleaseSignature;
 };
 
 /**
@@ -128,16 +145,26 @@ export const determineInitialPage = async (appState: AppState): Promise<PageType
     
     // Standard flow determination
     if (!isProfileComplete(appState.profileData)) {
-      aiLogger.info('Profile incomplete - navigating to profile page');
+      aiLogger.info('Profile incomplete - navigating to profile page', {
+        hasProfileData: !!appState.profileData,
+        profileFields: appState.profileData ? Object.keys(appState.profileData) : []
+      });
       return 'profile';
     }
     
     if (!isWaiverComplete(appState.waiverData)) {
-      aiLogger.info('Waiver incomplete - navigating to waiver page');
+      aiLogger.info('Waiver incomplete - navigating to waiver page', {
+        hasWaiverData: !!appState.waiverData,
+        waiverFields: appState.waiverData ? Object.keys(appState.waiverData) : [],
+        waiverComplete: isWaiverComplete(appState.waiverData)
+      });
       return 'waiver';
     }
     
-    aiLogger.info('All onboarding complete - navigating to focus page');
+    aiLogger.info('All onboarding complete - navigating to focus page', {
+      profileComplete: isProfileComplete(appState.profileData),
+      waiverComplete: isWaiverComplete(appState.waiverData)
+    });
     return 'focus';
     
   } catch (error) {
