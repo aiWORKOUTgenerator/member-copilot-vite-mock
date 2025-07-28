@@ -19,6 +19,7 @@ import { GeneratedWorkout } from './services/ai/external/types/external-ai.types
 import { PerWorkoutOptions } from './types/core';
 import { aiContextRollbackManager } from './services/ai/monitoring/AIContextRollbackManager';
 import { aiLogger } from './services/ai/logging/AILogger';
+import { determineInitialPage, markOnboardingComplete } from './utils/pageDetermination';
 // import { EnvironmentDebug } from './components/shared/EnvironmentDebug'; // REMOVED FOR SECURITY
 
 // Define WorkoutType locally since it's used throughout the app
@@ -264,6 +265,29 @@ function AppContent() {
 
   // Use AI initialization hook
   useAIInitialization(appState.profileData);
+
+  // Determine initial page based on app state and feature flags
+  useEffect(() => {
+    const initializePage = async () => {
+      try {
+        const initialPage = await determineInitialPage(appState);
+        setCurrentPage(initialPage);
+        
+        aiLogger.info('Initial page determined', {
+          page: initialPage,
+          hasProfileData: !!appState.profileData,
+          hasWaiverData: !!appState.waiverData
+        });
+      } catch (error) {
+        aiLogger.error('Failed to determine initial page, defaulting to profile', {
+          error: error instanceof Error ? error.message : String(error)
+        });
+        setCurrentPage('profile');
+      }
+    };
+
+    initializePage();
+  }, [appState.profileData, appState.waiverData]);
 
   // Load profile data from localStorage when it changes
   useEffect(() => {

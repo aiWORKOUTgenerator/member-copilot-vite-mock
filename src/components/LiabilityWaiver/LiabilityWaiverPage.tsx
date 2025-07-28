@@ -5,6 +5,7 @@ import { useWaiverForm } from './hooks/useWaiverForm';
 import { LiabilityWaiverPageProps } from './types/liability-waiver.types';
 import { PersonalInfoStep, RiskAcknowledgmentStep, ReleaseSignatureStep } from './components/steps';
 import { aiLogger } from '../../services/ai/logging/AILogger';
+import { markOnboardingComplete } from '../../utils/pageDetermination';
 
 const LiabilityWaiverPage: React.FC<LiabilityWaiverPageProps> = ({ onNavigate }) => {
   const {
@@ -46,7 +47,8 @@ const LiabilityWaiverPage: React.FC<LiabilityWaiverPageProps> = ({ onNavigate })
   const handleSubmit = () => {
     if (isWaiverComplete()) {
       forceSave(); // Ensure all changes are saved before proceeding
-      aiLogger.info('Waiver completed', { waiverData });
+      markOnboardingComplete(); // Mark onboarding as complete
+      aiLogger.info('Waiver completed and onboarding marked as complete', { waiverData });
       onNavigate('focus');
     }
   };

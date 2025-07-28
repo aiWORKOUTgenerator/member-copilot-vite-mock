@@ -137,6 +137,20 @@ const DEFAULT_AI_FLAGS: FeatureFlag[] = [
       owner: 'ai_team',
       notes: 'OpenAI-powered user preference analysis - enabled for all users'
     }
+  },
+  {
+    id: 'skip-onboarding-flow',
+    name: 'Skip Onboarding for Returning Users',
+    description: 'Skip profile and waiver steps for users who completed onboarding',
+    enabled: true,
+    rolloutPercentage: 25, // Start with 25% of users
+    userGroups: ['returning_users', 'power_users'],
+    metadata: {
+      experimentId: 'onboarding_optimization_2024',
+      startDate: new Date(),
+      owner: 'ux_team',
+      notes: 'Skip onboarding flow for returning users to improve user experience'
+    }
   }
 ];
 
