@@ -19,7 +19,7 @@ import { GeneratedWorkout } from './services/ai/external/types/external-ai.types
 import { PerWorkoutOptions } from './types/core';
 import { aiContextRollbackManager } from './services/ai/monitoring/AIContextRollbackManager';
 import { aiLogger } from './services/ai/logging/AILogger';
-import { EnvironmentDebug } from './components/shared/EnvironmentDebug';
+// import { EnvironmentDebug } from './components/shared/EnvironmentDebug'; // REMOVED FOR SECURITY
 
 // Define WorkoutType locally since it's used throughout the app
 type WorkoutType = 'quick' | 'detailed';
@@ -618,8 +618,7 @@ function AppContent() {
       {/* AIContext Health Dashboard (development only) */}
       <AIContextHealthDashboard isVisible={process.env.NODE_ENV === 'development'} />
       
-      {/* Environment Debug (temporary) */}
-      <EnvironmentDebug />
+      {/* Environment Debug (temporary) - REMOVED FOR SECURITY */}
     </div>
   );
 }
