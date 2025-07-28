@@ -4,7 +4,7 @@ import { ProfilePage, ProfilePageProps } from './components/Profile';
 import { LiabilityWaiverPage } from './components/LiabilityWaiver';
 import type { LiabilityWaiverPageProps } from './components/LiabilityWaiver/types/liability-waiver.types';
 import WorkoutFocusPage from './components/WorkoutFocusPage';
-import type { WorkoutFocusPageProps } from './components/WorkoutFocusPage';
+import type WorkoutFocusPageProps from './components/WorkoutFocusPage';
 import ReviewPage from './components/ReviewPage';
 import type { ReviewPageProps } from './components/ReviewPage';
 import WorkoutResultsPage from './components/WorkoutResultsPage';
@@ -19,6 +19,7 @@ import { GeneratedWorkout } from './services/ai/external/types/external-ai.types
 import { PerWorkoutOptions } from './types/core';
 import { aiContextRollbackManager } from './services/ai/monitoring/AIContextRollbackManager';
 import { aiLogger } from './services/ai/logging/AILogger';
+import { EnvironmentDebug } from './components/shared/EnvironmentDebug';
 
 // Define WorkoutType locally since it's used throughout the app
 type WorkoutType = 'quick' | 'detailed';
@@ -616,6 +617,9 @@ function AppContent() {
       </footer>
       {/* AIContext Health Dashboard (development only) */}
       <AIContextHealthDashboard isVisible={process.env.NODE_ENV === 'development'} />
+      
+      {/* Environment Debug (temporary) */}
+      <EnvironmentDebug />
     </div>
   );
 }
