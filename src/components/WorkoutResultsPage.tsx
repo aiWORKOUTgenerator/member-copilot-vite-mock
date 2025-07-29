@@ -175,36 +175,109 @@ Generated on: ${generatedWorkout.generatedAt.toLocaleDateString()}
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Generating Your Workout</h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Please wait while we create your personalized workout routine...
+            Our AI is creating a personalized workout routine just for you...
           </p>
         </div>
 
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-white/70 backdrop-blur-sm rounded-xl p-6 border border-gray-200/50">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Generation Progress</h3>
-              <span className="text-sm text-gray-600">
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-8 border border-gray-200/50 shadow-lg">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">Generation Progress</h3>
+              <span className="text-lg font-bold text-purple-600">
                 {workoutGeneration.state.generationProgress}%
               </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-3">
+            
+            {/* Enhanced Progress Bar */}
+            <div className="w-full bg-gray-200 rounded-full h-4 mb-6 overflow-hidden">
               <div 
-                className="bg-gradient-to-r from-purple-600 to-pink-600 h-3 rounded-full transition-all duration-500"
+                className="bg-gradient-to-r from-purple-600 via-pink-500 to-blue-600 h-4 rounded-full transition-all duration-700 ease-out shadow-lg"
                 style={{ width: `${workoutGeneration.state.generationProgress}%` }}
               />
             </div>
-            <p className="text-sm text-gray-600 mt-3">
-              Status: {workoutGeneration.status === 'generating' ? 
-                (workoutGeneration.state.generationProgress < 30 ? 'Preparing your workout...' :
-                 workoutGeneration.state.generationProgress < 50 ? 'Analyzing your preferences...' :
-                 workoutGeneration.state.generationProgress < 70 ? 'Selecting optimal exercises...' :
-                 workoutGeneration.state.generationProgress < 85 ? 'Personalizing recommendations...' :
-                 workoutGeneration.state.generationProgress < 95 ? 'Adding finishing touches...' :
-                 'Almost ready!') :
-                workoutGeneration.status === 'enhancing' ? 'Adding finishing touches...' :
-                workoutGeneration.status === 'validating' ? 'Validating your information...' :
-                'Processing...'}
-            </p>
+            
+            {/* Dynamic Status Messages */}
+            <div className="space-y-4">
+              <div className="text-center">
+                <p className="text-lg font-medium text-gray-800 mb-2">
+                  {workoutGeneration.status === 'generating' ? 
+                    (workoutGeneration.state.generationProgress < 15 ? 'Initializing AI systems...' :
+                     workoutGeneration.state.generationProgress < 30 ? 'Analyzing your fitness profile...' :
+                     workoutGeneration.state.generationProgress < 45 ? 'Processing your preferences...' :
+                     workoutGeneration.state.generationProgress < 60 ? 'Selecting optimal exercises...' :
+                     workoutGeneration.state.generationProgress < 75 ? 'Personalizing your workout...' :
+                     workoutGeneration.state.generationProgress < 85 ? 'Optimizing exercise sequence...' :
+                     workoutGeneration.state.generationProgress < 95 ? 'Adding finishing touches...' :
+                     'Almost ready!') :
+                    workoutGeneration.status === 'enhancing' ? 'Enhancing with AI insights...' :
+                    workoutGeneration.status === 'validating' ? 'Validating workout safety...' :
+                    'Processing your request...'}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {workoutGeneration.state.generationProgress < 30 ? 
+                    'Setting up your personalized workout environment' :
+                   workoutGeneration.state.generationProgress < 60 ? 
+                    'Matching exercises to your fitness level and goals' :
+                   workoutGeneration.state.generationProgress < 85 ? 
+                    'Fine-tuning intensity and progression' :
+                    'Finalizing your workout details'}
+                </p>
+              </div>
+              
+              {/* Progress Indicators */}
+              <div className="flex justify-center space-x-2 mt-6">
+                {[15, 30, 45, 60, 75, 90, 100].map((milestone) => (
+                  <div
+                    key={milestone}
+                    className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                      workoutGeneration.state.generationProgress >= milestone
+                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 shadow-md'
+                        : 'bg-gray-300'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+            
+            {/* Estimated Time */}
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="flex items-center justify-center space-x-4 text-sm text-gray-600">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span>AI Analysis</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    workoutGeneration.state.generationProgress > 30 ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'
+                  }`}></div>
+                  <span>Exercise Selection</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    workoutGeneration.state.generationProgress > 60 ? 'bg-purple-500 animate-pulse' : 'bg-gray-300'
+                  }`}></div>
+                  <span>Personalization</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Tips Section */}
+          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-6">
+            <h4 className="font-semibold text-blue-900 mb-3 flex items-center">
+              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+              While You Wait
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
+              <div>
+                <p className="font-medium mb-1">💡 Pro Tip</p>
+                <p>This workout is being customized based on your fitness level, goals, and available equipment.</p>
+              </div>
+              <div>
+                <p className="font-medium mb-1">⏱️ Typical Time</p>
+                <p>Most workouts are generated in 10-15 seconds. Complex routines may take a bit longer.</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -59,33 +59,141 @@ export class StringJSONStrategy implements ParseStrategy {
 
     const jsonString = content.slice(firstBrace, lastBrace + 1);
     
+    // Debug: Log the extracted JSON string
+    console.log('🔍 StringJSONStrategy: Extracted JSON string:', jsonString.substring(0, 200) + '...');
+    
     try {
       const parsed = JSON.parse(jsonString);
       // Use DirectJSONStrategy to validate and normalize the parsed object
       return await this.directStrategy.parse(parsed);
     } catch (error) {
+      console.log('🔄 StringJSONStrategy: Initial JSON parse failed, trying cleaning');
       // Try cleaning the string if initial parse fails
       return await this.tryCleanAndParse(jsonString);
     }
   }
 
   private async tryCleanAndParse(jsonString: string): Promise<GeneratedWorkout> {
-    // Remove common issues that might cause parsing failures
-    const cleaned = jsonString
+    console.log('🔍 StringJSONStrategy: Starting cleaning process');
+    console.log('🔍 StringJSONStrategy: Original JSON string:', jsonString.substring(0, 100) + '...');
+    
+    // Enhanced cleaning logic to handle more edge cases
+    let cleaned = jsonString;
+    
+    console.log('🔍 StringJSONStrategy: Step 0 - Original:', cleaned.substring(0, 50) + '...');
+    
+    // Handle escaped characters
+    cleaned = cleaned
       .replace(/\\n/g, ' ') // Replace escaped newlines with spaces
+      .replace(/\\t/g, ' ') // Replace escaped tabs with spaces
+      .replace(/\\r/g, ' ') // Replace escaped carriage returns with spaces;
+    
+    console.log('🔍 StringJSONStrategy: Step 1 - After escaped chars:', cleaned.substring(0, 50) + '...');
+    
+    // Handle unescaped quotes in string values
+    cleaned = cleaned.replace(/"([^"]*)"([^"]*)"([^"]*)"/g, (match, p1, p2, p3) => {
+      // Only apply this if we're not dealing with a valid JSON property pattern like "key": "value"
+      if (p2.trim().startsWith(':')) {
+        // This is a valid JSON property, don't modify it
+        return match;
+      }
+      // If we have multiple quotes, escape the inner ones
+      return `"${p1}${p2.replace(/"/g, '\\"')}${p3}"`;
+    });
+    
+    console.log('🔍 StringJSONStrategy: Step 2 - After quote handling:', cleaned.substring(0, 50) + '...');
+    
+    // Handle single quotes that should be double quotes
+    cleaned = cleaned
+      .replace(/([{,]\s*)'([^']*)'(\s*:)/g, '$1"$2"$3')
+      .replace(/:\s*'([^']*)'(\s*[,}])/g, ':"$1"$2');
+    
+    console.log('🔍 StringJSONStrategy: Step 3 - After single quote handling:', cleaned.substring(0, 50) + '...');
+    
+    // Normalize whitespace (but preserve colons)
+    cleaned = cleaned
       .replace(/\s+/g, ' ') // Normalize whitespace
       .replace(/"\s*([{[])/g, '"$1') // Remove spaces after quotes before objects/arrays
       .replace(/([}\]])\s*"/g, '$1"') // Remove spaces before quotes after objects/arrays
-      .replace(/([}\]])\s*,\s*"/g, '$1,"') // Normalize spaces around commas
-      .replace(/"\s*:\s*"/g, '":"') // Normalize spaces around colons
-      .trim();
+      .replace(/([}\]])\s*,\s*"/g, '$1,"'); // Normalize spaces around commas
+    
+    console.log('🔍 StringJSONStrategy: Step 4 - After whitespace normalization:', cleaned.substring(0, 50) + '...');
+    
+    // Handle trailing commas
+    cleaned = cleaned.replace(/,(\s*[}\]])/g, '$1');
+    
+    console.log('🔍 StringJSONStrategy: Step 5 - After trailing comma handling:', cleaned.substring(0, 50) + '...');
+    
+    // Handle missing quotes around property names
+    cleaned = cleaned.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+    
+    console.log('🔍 StringJSONStrategy: Step 6 - After property name handling:', cleaned.substring(0, 50) + '...');
+    
+    // Handle special characters that might break JSON
+    cleaned = cleaned.replace(/[\u0000-\u001F\u007F-\u009F]/g, ''); // Remove control characters
+    
+    console.log('🔍 StringJSONStrategy: Step 7 - After control char handling:', cleaned.substring(0, 50) + '...');
+    
+    cleaned = cleaned.trim();
+    
+    console.log('🔍 StringJSONStrategy: Step 8 - After trim:', cleaned.substring(0, 50) + '...');
 
-    try {
-      const parsed = JSON.parse(cleaned);
-      // Use DirectJSONStrategy to validate and normalize the parsed object
-      return await this.directStrategy.parse(parsed);
-    } catch (error) {
-      throw new Error(`JSON extraction failed after cleaning: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    // Try multiple parsing attempts with different cleaning strategies
+    const parsingAttempts = [
+      () => JSON.parse(cleaned),
+      () => JSON.parse(cleaned.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']')), // Remove trailing commas
+      () => JSON.parse(cleaned.replace(/\\/g, '\\\\')), // Escape backslashes
+      () => JSON.parse(cleaned.replace(/"/g, '\\"').replace(/\\"/g, '"')), // Fix quote escaping
+      // New attempt: Fix missing colons after property names
+      () => JSON.parse(cleaned.replace(/"([^"]+)"\s*([^":,}\]]+)/g, '"$1": $2')),
+      // New attempt: Fix property names without quotes
+      () => JSON.parse(cleaned.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*([^":,}\]]+)/g, '$1"$2": $3')),
+      // New attempt: Fix the specific issue with missing colons after quoted property names
+      () => JSON.parse(cleaned.replace(/"([^"]+)"\s+([^":,}\]]+)/g, '"$1": $2')),
+      // New attempt: Fix unescaped quotes in string values
+      () => JSON.parse(cleaned.replace(/"([^"]*)"([^"]*)"([^"]*)"/g, (match, p1, p2, p3) => {
+        return `"${p1}${p2.replace(/"/g, '\\"')}${p3}"`;
+      })),
+    ];
+
+    for (let i = 0; i < parsingAttempts.length; i++) {
+      try {
+        console.log(`🔄 StringJSONStrategy: Trying cleaning attempt ${i + 1}`);
+        const parsed = parsingAttempts[i]();
+        console.log(`✅ StringJSONStrategy: Successfully parsed with cleaning attempt ${i + 1}`);
+        // Use DirectJSONStrategy to validate and normalize the parsed object
+        return await this.directStrategy.parse(parsed);
+      } catch (error) {
+        console.log(`❌ StringJSONStrategy: Cleaning attempt ${i + 1} failed:`, error instanceof Error ? error.message : 'Unknown error');
+        if (i === parsingAttempts.length - 1) {
+          // Last attempt failed, analyze the error
+          this.analyzeJsonError(cleaned, error);
+          console.log('❌ StringJSONStrategy: All cleaning attempts failed');
+          console.log('🔍 StringJSONStrategy: Failed JSON preview:', cleaned.substring(0, 100) + '...');
+          throw new Error(`JSON extraction failed after cleaning: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+    }
+
+    throw new Error('JSON extraction failed after all cleaning attempts');
+  }
+
+  private analyzeJsonError(jsonString: string, error: unknown): void {
+    if (error instanceof Error && error.message.includes('position')) {
+      const positionMatch = error.message.match(/position (\d+)/);
+      if (positionMatch) {
+        const position = parseInt(positionMatch[1]);
+        const contextStart = Math.max(0, position - 50);
+        const contextEnd = Math.min(jsonString.length, position + 50);
+        const context = jsonString.substring(contextStart, contextEnd);
+        
+        console.log('🔍 StringJSONStrategy: JSON Error Analysis');
+        console.log('📍 Error position:', position);
+        console.log('📍 Context around error:', context);
+        console.log('📍 Character at position:', jsonString[position]);
+        console.log('📍 Previous 10 chars:', jsonString.substring(Math.max(0, position - 10), position));
+        console.log('📍 Next 10 chars:', jsonString.substring(position + 1, position + 11));
+      }
     }
   }
 

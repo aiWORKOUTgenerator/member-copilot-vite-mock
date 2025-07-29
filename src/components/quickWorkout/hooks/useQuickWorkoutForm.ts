@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { WorkoutFocusData, defaultWorkoutFocusData } from '../../../schemas/workoutFocusSchema';
 import { useViewModePreference } from '../../../hooks/useViewModePreference';
-import { logger } from '../../../utils/logger';
+import { aiLogger } from '../../../services/ai/logging/AILogger';
 
 export const useQuickWorkoutForm = () => {
   const [focusData, setFocusData] = useState<WorkoutFocusData>(defaultWorkoutFocusData);
@@ -11,7 +11,7 @@ export const useQuickWorkoutForm = () => {
   });
 
   const handleInputChange = (field: keyof WorkoutFocusData, value: string | number) => {
-    logger.debug('Form input change:', { field, value, type: typeof value });
+    aiLogger.debug('Form input change:', { field, value, type: typeof value });
     setFocusData(prev => ({
       ...prev,
       [field]: value
@@ -29,7 +29,7 @@ export const useQuickWorkoutForm = () => {
       };
 
       // Log validation state for debugging
-      logger.debug('Form validation state:', {
+      aiLogger.debug('Form validation state:', {
         focusData,
         requiredFields,
         allFieldsValid: Object.values(requiredFields).every(isValid => isValid)
@@ -37,7 +37,7 @@ export const useQuickWorkoutForm = () => {
 
       return Object.values(requiredFields).every(isValid => isValid);
     } catch (error) {
-      logger.error('Error validating quick workout form:', error);
+      // logger.error('Error validating quick workout form:', error); // This line was removed as per the new_code
       return false;
     }
   }, [focusData]);

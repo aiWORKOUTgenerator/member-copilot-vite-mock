@@ -40,6 +40,7 @@ The AI Service Feature-First Architecture is a production-ready, enterprise-grad
 - [Testing Strategy](./testing/strategy.md) - Comprehensive testing approach
 - [Test Examples](./testing/examples/) - Testing patterns and examples
 - [Quality Gates](./testing/quality-gates.md) - Quality assurance standards
+- [Coverage Configuration](./development/coverage-configuration.md) - ✅ **COMPLETE** - Optimized test coverage setup
 
 ### **🚀 Production**
 - [Deployment Guide](./production/deployment/) - Production deployment strategies

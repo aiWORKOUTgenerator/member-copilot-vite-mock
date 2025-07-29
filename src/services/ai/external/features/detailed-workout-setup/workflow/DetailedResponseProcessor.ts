@@ -56,7 +56,7 @@ export class DetailedResponseProcessor {
       // Ensure metadata exists
       metadata: {
         ...response.metadata,
-        generatedAt: new Date().toISOString(),
+        generatedAt: new Date(),
         version: '1.0'
       }
     };

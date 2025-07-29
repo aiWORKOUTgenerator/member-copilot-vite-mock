@@ -7,6 +7,7 @@ import { useAIService } from '../../../contexts/composition/AIServiceProvider';
 import { AIInsight } from '../../../types/insights';
 import { logger } from '../../../utils/logger';
 import { WORKOUT_FOCUS_MUSCLE_GROUPS, WorkoutFocusOption } from '../../../types/workout-focus.types';
+import { aiLogger } from '../../../services/ai/logging/AILogger';
 
 const focusOptions: WorkoutFocusOption[] = [
   {
@@ -155,7 +156,7 @@ export const WorkoutFocusSection: React.FC<SectionProps> = ({
     if (serviceStatus === 'ready' && userProfile) {
       const insights = generateFocusInsights(value);
       insights.forEach(insight => {
-        logger.debug('Focus AI Insight:', insight);
+        aiLogger.debug('Focus AI Insight:', { insight });
       });
     }
   };

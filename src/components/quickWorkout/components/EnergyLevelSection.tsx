@@ -5,6 +5,7 @@ import { RatingScaleWrapper } from '../../customization/rating';
 import { AIInsight } from '../../../types/insights';
 import { logger } from '../../../utils/logger';
 import { useAIService } from '../../../contexts/composition/AIServiceProvider';
+import { aiLogger } from '../../../services/ai/logging/AILogger';
 
 // Removed unused constant
 
@@ -31,7 +32,7 @@ export const EnergyLevelSection: React.FC<SectionProps> = ({
   };
 
   const handleAIInsight = (insight: AIInsight) => {
-    logger.debug('Energy AI Insight:', insight);
+    aiLogger.debug('Energy AI Insight:', { insight });
   };
 
   // Generate AI insights using the service

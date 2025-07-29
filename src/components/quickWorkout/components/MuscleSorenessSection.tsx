@@ -5,6 +5,7 @@ import { RatingScaleWrapper } from '../../customization/rating';
 import { AIInsight } from '../../../types/insights';
 import { logger } from '../../../utils/logger';
 import { useAIService } from '../../../contexts/composition/AIServiceProvider';
+import { aiLogger } from '../../../services/ai/logging/AILogger';
 
 // Constants
 const HIGH_SORENESS_THRESHOLD = 8;
@@ -35,7 +36,7 @@ export const MuscleSorenessSection: React.FC<SectionProps> = ({
   };
 
   const handleAIInsight = (insight: AIInsight) => {
-    logger.debug('Soreness AI Insight:', insight);
+    aiLogger.debug('Soreness AI Insight:', { insight });
   };
 
   // Generate AI insights using the service

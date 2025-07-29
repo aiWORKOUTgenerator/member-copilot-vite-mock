@@ -74,8 +74,7 @@ export class RecommendationEngine {
           if (!config?.fallbackToInternal) {
             throw error;
           }
-          aiLogger.warn({
-            message: 'External AI failed, falling back to internal generation',
+          aiLogger.warn('External AI failed, falling back to internal generation', {
             error: error instanceof Error ? error : new Error(String(error)),
             context: 'workout generation',
             component: 'RecommendationEngine'

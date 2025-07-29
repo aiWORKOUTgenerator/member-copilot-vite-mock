@@ -6,6 +6,7 @@ import { useAIService } from '../../../contexts/composition/AIServiceProvider';
 import { useAIFeatureFlags } from '../../../contexts/composition/AIFeatureFlagsProvider';
 import { AIInsight } from '../../../types/insights';
 import { logger } from '../../../utils/logger';
+import { aiLogger } from '../../../services/ai/logging/AILogger';
 
 const durationOptions = [
   { value: 5, label: '5 min', sublabel: 'Quick Break', description: 'Perfect for desk breaks' },
@@ -126,7 +127,7 @@ export const WorkoutDurationSection: React.FC<SectionProps> = ({
     if (isFeatureEnabled('ai_service_unified') && viewMode === 'complex') {
       const insights = generateDurationInsights(duration);
       insights.forEach(insight => {
-        logger.debug('Duration AI Insight:', insight);
+        aiLogger.debug('Duration AI Insight:', { insight });
       });
     }
   };

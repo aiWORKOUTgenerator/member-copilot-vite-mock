@@ -177,15 +177,30 @@ export const WorkoutDisplay: React.FC<WorkoutDisplayProps> = ({
     return 'bg-gradient-to-r from-red-500 to-pink-500';
   };
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
-    }).format(date);
+  const formatDate = (date: Date | string | null | undefined) => {
+    if (!date) return 'Unknown';
+    
+    try {
+      // Convert string to Date if needed
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      
+      // Check if the date is valid
+      if (isNaN(dateObj.getTime())) {
+        return 'Invalid Date';
+      }
+      
+      return new Intl.DateTimeFormat('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      }).format(dateObj);
+    } catch (error) {
+      console.warn('Error formatting date:', error);
+      return 'Invalid Date';
+    }
   };
 
   const getAllExercises = () => {
@@ -662,7 +677,7 @@ export const WorkoutDisplay: React.FC<WorkoutDisplayProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div>
             <span className="font-medium text-gray-700">Generated:</span>
-            <span className="text-gray-600 ml-2">{workout.generatedAt ? formatDate(workout.generatedAt) : 'Unknown'}</span>
+            <span className="text-gray-600 ml-2">{formatDate(workout.generatedAt)}</span>
           </div>
           <div>
             <span className="font-medium text-gray-700">AI Model:</span>

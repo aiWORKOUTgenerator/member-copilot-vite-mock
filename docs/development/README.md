@@ -12,6 +12,10 @@ This section covers the complete development workflow, including setup, coding s
 - **[Running Locally](./getting-started/running-locally.md)** - Local development setup
 - **[Debugging Setup](./getting-started/debugging-setup.md)** - Debugging configuration
 
+### **Essential Guides**
+- **[Import Paths Guide](./import-paths-guide.md)** - **CRITICAL**: Correct import patterns to avoid path confusion
+- **[Common Integration Errors](../ai-systems/internal/domain-services/common-integration-errors.md)** - Avoiding AI integration mistakes
+
 ### **Coding Standards**
 - **[TypeScript Patterns](./coding-standards/typescript-patterns.md)** - TypeScript best practices
 - **[React Patterns](./coding-standards/react-patterns.md)** - React component patterns

@@ -258,8 +258,7 @@ export class InternalFallbackGenerator {
       };
 
     } catch (error) {
-      aiLogger.warn({
-        message: 'Failed to parse exercise recommendation',
+      aiLogger.warn('Failed to parse exercise recommendation', {
         error: error instanceof Error ? error : new Error(String(error)),
         context: 'exercise parsing',
         component: 'InternalFallbackGenerator',
