@@ -1,6 +1,6 @@
 // Profile Match Calculator - Analyzes workout-to-user profile alignment
 import { UserProfile } from '../../../../../types/user';
-import { GeneratedWorkout } from '../../../../../types/workout-generation.types';
+import { GeneratedWorkout, Exercise } from '../../../../../types/workout-generation.types';
 import { ConfidenceContext, FactorCalculator } from '../types/confidence.types';
 
 /**
@@ -28,7 +28,7 @@ export class ProfileMatchCalculator implements FactorCalculator {
     scores.push(experienceScore * 0.25);
 
     // 3. Energy Level Compatibility (25% weight)
-    const energyScore = this.calculateEnergyLevelCompatibility(userProfile, workoutData);
+    const energyScore = this.calculateEnergyLevelCompatibility(userProfile, workoutData, context);
     scores.push(energyScore * 0.25);
 
     // 4. Workout Intensity Match (25% weight)
@@ -101,9 +101,20 @@ export class ProfileMatchCalculator implements FactorCalculator {
   /**
    * Calculate energy level compatibility score
    */
-  private calculateEnergyLevelCompatibility(userProfile: UserProfile, workoutData: GeneratedWorkout): number {
-    // Use a default energy level since UserProfile doesn't have energyLevel
-    const userEnergyLevel = 5; // Default moderate energy
+  private calculateEnergyLevelCompatibility(userProfile: UserProfile, workoutData: GeneratedWorkout, context: ConfidenceContext): number {
+    // Derive energy level from user profile characteristics
+    const userFitnessLevel = userProfile.fitnessLevel?.toLowerCase();
+    
+    // Map fitness level to energy level (1-10 scale)
+    const fitnessToEnergyMap: Record<string, number> = {
+      'beginner': 3,    // Lower energy for beginners
+      'novice': 4,      // Slightly higher for novices
+      'intermediate': 6, // Moderate energy for intermediates
+      'advanced': 8,    // Higher energy for advanced users
+      'adaptive': 5     // Default moderate energy for adaptive
+    };
+    
+    const userEnergyLevel = fitnessToEnergyMap[userFitnessLevel || 'intermediate'] || 5;
     const workoutDuration = workoutData.totalDuration / 60; // Convert seconds to minutes
     const workoutIntensity = this.estimateWorkoutIntensity(workoutData);
 
@@ -137,8 +148,18 @@ export class ProfileMatchCalculator implements FactorCalculator {
 
     const intensityScore = intensityCompatibility[recommendation.preferredIntensity]?.[workoutIntensity] || 0.5;
 
-    // Return average of duration and intensity scores
-    return (durationScore + intensityScore) / 2;
+    // Consider environmental factors from context
+    let environmentalAdjustment = 0;
+    if (context.environmentalFactors?.timeOfDay === 'morning') {
+      // Morning workouts might need different energy considerations
+      environmentalAdjustment += 0.05;
+    } else if (context.environmentalFactors?.timeOfDay === 'evening') {
+      // Evening workouts might be more suitable for higher energy
+      environmentalAdjustment -= 0.05;
+    }
+
+    // Return average of duration and intensity scores with environmental adjustment
+    return Math.max(0, Math.min(1, (durationScore + intensityScore) / 2 + environmentalAdjustment));
   }
 
   /**
@@ -192,22 +213,20 @@ export class ProfileMatchCalculator implements FactorCalculator {
     let totalIntensity = 0;
     let exerciseCount = 0;
 
-    allExercises.forEach((exercise: any) => {
-      // Estimate intensity based on exercise category and duration
-      const category = exercise.category?.toLowerCase() || '';
-      const duration = exercise.duration || 0;
+    allExercises.forEach((exercise: Exercise) => {
+      // Estimate intensity based on exercise intensity and duration
+      const exerciseIntensity = exercise.intensity;
+      const duration = exercise.duration ?? 0;
 
       let intensity = 0.5; // Default medium
 
-      // Category-based intensity estimation
-      if (category.includes('cardio') || category.includes('hiit')) {
+      // Intensity-based estimation
+      if (exerciseIntensity === 'high') {
         intensity = 0.9;
-      } else if (category.includes('strength') || category.includes('power')) {
-        intensity = 0.8;
-      } else if (category.includes('flexibility') || category.includes('mobility')) {
+      } else if (exerciseIntensity === 'moderate') {
+        intensity = 0.7;
+      } else if (exerciseIntensity === 'low') {
         intensity = 0.3;
-      } else if (category.includes('yoga') || category.includes('pilates')) {
-        intensity = 0.4;
       }
 
       // Duration adjustment
@@ -246,12 +265,12 @@ export class ProfileMatchCalculator implements FactorCalculator {
     let complexityScore = 0;
     let exerciseCount = 0;
 
-    allExercises.forEach((exercise: any) => {
+    allExercises.forEach((exercise: Exercise) => {
       let exerciseComplexity = 0.5; // Default moderate
 
-      // Complexity based on exercise type
+      // Complexity based on exercise name and intensity
       const name = exercise.name?.toLowerCase() || '';
-      const category = exercise.category?.toLowerCase() || '';
+      const exerciseIntensity = exercise.intensity;
 
       if (name.includes('compound') || name.includes('multi-joint')) {
         exerciseComplexity += 0.3;
@@ -259,10 +278,10 @@ export class ProfileMatchCalculator implements FactorCalculator {
       if (name.includes('isolation') || name.includes('single-joint')) {
         exerciseComplexity -= 0.2;
       }
-      if (category.includes('balance') || category.includes('stability')) {
+      if (name.includes('balance') || name.includes('stability')) {
         exerciseComplexity += 0.2;
       }
-      if (category.includes('cardio') && name.includes('interval')) {
+      if (exerciseIntensity === 'high' && name.includes('interval')) {
         exerciseComplexity += 0.2;
       }
 

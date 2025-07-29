@@ -6,10 +6,15 @@ import {
   QuickWorkoutParams, 
   ResponseProcessingResult, 
   FeatureValidationResult,
-  DurationStrategyResult 
+  DurationStrategyResult,
+  ValidationError,
+  ValidationWarning
 } from '../types/quick-workout.types';
 import { ResponseParser } from './parsing/ResponseParser';
 import { WorkoutNormalizer } from './normalization/WorkoutNormalizer';
+import { ConfidenceServiceFactory } from '../../../../domains/confidence/ConfidenceServiceFactory';
+import { ConfidenceContext } from '../../../../domains/confidence/types/confidence.types';
+import { UserProfile } from '../../../../../../types/user';
 
 /**
  * Response processor for AI workout generation responses
@@ -31,7 +36,8 @@ export class ResponseProcessor {
     aiResponse: unknown,
     durationResult: DurationStrategyResult,
     params: QuickWorkoutParams,
-    generationStartTime: number
+    generationStartTime: number,
+    userProfile?: UserProfile
   ): Promise<ResponseProcessingResult> {
     console.log('🔄 ResponseProcessor: Processing AI response');
     
@@ -74,24 +80,83 @@ export class ResponseProcessor {
       // Validate the workout
       const validation = this.validateWorkout(normalizationResult.workout, params);
       
+      // Calculate confidence using the new confidence service
+      let confidence = 0.8; // Default fallback
+      let confidenceFactors: {
+        profileMatch: number;
+        safetyAlignment: number;
+        equipmentFit: number;
+        goalAlignment: number;
+        structureQuality: number;
+      } | undefined = undefined;
+
+      if (userProfile && ConfidenceServiceFactory.isConfidenceEnabled(userProfile)) {
+        try {
+          console.log('🎯 ResponseProcessor.process - Calculating confidence');
+          const confidenceContext: ConfidenceContext = {
+            workoutType: 'quick',
+            generationSource: 'external',
+            environmentalFactors: {
+              location: params.location === 'outdoor' ? 'outdoor' : 'indoor',
+              timeOfDay: 'morning', // Default, could be enhanced with actual time
+            },
+            userPreferences: {
+              intensity: params.fitnessLevel === 'advanced athlete' ? 'high' : 
+                        params.fitnessLevel === 'some experience' ? 'moderate' : 'low',
+              duration: params.duration,
+              focus: params.focus || 'general fitness'
+            }
+          };
+
+          const confidenceResult = await ConfidenceServiceFactory.calculateConfidence(
+            userProfile,
+            normalizationResult.workout,
+            confidenceContext
+          );
+
+          if (confidenceResult) {
+            confidence = confidenceResult.confidence;
+            confidenceFactors = confidenceResult.confidenceFactors;
+            
+            // Update workout with confidence factors
+            normalizationResult.workout.confidence = confidence;
+            normalizationResult.workout.confidenceFactors = confidenceFactors;
+            
+            console.log('✅ ResponseProcessor.process - Confidence calculated', {
+              confidence: confidence.toFixed(3),
+              factors: confidenceFactors
+            });
+          }
+        } catch (error) {
+          console.warn('⚠️ ResponseProcessor.process - Confidence calculation failed, using fallback:', error);
+          // Keep the fallback confidence value
+        }
+      } else {
+        console.log('ℹ️ ResponseProcessor.process - Confidence calculation disabled or no user profile');
+      }
+      
       // Calculate processing metrics
       const processingTime = Date.now() - processingStartTime;
+      const totalGenerationTime = Date.now() - generationStartTime;
       const structureScore = this.calculateStructureScore(normalizationResult.workout);
       const completenessScore = this.calculateCompletenessScore(normalizationResult.workout);
       const consistencyScore = this.calculateConsistencyScore(normalizationResult.workout, durationResult);
 
-      console.log(`✅ ResponseProcessor: Processing completed in ${processingTime}ms`);
+      console.log(`✅ ResponseProcessor: Processing completed in ${processingTime}ms (total generation: ${totalGenerationTime}ms)`);
 
       return {
         workout: normalizationResult.workout,
         processingTime,
+        totalGenerationTime,
         validationPassed: validation.isValid,
         normalizationApplied: fixesApplied.length > 0,
         issuesFound,
         fixesApplied,
         structureScore,
         completenessScore,
-        consistencyScore
+        consistencyScore,
+        confidence,
+        confidenceFactors
       };
 
     } catch (error) {
@@ -104,8 +169,8 @@ export class ResponseProcessor {
    * Validate the processed workout
    */
   private validateWorkout(workout: GeneratedWorkout, params: QuickWorkoutParams): FeatureValidationResult {
-    const errors: any[] = [];
-    const warnings: any[] = [];
+    const errors: ValidationError[] = [];
+    const warnings: ValidationWarning[] = [];
 
     // Check required fields
     if (!workout.id) errors.push({ field: 'id', message: 'Workout ID is required', severity: 'error' });

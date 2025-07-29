@@ -2,7 +2,7 @@
 import { PrioritizedRecommendation, GlobalAIContext } from '../../core/types/AIServiceTypes';
 import { AIInsight } from '../../../../types/insights';
 // PerWorkoutOptions and UserProfile are now imported from the unified types
-import { WorkoutGenerationRequest } from '../../../../types/workout-generation.types';
+import { WorkoutGenerationRequest } from '../../../../types/workout-results.types';
 
 // OpenAI Configuration
 export interface OpenAIConfig {
@@ -76,6 +76,13 @@ export interface GeneratedWorkout {
   generatedAt: Date;
   aiModel: string;
   confidence: number;
+  confidenceFactors?: {
+    profileMatch: number;
+    safetyAlignment: number;
+    equipmentFit: number;
+    goalAlignment: number;
+    structureQuality: number;
+  };
   tags: string[];
 }
 

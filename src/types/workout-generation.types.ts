@@ -3,7 +3,6 @@ import { ProfileData } from '../components/Profile/types/profile.types';
 import { LiabilityWaiverData } from '../components/LiabilityWaiver/types/liability-waiver.types';
 import { PerWorkoutOptions } from './core';
 import { UserProfile } from './user';
-import { PrioritizedRecommendation } from '../services/ai/core/types/AIServiceTypes';
 
 // ============================================================================
 // ERROR TYPES
@@ -91,8 +90,48 @@ export interface GeneratedWorkout {
   generatedAt: Date;
   aiModel: string;
   confidence: number;
+  confidenceFactors?: {
+    profileMatch: number;
+    safetyAlignment: number;
+    equipmentFit: number;
+    goalAlignment: number;
+    structureQuality: number;
+  };
   tags: string[];
 }
+
+// ============================================================================
+// WORKOUT GENERATION REQUEST TYPES
+// ============================================================================
+
+/**
+ * Base interface for workout generation requests
+ */
+export interface BaseWorkoutRequest {
+  profileData: ProfileData;
+  waiverData?: LiabilityWaiverData;
+  workoutFocusData: PerWorkoutOptions;
+  userProfile: UserProfile;
+}
+
+/**
+ * Quick workout generation request
+ */
+export interface QuickWorkoutRequest extends BaseWorkoutRequest {
+  type: 'quick';
+}
+
+/**
+ * Detailed workout generation request
+ */
+export interface DetailedWorkoutRequest extends BaseWorkoutRequest {
+  type: 'detailed';
+}
+
+/**
+ * Union type for all workout generation requests
+ */
+export type WorkoutGenerationRequest = QuickWorkoutRequest | DetailedWorkoutRequest;
 
 // ============================================================================
 // GENERATION OPTIONS AND STATE

@@ -1,7 +1,7 @@
 // QuickWorkoutSetup Feature - Type Definitions
 // Feature-specific types for quick workout generation workflow
 
-import { GeneratedWorkout, WorkoutPhase, Exercise } from '../../../types/external-ai.types';
+import { GeneratedWorkout } from '../../../types/external-ai.types';
 import { UserProfile } from '../../../../types';
 import { DurationConfig } from '../constants/quick-workout.constants';
 
@@ -162,6 +162,7 @@ export interface ResponseProcessingResult {
   
   // Processing details
   processingTime: number;
+  totalGenerationTime: number;
   validationPassed: boolean;
   normalizationApplied: boolean;
   
@@ -173,6 +174,16 @@ export interface ResponseProcessingResult {
   structureScore: number;
   completenessScore: number;
   consistencyScore: number;
+  
+  // Confidence calculation
+  confidence: number;
+  confidenceFactors?: {
+    profileMatch: number;
+    safetyAlignment: number;
+    equipmentFit: number;
+    goalAlignment: number;
+    structureQuality: number;
+  };
 }
 
 /**

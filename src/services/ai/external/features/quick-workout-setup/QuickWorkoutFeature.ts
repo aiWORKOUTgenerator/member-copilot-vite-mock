@@ -3,6 +3,7 @@
 
 import { OpenAIService } from '../../OpenAIService';
 import { UserProfile } from '../../../../../types';
+
 import { 
   QuickWorkoutParams, 
   QuickWorkoutResult, 
@@ -20,6 +21,7 @@ import { DurationStrategy } from './workflow/DurationStrategy';
 import { PromptSelector } from './workflow/PromptSelector';
 import { ResponseProcessor } from './workflow/ResponseProcessor';
 import { QUICK_WORKOUT_CONSTANTS } from './constants/quick-workout.constants';
+
 // Feature metadata (defined inline to avoid circular import)
 const FEATURE_METADATA = {
   name: 'QuickWorkoutSetup',
@@ -196,7 +198,8 @@ export class QuickWorkoutFeature {
         aiResponse,
         durationResult,
         context.params,
-        metrics.startTime
+        metrics.startTime,
+        context.userProfile
       );
       metrics.steps.processing = Date.now() - processingStart;
 
@@ -220,7 +223,7 @@ export class QuickWorkoutFeature {
 
       console.log('✅ QuickWorkoutFeature: Workflow completed successfully');
 
-      return this.createQuickWorkoutResult(processingResult, durationResult, promptResult, context, totalTime);
+      return await this.createQuickWorkoutResult(processingResult, durationResult, promptResult, context, totalTime);
 
     } catch (error) {
       // 🔍 DEBUG: Log error details
@@ -260,13 +263,13 @@ export class QuickWorkoutFeature {
   /**
    * Create the final QuickWorkoutResult
    */
-  private createQuickWorkoutResult(
+  private async createQuickWorkoutResult(
     processingResult: ResponseProcessingResult,
     durationResult: DurationStrategyResult,
     promptResult: PromptSelectionResult,
     context: WorkflowContext,
     generationTime: number
-  ): QuickWorkoutResult {
+  ): Promise<QuickWorkoutResult> {
     // Create metadata
     const metadata: QuickWorkoutMetadata = {
       generatedAt: new Date(),
@@ -311,10 +314,13 @@ export class QuickWorkoutFeature {
       safetyReminders.push(`Avoid intense work on sore areas: ${context.params.sorenessAreas.join(', ')}`);
     }
 
+    // Use confidence from processing result (already calculated in ResponseProcessor)
+    const confidence = processingResult.confidence;
+
     return {
       workout: processingResult.workout,
       metadata,
-      confidence: processingResult.consistencyScore ? processingResult.consistencyScore / 100 : 0.8,
+      confidence,
       reasoning: promptResult.selectionReasoning,
       durationOptimization,
       personalizedNotes,

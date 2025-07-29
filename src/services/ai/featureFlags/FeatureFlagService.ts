@@ -48,6 +48,19 @@ export interface ABTestResults {
 // Default feature flags for AI service rollout
 const DEFAULT_AI_FLAGS: FeatureFlag[] = [
   {
+    id: 'ai_confidence_system',
+    name: 'AI Confidence Score System',
+    description: 'Enable the new AI confidence calculation system for workout generation',
+    enabled: true,
+    rolloutPercentage: 0, // Start at 0% for safe deployment
+    metadata: {
+      experimentId: 'ai_confidence_system_2024',
+      startDate: new Date(),
+      owner: 'ai_team',
+      notes: 'Phase 1 deployment - confidence calculation service integration'
+    }
+  },
+  {
     id: 'ai_service_unified',
     name: 'Unified AI Service',
     description: 'Use the new unified AI service instead of legacy implementations',

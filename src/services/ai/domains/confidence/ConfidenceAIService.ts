@@ -141,11 +141,11 @@ export class ConfidenceAIService {
     const factorResults = await Promise.all(factorPromises);
     
     return {
-      profileMatch: factorResults.find(f => f.name === 'profileMatch')?.score || 0.5,
-      safetyAlignment: factorResults.find(f => f.name === 'safetyAlignment')?.score || 0.5,
-      equipmentFit: factorResults.find(f => f.name === 'equipmentFit')?.score || 0.5,
-      goalAlignment: factorResults.find(f => f.name === 'goalAlignment')?.score || 0.5,
-      structureQuality: factorResults.find(f => f.name === 'structureQuality')?.score || 0.5
+      profileMatch: factorResults.find(f => f.name === 'profileMatch')?.score ?? 0.5,
+      safetyAlignment: factorResults.find(f => f.name === 'safetyAlignment')?.score ?? 0.5,
+      equipmentFit: factorResults.find(f => f.name === 'equipmentFit')?.score ?? 0.5,
+      goalAlignment: factorResults.find(f => f.name === 'goalAlignment')?.score ?? 0.5,
+      structureQuality: factorResults.find(f => f.name === 'structureQuality')?.score ?? 0.5
     };
   }
 
