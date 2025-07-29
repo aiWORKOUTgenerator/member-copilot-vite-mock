@@ -1,5 +1,5 @@
 // Custom hook for workout generation workflow
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useAIService } from './useAIService';
 import { useAIAnalytics } from '../contexts/composition/AIAnalyticsProvider';
 import { 
@@ -9,11 +9,10 @@ import { AIInteractionData } from '../types/ai-context.types';
 import { GeneratedWorkout } from '../services/ai/external/types/external-ai.types';
 import { FitnessLevel } from '../types/user';
 import { logger } from '../utils/logger';
-import { PromptVariableComposer } from '../services/ai/external/DataTransformer';
-import { WorkoutFocusData } from '../services/ai/external/DataTransformer/transformers/WorkoutFocusTransformer';
 import { DEFAULT_VALUES } from '../services/ai/external/DataTransformer/constants/DefaultValues';
-import { WorkoutFocusConfigurationData, PerWorkoutOptions, CategoryRatingData } from '../types/core';
-import { profileTransformers } from '../utils/dataTransformers';
+import { WorkoutFocusConfigurationData, PerWorkoutOptions } from '../types/core';
+import { PromptDataTransformer } from '../services/ai/external/shared/utils/PromptDataTransformer';
+import { calculateFitnessLevel, calculateWorkoutIntensity } from '../utils/fitnessLevelCalculator';
 
 // Helper function to map FitnessLevel to GeneratedWorkout difficulty
 const mapFitnessLevelToDifficulty = (fitnessLevel: FitnessLevel): 'new to exercise' | 'some experience' | 'advanced athlete' => {
@@ -361,9 +360,6 @@ const withTimeout = <T>(
 export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
   const { generateWorkout: aiGenerateWorkout, aiService } = useAIService();
   const { trackAIInteraction } = useAIAnalytics();
-  
-  // Initialize the PromptVariableComposer with debug mode
-  const composer = useMemo(() => new PromptVariableComposer(true), []);
 
   // Enhanced state with retry tracking
   const [state, setState] = useState<WorkoutGenerationState>({
@@ -461,20 +457,26 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
       setStatus('generating');
       updateProgress(10);
 
-      // Transform data using the new PromptVariableComposer
+      // Transform data using PromptDataTransformer for consistency
       const focus = request.workoutFocusData.customization_focus || DEFAULT_VALUES.workout.customization_focus;
       const focusValue = typeof focus === 'string' ? focus : (focus as WorkoutFocusConfigurationData).focus || DEFAULT_VALUES.workout.customization_focus;
       const energyValue = Number(request.workoutFocusData.customization_energy || DEFAULT_VALUES.workout.customization_energy);
       
-      const promptVariables = composer.transformToPromptVariables(
+      // Create PerWorkoutOptions for the transformer
+      const workoutOptions: PerWorkoutOptions = {
+        customization_focus: focusValue,
+        customization_duration: Number(request.workoutFocusData.customization_duration || DEFAULT_VALUES.workout.customization_duration),
+        customization_energy: {
+          rating: energyValue,
+          categories: energyValue <= 3 ? ['low_energy'] : energyValue >= 7 ? ['high_energy'] : ['moderate_energy']
+        },
+        customization_equipment: request.workoutFocusData.customization_equipment || [...DEFAULT_VALUES.workout.customization_equipment],
+        customization_soreness: request.workoutFocusData.customization_soreness
+      };
+      
+      const promptVariables = PromptDataTransformer.transformToPromptVariables(
         request.profileData,
-        {
-          customization_focus: focusValue,
-          customization_duration: Number(request.workoutFocusData.customization_duration || DEFAULT_VALUES.workout.customization_duration),
-          customization_energy: energyValue,
-          customization_equipment: request.workoutFocusData.customization_equipment || DEFAULT_VALUES.workout.customization_equipment,
-          customization_soreness: request.workoutFocusData.customization_soreness
-        } as WorkoutFocusData,
+        workoutOptions,
         request.additionalContext
       );
       
@@ -518,32 +520,72 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
           });
         }
         
-        // Pass the complete request with transformed data
-        const selections: PerWorkoutOptions = {
-          customization_focus: focusValue,
-          customization_duration: Number(request.workoutFocusData.customization_duration || DEFAULT_VALUES.workout.customization_duration),
-          customization_energy: {
-            rating: energyValue,
-            categories: energyValue <= 3 ? ['low_energy'] : energyValue >= 7 ? ['high_energy'] : ['moderate_energy']
+        // Create UserProfile from profileData for the AI service
+        const userProfile = {
+          fitnessLevel: request.profileData.calculatedFitnessLevel || 
+            (request.profileData.experienceLevel && request.profileData.physicalActivity ? 
+              calculateFitnessLevel(request.profileData.experienceLevel, request.profileData.physicalActivity) : 
+              'intermediate'
+            ),
+          goals: [request.profileData.primaryGoal.toLowerCase().replace(' ', '_')],
+          preferences: {
+            workoutStyle: ['balanced'],
+            timePreference: 'morning' as const,
+            intensityPreference: request.profileData.calculatedWorkoutIntensity || 
+              (request.profileData.experienceLevel && request.profileData.intensityLevel ? 
+                calculateWorkoutIntensity(
+                  request.profileData.calculatedFitnessLevel || 
+                    (request.profileData.experienceLevel && request.profileData.physicalActivity ? 
+                      calculateFitnessLevel(request.profileData.experienceLevel, request.profileData.physicalActivity) : 
+                      'intermediate'
+                    ),
+                  request.profileData.intensityLevel
+                ) : 
+                'moderate'
+              ),
+            advancedFeatures: request.profileData.experienceLevel === 'Advanced Athlete',
+            aiAssistanceLevel: 'moderate' as const
           },
-          customization_equipment: request.workoutFocusData.customization_equipment || [...DEFAULT_VALUES.workout.customization_equipment],
-          customization_soreness: request.workoutFocusData.customization_soreness
+          basicLimitations: {
+            injuries: request.profileData.injuries || [],
+            availableEquipment: request.profileData.availableEquipment || ['Body Weight'],
+            availableLocations: request.profileData.availableLocations || ['Home']
+          },
+          enhancedLimitations: {
+            timeConstraints: 0,
+            equipmentConstraints: request.profileData.availableEquipment || ['Body Weight'],
+            locationConstraints: request.profileData.availableLocations || ['Home'],
+            recoveryNeeds: {
+              restDays: 2,
+              sleepHours: 7,
+              hydrationLevel: 'moderate' as const
+            },
+            mobilityLimitations: [],
+            progressionRate: 'moderate' as const
+          },
+          workoutHistory: {
+            estimatedCompletedWorkouts: 0,
+            averageDuration: 45,
+            preferredFocusAreas: [],
+            progressiveEnhancementUsage: {},
+            aiRecommendationAcceptance: 0.7,
+            consistencyScore: 0.5,
+            plateauRisk: 'low' as const
+          },
+          learningProfile: {
+            prefersSimplicity: request.profileData.experienceLevel === 'New to Exercise',
+            explorationTendency: 'moderate' as const,
+            feedbackPreference: 'simple' as const,
+            learningStyle: 'visual' as const,
+            motivationType: 'intrinsic' as const,
+            adaptationSpeed: 'moderate' as const
+          }
         };
         
-        console.log('🔍 DEBUG - About to call aiGenerateWorkout with selections:', selections);
-        
-        // Transform ProfileData to UserProfile
-        const userProfile = profileTransformers.convertProfileToUserProfile(request.profileData);
-        
+        // Pass both userProfile and selections to aiGenerateWorkout
         const generatedWorkout = await aiGenerateWorkout({
-          userProfile: userProfile,
-          selections: selections
-        });
-        
-        console.log('🔍 DEBUG - aiGenerateWorkout returned:', {
-          hasWorkout: !!generatedWorkout,
-          workoutType: typeof generatedWorkout,
-          workoutKeys: generatedWorkout ? Object.keys(generatedWorkout) : 'null'
+          userProfile,
+          selections: workoutOptions
         });
         
         if (abortControllerRef.current?.signal.aborted) {
@@ -640,17 +682,6 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
       return enhancedWorkout;
 
     } catch (error) {
-      // 🔍 CRITICAL DEBUG: Log the original error details
-      console.error('🔍 CRITICAL - Original error details:', {
-        error: error,
-        errorType: typeof error,
-        errorMessage: error instanceof Error ? error.message : String(error),
-        errorStack: error instanceof Error ? error.stack : 'No stack trace',
-        errorCode: (error as any)?.code,
-        errorTypeName: (error as any)?.type,
-        errorDetails: (error as any)?.details
-      });
-
       const isAbortError = error instanceof Error && error.name === 'AbortError';
       const isTimeoutError = error instanceof Error && error.message.includes('timed out');
       const isNetworkError = error instanceof Error && (
@@ -709,15 +740,18 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
           const energyValue = Number(lastRequestRef.current.workoutFocusData.customization_energy || DEFAULT_VALUES.workout.customization_energy);
           
           // Transform data for fallback using the new composer
-          const promptVariables = composer.transformToPromptVariables(
+          const promptVariables = PromptDataTransformer.transformToPromptVariables(
             lastRequestRef.current.profileData,
             {
               customization_focus: focusValue,
               customization_duration: Number(lastRequestRef.current.workoutFocusData.customization_duration || DEFAULT_VALUES.workout.customization_duration),
-              customization_energy: energyValue,
-              customization_equipment: lastRequestRef.current.workoutFocusData.customization_equipment || DEFAULT_VALUES.workout.customization_equipment,
+              customization_energy: {
+                rating: energyValue,
+                categories: energyValue <= 3 ? ['low_energy'] : energyValue >= 7 ? ['high_energy'] : ['moderate_energy']
+              },
+              customization_equipment: lastRequestRef.current.workoutFocusData.customization_equipment || [...DEFAULT_VALUES.workout.customization_equipment],
               customization_soreness: lastRequestRef.current.workoutFocusData.customization_soreness
-            } as WorkoutFocusData
+            } as PerWorkoutOptions
           );
           
           const fallbackWorkout = generateFallbackWorkout(
@@ -755,7 +789,7 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
     } finally {
       abortControllerRef.current = null;
     }
-  }, [aiGenerateWorkout, validateRequest, updateProgress, logger, composer, trackAIInteraction]);
+  }, [aiGenerateWorkout, validateRequest, updateProgress, logger, trackAIInteraction]);
 
   // Enhanced retry with exponential backoff
   const retryGeneration = useCallback(async (): Promise<GeneratedWorkout | null> => {

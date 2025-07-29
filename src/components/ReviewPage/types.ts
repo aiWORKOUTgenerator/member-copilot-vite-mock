@@ -26,6 +26,8 @@ export interface DataRowProps {
   label: string;
   value: string | string[] | React.ReactNode;
   icon?: LucideIcon;
+  status?: 'success' | 'warning' | 'error' | 'info';
+  statusIcon?: LucideIcon;
 }
 
 export interface DisplayWorkoutFocus {

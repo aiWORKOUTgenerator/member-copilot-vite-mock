@@ -5,7 +5,7 @@ import { ValidationFeedback } from '../shared/ValidationFeedback';
 import { ConflictWarning } from '../shared/ConflictWarning';
 import { DetailedWorkoutFeature } from '../../DetailedWorkoutFeature';
 import { AIRecommendationPanel } from '../shared/AIRecommendationPanel';
-import { aiLogger } from 'src/services/ai/logging/AILogger';
+import { aiLogger } from '../../../../../../../services/ai/logging/AILogger';
 
 interface TrainingDetailsStepProps {
   options: PerWorkoutOptions;

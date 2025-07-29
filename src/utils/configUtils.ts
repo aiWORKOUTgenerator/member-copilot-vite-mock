@@ -233,10 +233,19 @@ export const createExerciseSelectionConfig = (
 }); 
 
 /**
+ * @deprecated Use calculateFitnessLevel from fitnessLevelCalculator instead.
+ * This function only considers experience level and ignores physical activity,
+ * leading to inaccurate fitness level assessments.
+ * 
+ * The correct function is: calculateFitnessLevel(experienceLevel, physicalActivity)
+ * which provides a sophisticated two-variable calculation.
+ * 
  * Maps UI experience level values to AI service fitness levels
  * This converts the UI experience levels to the standardized FitnessLevel type
  */
 export const mapExperienceLevelToFitnessLevel = (experienceLevel: string): FitnessLevel => {
+  console.warn('⚠️ DEPRECATED: mapExperienceLevelToFitnessLevel is deprecated. Use calculateFitnessLevel(experienceLevel, physicalActivity) instead.');
+  
   switch (experienceLevel.toLowerCase()) {
     case 'new to exercise':
       return 'beginner';

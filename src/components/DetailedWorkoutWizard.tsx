@@ -10,7 +10,7 @@ import {
   ExerciseSelectionStep
 } from '../services/ai/external/features/detailed-workout-setup/components/steps';
 import { DetailedWorkoutFeature } from '../services/ai/external/features/detailed-workout-setup/DetailedWorkoutFeature';
-import { useAI } from '../contexts/AIContext';
+import { useAIService } from '../contexts/composition/AIServiceProvider';
 import { aiLogger } from '../services/ai/logging/AILogger';
 
 interface DetailedWorkoutWizardProps {
@@ -69,7 +69,7 @@ export const DetailedWorkoutWizard: React.FC<DetailedWorkoutWizardProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get AI service from context
-  const { aiService } = useAI();
+  const { aiService } = useAIService();
 
   // Initialize DetailedWorkoutFeature
   const detailedWorkoutFeature = useMemo(() => {

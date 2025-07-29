@@ -5,7 +5,7 @@ import { FocusForm } from '../forms/FocusForm';
 import { ValidationFeedback } from '../shared/ValidationFeedback';
 import { ConflictWarning } from '../shared/ConflictWarning';
 import { DetailedWorkoutFeature } from '../../DetailedWorkoutFeature';
-import { aiLogger } from 'src/services/ai/logging/AILogger';
+import { aiLogger } from '../../../../../../../services/ai/logging/AILogger';
 
 interface TrainingStructureStepProps {
   options: PerWorkoutOptions;
@@ -61,15 +61,25 @@ export const TrainingStructureStep: React.FC<TrainingStructureStepProps> = ({
     if (!options.customization_duration || !options.customization_focus) return;
 
     try {
+      // Extract duration value - handle both number and DurationConfigurationData
+      const durationValue = typeof options.customization_duration === 'number' 
+        ? options.customization_duration 
+        : options.customization_duration.duration;
+
+      // Extract focus value - handle both string and WorkoutFocusConfigurationData
+      const focusValue = typeof options.customization_focus === 'string'
+        ? options.customization_focus
+        : options.customization_focus.focus;
+
       // Use the workout feature to validate the combination
       const result = await workoutFeature.validateWorkoutStructure({
-        duration: options.customization_duration,
-        focus: options.customization_focus
+        duration: durationValue,
+        focus: focusValue
       });
 
       // Update conflicts based on validation result
       if (!result.isValid && result.details?.conflicts) {
-        setConflicts(result.details.conflicts.map((conflict, index) => ({
+        setConflicts(result.details.conflicts.map((conflict: any, index: number) => ({
           id: `structure-conflict-${index}`,
           message: conflict.message,
           severity: conflict.severity || 'medium',
@@ -79,7 +89,7 @@ export const TrainingStructureStep: React.FC<TrainingStructureStepProps> = ({
             action: () => {
               if (conflict.suggestion?.changes) {
                 Object.entries(conflict.suggestion.changes).forEach(([key, value]) => {
-                  onChange(key as keyof PerWorkoutOptions, value);
+                  onChange(key as keyof PerWorkoutOptions, value as PerWorkoutOptions[keyof PerWorkoutOptions]);
                 });
               }
             }
@@ -116,7 +126,7 @@ export const TrainingStructureStep: React.FC<TrainingStructureStepProps> = ({
       {/* Duration Selection */}
       <div className="space-y-4">
         <DurationForm
-          value={options.customization_duration}
+          value={typeof options.customization_duration === 'object' ? options.customization_duration : undefined}
           onChange={value => {
             onChange('customization_duration', value);
             // Remove automatic cross-field validation to prevent setState during render
@@ -135,7 +145,7 @@ export const TrainingStructureStep: React.FC<TrainingStructureStepProps> = ({
       {/* Focus Selection */}
       <div className="space-y-4">
         <FocusForm
-          value={options.customization_focus}
+          value={typeof options.customization_focus === 'object' ? options.customization_focus : undefined}
           onChange={value => {
             onChange('customization_focus', value);
             // Remove automatic cross-field validation to prevent setState during render

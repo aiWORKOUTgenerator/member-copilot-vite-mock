@@ -1,15 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Dumbbell, Heart, Activity, Users, Zap, Moon, Settings, ChevronDown, ChevronUp, Brain, AlertTriangle, Lightbulb } from 'lucide-react';
-
-import { 
-  CustomizationComponentProps, 
-  WorkoutFocusConfigurationData,
-  UserProfile,
-  AIRecommendationContext
-} from '../../../types';
-
+import React, { useState, useCallback, useEffect } from 'react';
+import { Target, ChevronDown, ChevronUp, CheckCircle, AlertCircle } from 'lucide-react';
+import { PerWorkoutOptions, WorkoutFocusConfigurationData, ValidationResult } from '../../types/core';
 import { FocusOptionsGrid } from './FocusOptionsGrid';
-import { useAI } from '../../../contexts/AIContext';
+import { ValidationFeedback } from '../shared/ValidationFeedback';
+import { ConflictWarning } from '../shared/ConflictWarning';
+import { AIRecommendationPanel } from '../shared/AIRecommendationPanel';
+import { useAIService } from '../../../contexts/composition/AIServiceProvider';
+import { aiLogger } from '../../../services/ai/logging/AILogger';
 
 // Helper function to consistently extract focus value
 const getCurrentFocus = (value: string | WorkoutFocusConfigurationData): string => {

@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Settings, ChevronDown, ChevronUp, Brain, AlertTriangle, Lightbulb, Activity } from 'lucide-react';
-import { OptionGrid } from '../../shared/DRYComponents';
-import { CustomizationComponentProps } from '../../../types/core';
-import { HierarchicalSelectionData } from '../../../types/areas';
-import { UserProfile, AIRecommendationContext } from '../../../types';
-import HierarchicalAreaSelector from './HierarchicalAreaSelector';
-import { useAI } from '../../../contexts/AIContext';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Target, ChevronDown, ChevronUp, CheckCircle, AlertCircle } from 'lucide-react';
+import { PerWorkoutOptions, ValidationResult } from '../../../types/core';
+import { HierarchicalAreaSelector } from './HierarchicalAreaSelector';
+import { ValidationFeedback } from '../shared/ValidationFeedback';
+import { ConflictWarning } from '../shared/ConflictWarning';
+import { AIRecommendationPanel } from '../shared/AIRecommendationPanel';
+import { useAIService } from '../../../contexts/composition/AIServiceProvider';
+import { aiLogger } from '../../../services/ai/logging/AILogger';
 import { PRIMARY_REGIONS, findOptionInfo, getAllDescendants, getParentKey } from './data';
 
 // Helper function to consistently extract focus areas value
