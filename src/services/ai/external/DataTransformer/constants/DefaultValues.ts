@@ -203,6 +203,70 @@ export const DERIVED_VALUE_MAPS = {
     return ageMap[ageRange] || 30; // Default to 30 if unknown
   },
 
+  // Parse weight string to number (handle various formats)
+  parseWeight: (weight: string): number => {
+    if (!weight) return 70; // Default weight
+    
+    const weightStr = weight.toLowerCase().trim();
+    
+    // Handle "200 lbs" format
+    if (weightStr.includes('lbs') || weightStr.includes('lb')) {
+      const match = weightStr.match(/(\d+)/);
+      if (match) {
+        return parseInt(match[1]);
+      }
+    }
+    
+    // Handle "70 kg" format
+    if (weightStr.includes('kg')) {
+      const match = weightStr.match(/(\d+)/);
+      if (match) {
+        return parseInt(match[1]);
+      }
+    }
+    
+    // Handle plain number (assume lbs)
+    const plainNumber = parseFloat(weightStr);
+    if (!isNaN(plainNumber)) {
+      return plainNumber;
+    }
+    
+    return 70; // Default weight
+  },
+
+  // Parse height string to number (handle various formats)
+  parseHeight: (height: string): number => {
+    if (!height) return 170; // Default height in cm
+    
+    const heightStr = height.toLowerCase().trim();
+    
+    // Handle "5'8\"" format
+    if (heightStr.includes("'") && heightStr.includes('"')) {
+      const match = heightStr.match(/(\d+)'(\d+)"/);
+      if (match) {
+        const feet = parseInt(match[1]);
+        const inches = parseInt(match[2]);
+        return Math.round((feet * 12 + inches) * 2.54); // Convert to cm
+      }
+    }
+    
+    // Handle "170cm" format
+    if (heightStr.includes('cm')) {
+      const match = heightStr.match(/(\d+)/);
+      if (match) {
+        return parseInt(match[1]);
+      }
+    }
+    
+    // Handle plain number (assume cm)
+    const plainNumber = parseFloat(heightStr);
+    if (!isNaN(plainNumber)) {
+      return plainNumber;
+    }
+    
+    return 170; // Default height in cm
+  },
+
   // Calculate recovery needs based on fitness level
   calculateRecoveryNeeds: (fitnessLevel: FitnessLevel): RecoveryNeeds => {
     const recoveryMap = {

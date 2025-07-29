@@ -3,11 +3,11 @@
  * Ensures workout parameters make sense together
  */
 
-import { BaseValidationRule } from '../core/ValidationRule';
 import { ValidationContext } from '../core/ValidationContext';
-import { ValidationWarning } from '../core/ValidationError';
+import { ValidationRule } from '../core/ValidationRule';
+import { isValidFitnessLevel } from '../../../../types/guards';
 
-export class BusinessLogicRule extends BaseValidationRule {
+export class BusinessLogicRule extends ValidationRule {
   constructor() {
     super('BusinessLogicRule', 30); // Priority 30 - runs after data validation
   }
@@ -37,7 +37,7 @@ export class BusinessLogicRule extends BaseValidationRule {
     // Only check length if equipment is an array
     if (focus === 'strength' && Array.isArray(equipment) && equipment.length === 0) {
       context.addWarning(
-        ValidationWarning.createFieldWarning('customization_equipment', 'Strength workouts usually require some equipment', 'Recommend adding at least one equipment item')
+        'Strength workouts usually require some equipment. Recommend adding at least one equipment item'
       );
     }
   }

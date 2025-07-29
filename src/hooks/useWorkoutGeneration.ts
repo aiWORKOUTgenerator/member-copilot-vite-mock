@@ -12,6 +12,7 @@ import { logger } from '../utils/logger';
 import { DEFAULT_VALUES } from '../services/ai/external/DataTransformer/constants/DefaultValues';
 import { WorkoutFocusConfigurationData, PerWorkoutOptions } from '../types/core';
 import { PromptDataTransformer } from '../services/ai/external/shared/utils/PromptDataTransformer';
+import { UserProfileTransformer } from '../services/ai/external/DataTransformer/transformers/UserProfileTransformer';
 import { calculateFitnessLevel, calculateWorkoutIntensity } from '../utils/fitnessLevelCalculator';
 
 // Helper function to map FitnessLevel to GeneratedWorkout difficulty
@@ -520,67 +521,9 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
           });
         }
         
-        // Create UserProfile from profileData for the AI service
-        const userProfile = {
-          fitnessLevel: request.profileData.calculatedFitnessLevel || 
-            (request.profileData.experienceLevel && request.profileData.physicalActivity ? 
-              calculateFitnessLevel(request.profileData.experienceLevel, request.profileData.physicalActivity) : 
-              'intermediate'
-            ),
-          goals: [request.profileData.primaryGoal.toLowerCase().replace(' ', '_')],
-          preferences: {
-            workoutStyle: ['balanced'],
-            timePreference: 'morning' as const,
-            intensityPreference: request.profileData.calculatedWorkoutIntensity || 
-              (request.profileData.experienceLevel && request.profileData.intensityLevel ? 
-                calculateWorkoutIntensity(
-                  request.profileData.calculatedFitnessLevel || 
-                    (request.profileData.experienceLevel && request.profileData.physicalActivity ? 
-                      calculateFitnessLevel(request.profileData.experienceLevel, request.profileData.physicalActivity) : 
-                      'intermediate'
-                    ),
-                  request.profileData.intensityLevel
-                ) : 
-                'moderate'
-              ),
-            advancedFeatures: request.profileData.experienceLevel === 'Advanced Athlete',
-            aiAssistanceLevel: 'moderate' as const
-          },
-          basicLimitations: {
-            injuries: request.profileData.injuries || [],
-            availableEquipment: request.profileData.availableEquipment || ['Body Weight'],
-            availableLocations: request.profileData.availableLocations || ['Home']
-          },
-          enhancedLimitations: {
-            timeConstraints: 0,
-            equipmentConstraints: request.profileData.availableEquipment || ['Body Weight'],
-            locationConstraints: request.profileData.availableLocations || ['Home'],
-            recoveryNeeds: {
-              restDays: 2,
-              sleepHours: 7,
-              hydrationLevel: 'moderate' as const
-            },
-            mobilityLimitations: [],
-            progressionRate: 'moderate' as const
-          },
-          workoutHistory: {
-            estimatedCompletedWorkouts: 0,
-            averageDuration: 45,
-            preferredFocusAreas: [],
-            progressiveEnhancementUsage: {},
-            aiRecommendationAcceptance: 0.7,
-            consistencyScore: 0.5,
-            plateauRisk: 'low' as const
-          },
-          learningProfile: {
-            prefersSimplicity: request.profileData.experienceLevel === 'New to Exercise',
-            explorationTendency: 'moderate' as const,
-            feedbackPreference: 'simple' as const,
-            learningStyle: 'visual' as const,
-            motivationType: 'intrinsic' as const,
-            adaptationSpeed: 'moderate' as const
-          }
-        };
+        // Transform profile data using UserProfileTransformer
+        const userProfileTransformer = new UserProfileTransformer();
+        const userProfile = userProfileTransformer.transform(request.profileData);
         
         // Pass both userProfile and selections to aiGenerateWorkout
         const generatedWorkout = await aiGenerateWorkout({

@@ -1,13 +1,6 @@
 import { VALIDATION_RULES, ALL_REQUIRED_FIELDS } from '../constants/ValidationRules';
 import type { ProfileFields } from '../types/profile.types';
-
-export interface ValidationResult {
-  isValid: boolean;
-  errors: string[];
-  warnings: string[];
-  missingFields: string[];
-  populatedFields: string[];
-}
+import { ValidationResult } from '../../../../../types/core';
 
 export function validateProfileData(data: any): ValidationResult {
   const errors: string[] = [];

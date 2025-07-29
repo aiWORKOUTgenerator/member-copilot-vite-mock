@@ -8,7 +8,7 @@ import { PerWorkoutOptions } from '../../types/core';
 import { AIRecommendationContext } from '../../types/ai';
 import { UserProfile, TimePreference, AIAssistanceLevel, RecoveryStatus } from '../../types/user';
 import { ProfileData } from '../Profile/types/profile.types';
-import { profileTransformers } from '../../utils/dataTransformers';
+import { UserProfileTransformer } from '../../services/ai/external/DataTransformer/transformers/UserProfileTransformer';
 import { aiLogger } from '../../services/ai/logging/AILogger';
 
 // Define WorkoutType locally since it's used throughout the app
@@ -16,7 +16,8 @@ type WorkoutType = 'quick' | 'detailed';
 
 // Helper function to convert ProfileData to UserProfile
 const convertProfileDataToUserProfile = (profileData: ProfileData): UserProfile => {
-  return profileTransformers.convertProfileToUserProfileSimple(profileData);
+  const transformer = new UserProfileTransformer();
+  return transformer.transform(profileData);
 };
 
 export interface WorkoutFocusPageProps {

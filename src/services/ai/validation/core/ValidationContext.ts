@@ -3,10 +3,9 @@
  * Tracks errors, warnings, and metrics for a single validation run
  */
 
-import { ValidationError, ValidationWarning } from './ValidationError';
+import { ValidationResult } from '../../../../types/core';
 import { ValidationMetrics } from '../metrics/ValidationMetrics';
 import { WorkoutGenerationRequest } from '../../../../types/workout-generation.types';
-import { ValidationResult } from './ValidationResult';
 
 export class ValidationContext {
   private errors: ValidationError[] = [];

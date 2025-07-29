@@ -43,12 +43,9 @@ export type ProfileData = {
 
 export type StepValidationErrors = Record<string, string[]>;
 
-// Validation result interface
-export interface ValidationResult {
-  success: boolean;
-  errors: StepValidationErrors;
-  data?: unknown;
-}
+// Import ValidationResult from core types
+import { ValidationResult } from '../../../types/core';
+export type { ValidationResult };
 
 export interface StepProps {
   profileData: ProfileData | null;

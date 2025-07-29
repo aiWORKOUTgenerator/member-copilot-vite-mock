@@ -5,9 +5,8 @@
 
 // Core exports
 export { WorkoutRequestValidator } from './core/WorkoutRequestValidator';
-export type { ValidationResult } from './core/ValidationResult';
+export type { ValidationResult } from '../../../types/core';
 export { ValidationContext } from './core/ValidationContext';
-export { ValidationError, ValidationWarning } from './core/ValidationError';
 export type { ValidationRule } from './core/ValidationRule';
 export { BaseValidationRule } from './core/ValidationRule';
 

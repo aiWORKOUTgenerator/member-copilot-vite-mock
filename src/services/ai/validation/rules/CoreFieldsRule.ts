@@ -4,17 +4,16 @@
  */
 
 import { ValidationContext } from '../core/ValidationContext';
-import { ValidationError } from '../core/ValidationError';
+import { ValidationRule } from '../core/ValidationRule';
 import { isValidFitnessLevel, isValidProfileData } from '../../../../types/guards';
 // Define WorkoutType locally since it's used throughout the app
 type WorkoutType = 'quick' | 'detailed';
-import { BaseValidationRule } from '../core/ValidationRule';
 
 /**
  * CoreFieldsRule - Validates core fields of a WorkoutGenerationRequest
  * Keeps implementation focused and under 100 lines per clean code guidelines
  */
-export class CoreFieldsRule extends BaseValidationRule {
+export class CoreFieldsRule extends ValidationRule {
   constructor() {
     super('CoreFieldsRule', 10); // Priority 10 - runs first
   }
@@ -45,7 +44,7 @@ export class CoreFieldsRule extends BaseValidationRule {
   private validateWorkoutType(workoutType: unknown, context: ValidationContext): void {
     if (!workoutType) {
       context.addError(
-        ValidationError.createFieldError('workoutType', 'workoutType is required')
+        `workoutType is required`
       );
       return;
     }
@@ -53,10 +52,7 @@ export class CoreFieldsRule extends BaseValidationRule {
     const validTypes: WorkoutType[] = ['quick', 'detailed'];
     if (!validTypes.includes(workoutType as WorkoutType)) {
       context.addError(
-        ValidationError.createFieldError(
-          'workoutType',
-          `workoutType must be one of: ${validTypes.join(', ')}`
-        )
+        `workoutType must be one of: ${validTypes.join(', ')}`
       );
     }
   }
@@ -64,14 +60,14 @@ export class CoreFieldsRule extends BaseValidationRule {
   private validateUserProfile(userProfile: unknown, context: ValidationContext): void {
     if (!userProfile) {
       context.addError(
-        ValidationError.createFieldError('userProfile', 'userProfile is required')
+        `userProfile is required`
       );
       return;
     }
 
     if (typeof userProfile !== 'object' || userProfile === null) {
       context.addError(
-        ValidationError.createFieldError('userProfile', 'userProfile must be an object')
+        `userProfile must be an object`
       );
       return;
     }
@@ -80,17 +76,14 @@ export class CoreFieldsRule extends BaseValidationRule {
     
     if (!profile.fitnessLevel) {
       context.addError(
-        ValidationError.createFieldError('userProfile.fitnessLevel', 'userProfile.fitnessLevel is required')
+        `userProfile.fitnessLevel is required`
       );
       return;
     }
 
     if (!isValidFitnessLevel(profile.fitnessLevel)) {
       context.addError(
-        ValidationError.createFieldError(
-          'userProfile.fitnessLevel',
-          'userProfile.fitnessLevel must be one of: beginner, novice, intermediate, advanced, adaptive'
-        )
+        `userProfile.fitnessLevel must be one of: beginner, novice, intermediate, advanced, adaptive`
       );
     }
   }
@@ -98,14 +91,14 @@ export class CoreFieldsRule extends BaseValidationRule {
   private validateProfileData(profileData: unknown, context: ValidationContext): void {
     if (!profileData) {
       context.addError(
-        ValidationError.createFieldError('profileData', 'profileData is required')
+        `profileData is required`
       );
       return;
     }
 
     if (!isValidProfileData(profileData)) {
       context.addError(
-        ValidationError.createFieldError('profileData', 'profileData is invalid - check required fields and values')
+        `profileData is invalid - check required fields and values`
       );
     }
   }
@@ -113,14 +106,14 @@ export class CoreFieldsRule extends BaseValidationRule {
   private validateWorkoutFocusData(workoutFocusData: unknown, context: ValidationContext): void {
     if (!workoutFocusData) {
       context.addError(
-        ValidationError.createFieldError('workoutFocusData', 'workoutFocusData is required')
+        `workoutFocusData is required`
       );
       return;
     }
 
     if (typeof workoutFocusData !== 'object' || workoutFocusData === null) {
       context.addError(
-        ValidationError.createFieldError('workoutFocusData', 'workoutFocusData must be an object')
+        `workoutFocusData must be an object`
       );
       return;
     }

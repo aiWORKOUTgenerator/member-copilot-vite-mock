@@ -1,13 +1,5 @@
-import { WorkoutFocusData } from '../transformers/WorkoutFocusTransformer';
-import { DEFAULT_VALUES } from '../constants/DefaultValues';
-
-export interface ValidationResult {
-  isValid: boolean;
-  errors: string[];
-  warnings: string[];
-  missingFields: string[];
-  populatedFields: string[];
-}
+import { WorkoutFocusData } from '../types/workout.types';
+import { ValidationResult } from '../../../../../types/core';
 
 export function validateWorkoutData(data: WorkoutFocusData): ValidationResult {
   const errors: string[] = [];

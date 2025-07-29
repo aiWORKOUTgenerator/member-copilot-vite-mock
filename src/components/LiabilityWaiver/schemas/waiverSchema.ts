@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ValidationResult } from '../../../types/core';
 
 // Base schema for the liability waiver data with comprehensive validation
 export const waiverSchema = z.object({
@@ -56,80 +57,110 @@ export type Step1Data = z.infer<typeof stepSchemas[1]>;
 export type Step2Data = z.infer<typeof stepSchemas[2]>;
 export type Step3Data = z.infer<typeof stepSchemas[3]>;
 
-// Validation result interface
-export interface ValidationResult {
-  success: boolean;
-  errors: StepValidationErrors;
-  data?: any;
-}
-
 // Helper function to convert Zod error to our error format
-const formatZodError = (error: any): StepValidationErrors => {
+const formatZodError = (error: z.ZodError): StepValidationErrors => {
   const errors: StepValidationErrors = {};
-  
-  if (error.issues) {
-    error.issues.forEach((issue: any) => {
-      const field = issue.path[0] as string;
-      if (!errors[field]) {
-        errors[field] = [];
-      }
-      errors[field].push(issue.message);
-    });
-  }
-  
+  error.errors.forEach(err => {
+    const field = err.path.join('.');
+    if (!errors[field]) {
+      errors[field] = [];
+    }
+    errors[field].push(err.message);
+  });
   return errors;
 };
 
-// Enhanced step validation function
+// Validation functions
 export const validateSection = (section: number, data: Partial<LiabilityWaiverData>): ValidationResult => {
-  const schema = stepSchemas[section as keyof typeof stepSchemas];
-  
-  if (!schema) {
-    return { success: true, errors: {} };
+  try {
+    const schema = stepSchemas[section as keyof typeof stepSchemas];
+    const result = schema.safeParse(data);
+    
+    if (result.success) {
+      return {
+        isValid: true,
+        errors: [],
+        warnings: []
+      };
+    } else {
+      const fieldErrors = formatZodError(result.error);
+      const errors = Object.values(fieldErrors).flat();
+      
+      return {
+        isValid: false,
+        errors,
+        warnings: [],
+        fieldErrors
+      };
+    }
+  } catch (error) {
+    return {
+      isValid: false,
+      errors: [`Validation error: ${(error as Error).message}`],
+      warnings: []
+    };
   }
-
-  const result = schema.safeParse(data);
-  
-  if (result.success) {
-    return { success: true, errors: {}, data: result.data };
-  }
-
-  return { 
-    success: false, 
-    errors: formatZodError(result.error) 
-  };
 };
 
-// Full waiver validation function
 export const validateFullWaiver = (data: LiabilityWaiverData): ValidationResult => {
-  const result = waiverSchema.safeParse(data);
-  
-  if (result.success) {
-    return { success: true, errors: {}, data: result.data };
+  try {
+    const result = waiverSchema.safeParse(data);
+    
+    if (result.success) {
+      return {
+        isValid: true,
+        errors: [],
+        warnings: []
+      };
+    } else {
+      const fieldErrors = formatZodError(result.error);
+      const errors = Object.values(fieldErrors).flat();
+      
+      return {
+        isValid: false,
+        errors,
+        warnings: [],
+        fieldErrors
+      };
+    }
+  } catch (error) {
+    return {
+      isValid: false,
+      errors: [`Validation error: ${(error as Error).message}`],
+      warnings: []
+    };
   }
-
-  return { 
-    success: false, 
-    errors: formatZodError(result.error) 
-  };
 };
 
-// Field-specific validation function
 export const validateField = (field: keyof LiabilityWaiverData, value: any): ValidationResult => {
-  // Create a minimal schema for just this field using type assertion
-  const fieldSchema = waiverSchema.pick({ [field]: true } as any);
-  const testData = { [field]: value } as Partial<LiabilityWaiverData>;
-  
-  const result = fieldSchema.safeParse(testData);
-  
-  if (result.success) {
-    return { success: true, errors: {} };
+  try {
+    const fieldSchema = waiverSchema.pick({ [field]: true } as any);
+    const result = fieldSchema.safeParse({ [field]: value });
+    
+    if (result.success) {
+      return {
+        isValid: true,
+        errors: [],
+        warnings: []
+      };
+    } else {
+      const fieldErrors = formatZodError(result.error);
+      const errors = Object.values(fieldErrors).flat();
+      
+      return {
+        isValid: false,
+        errors,
+        warnings: [],
+        fieldErrors
+      };
+    }
+  } catch (error) {
+    return {
+      isValid: false,
+      errors: [`Field validation error: ${(error as Error).message}`],
+      warnings: []
+    };
   }
-
-  return { 
-    success: false, 
-    errors: formatZodError(result.error) 
-  };
 };
 
 // Get step number for a given field (useful for error handling)
@@ -157,7 +188,7 @@ export const getSectionForField = (field: keyof LiabilityWaiverData): number => 
 // Helper to check if a step is complete
 export const isSectionComplete = (section: number, data: Partial<LiabilityWaiverData>): boolean => {
   const result = validateSection(section, data);
-  return result.success;
+  return result.isValid;
 };
 
 // Helper to get completion percentage

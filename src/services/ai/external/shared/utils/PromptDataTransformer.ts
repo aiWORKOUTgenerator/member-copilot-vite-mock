@@ -1,6 +1,7 @@
 import { ProfileData } from '../../../../../components/Profile/types/profile.types';
 import { PerWorkoutOptions, CategoryRatingData, WorkoutFocusConfigurationData } from '../../../../../types/core';
 import { filterAvailableEquipment } from '../../../../../utils/equipmentRecommendations';
+import { ValidationResult } from '../../../../../types/core';
 
 // Type definitions for prompt variables
 export interface PromptVariables {
@@ -77,13 +78,6 @@ export interface DurationAdjustment {
   durationAdjusted: boolean;
   originalDuration?: number;
   adjustmentReason?: string;
-}
-
-export interface ValidationResult {
-  isValid: boolean;
-  missingRequired: string[];
-  totalFields: number;
-  populatedFields: number;
 }
 
 export interface AdditionalContext {
@@ -469,14 +463,15 @@ export class PromptDataTransformer {
     ];
     
     const missingRequired = requiredFields.filter(field => !variables[field]);
-    const totalFields = Object.keys(variables).length;
-    const populatedFields = totalFields - missingRequired.length;
+    const errors = missingRequired.map(field => `Missing required field: ${field}`);
+    const warnings: string[] = [];
     
     return {
       isValid: missingRequired.length === 0,
-      missingRequired,
-      totalFields,
-      populatedFields
+      errors,
+      warnings,
+      missingFields: missingRequired,
+      populatedFields: Object.keys(variables).filter(key => variables[key as keyof PromptVariables])
     };
   }
 

@@ -3,7 +3,7 @@
  * Provides backward compatibility for older validation patterns
  */
 
-import { ValidationResult } from '../core/ValidationResult';
+import { ValidationResult } from '../../../types/core';
 import { WorkoutGenerationRequest } from '../../../../types/workout-generation.types';
 import { WorkoutRequestValidator } from '../core/WorkoutRequestValidator';
 

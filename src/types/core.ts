@@ -46,7 +46,12 @@ export interface TrainingLoadData {
 
 export interface ValidationResult {
   isValid: boolean;
-  message?: string;
+  errors: string[];
+  warnings: string[];
+  missingFields?: string[];
+  populatedFields?: string[];
+  fieldErrors?: Record<string, string[]>;
+  suggestions?: string[];
   details?: Record<string, any>;
 }
 

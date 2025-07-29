@@ -5,10 +5,9 @@
 
 import { ValidationContext } from './ValidationContext';
 import { ValidationRule } from './ValidationRule';
-import { ValidationError } from './ValidationError';
 import { ValidationMetrics } from '../metrics/ValidationMetrics';
 import { WorkoutGenerationRequest } from '../../../../types/workout-generation.types';
-import { ValidationResult } from './ValidationResult';
+import { ValidationResult } from '../../../../types/core';
 
 export class WorkoutRequestValidator {
   private static rules: ValidationRule[] = [];
@@ -41,13 +40,7 @@ export class WorkoutRequestValidator {
       try {
         rule.validate(context);
       } catch (error) {
-        const validationError = new ValidationError(
-          `Rule ${rule.getName()} failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          'RULE_EXECUTION_ERROR',
-          undefined,
-          { ruleName: rule.getName() }
-        );
-        context.addError(validationError);
+        context.addError(`Rule ${rule.getName()} failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
     

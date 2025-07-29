@@ -1,14 +1,12 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { Eye, ChevronLeft, ChevronRight, AlertTriangle, Sparkles, CheckCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, AlertTriangle, CheckCircle } from 'lucide-react';
 import { WorkoutGenerationRequest } from '../../types/workout-generation.types';
 import { calculateFitnessLevel } from '../../utils/fitnessLevelCalculator';
-import { calculateWorkoutIntensity } from '../../utils/fitnessLevelCalculator';
 import { ReviewPageProps } from './types';
 import { ProfileSection, WorkoutSection, DetailedWorkoutSection } from './sections';
 import { 
   convertWorkoutFocusToDisplay, 
-  validateWorkoutFocusData, 
-  validateDetailedWorkoutProgression
+  validateWorkoutFocusData
 } from './utils';
 import { ValidationService } from './utils/validationService';
 import { ValidationFeedbackPanel, ErrorHandlingPanel, ErrorTemplates } from '../shared';
@@ -28,7 +26,7 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
 }) => {
   const [generationError, setGenerationError] = useState<string | null>(null);
 
-  // Progressive disclosure state
+  // Progressive disclosure state - start with workout details expanded
   const [expandedSections, setExpandedSections] = useState<Record<SectionKey, boolean>>({
     profile: false,
     timeIntensity: false,
@@ -193,6 +191,11 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
     return () => clearTimeout(timer);
   }, []);
 
+  // Scroll to top when component mounts to ensure Workout Details is visible first
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   // Debug logging for validation state
   useEffect(() => {
     aiLogger.debug('ReviewPage - Validation state updated', {
@@ -205,7 +208,7 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
     });
   }, [isDataReady, validationResult, hasRequiredData]);
 
-  // Main Content - Two Column Layout
+  // Main Content - Single Column Layout
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -236,20 +239,9 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
           </div>
         </div>
 
-        {/* Main Content - Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Column - Your Fitness Profile */}
-          <div className="space-y-6">
-            {profileData && (
-              <ProfileSection
-                profileData={profileData}
-                expandedSections={expandedSections}
-                onToggleSection={toggleSection}
-              />
-            )}
-          </div>
-
-          {/* Right Column - Today's Workout Focus */}
+        {/* Main Content - Single Column Layout */}
+        <div className="max-w-4xl mx-auto space-y-8">
+          {/* Workout Details Section - First */}
           <div className="space-y-6">
             {/* Quick Workout Details */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -321,6 +313,17 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
               </button>
             )}
           </div>
+
+          {/* Profile Section - Second */}
+          {profileData && (
+            <div className="space-y-6">
+              <ProfileSection
+                profileData={profileData}
+                expandedSections={expandedSections}
+                onToggleSection={toggleSection}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

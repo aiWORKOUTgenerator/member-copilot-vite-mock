@@ -1,3 +1,3 @@
 // Validation system exports
 export { AIServiceValidator } from './AIServiceValidator';
-export type { ValidationResult } from '../types/AIServiceTypes'; 
+export type { ValidationResult } from '../../../../types/core'; 

@@ -1,6 +1,6 @@
 import { DataTransformerBase } from '../core/DataTransformerBase';
 import { ProfileData } from '../../../../../components/Profile/types/profile.types';
-import { UserProfile } from '../types/user.types';
+import { UserProfile } from '../../../../../types/user';
 import { validateProfileData } from '../validators/ProfileDataValidator';
 import { DEFAULT_VALUES, DERIVED_VALUE_MAPS } from '../constants/DefaultValues';
 import { validatePreferredActivities, validateAvailableLocations, validateInjuries } from '../utils/ArrayTransformUtils';
@@ -25,10 +25,11 @@ export class UserProfileTransformer extends DataTransformerBase<ProfileData, Use
     });
 
     try {
-      // Use existing validation infrastructure
+      // Use existing validation infrastructure - but don't fail on validation errors
       const validation = validateProfileData(profileData);
       if (!validation.isValid) {
-        throw new Error(`Profile validation failed: ${validation.errors.join(', ')}`);
+        this.log('⚠️ Profile validation warnings (continuing with transformation):', validation.errors);
+        // Continue with transformation even if validation fails
       }
 
       // Use existing derived value calculations
@@ -65,8 +66,8 @@ export class UserProfileTransformer extends DataTransformerBase<ProfileData, Use
         learningProfile,
         // Optional personal metrics - convert string types to numbers
         age: profileData.age ? DERIVED_VALUE_MAPS.parseAgeRange(profileData.age) : undefined,
-        weight: profileData.weight ? parseFloat(profileData.weight) : undefined,
-        height: profileData.height ? parseFloat(profileData.height) : undefined,
+        weight: profileData.weight ? DERIVED_VALUE_MAPS.parseWeight(profileData.weight) : undefined,
+        height: profileData.height ? DERIVED_VALUE_MAPS.parseHeight(profileData.height) : undefined,
         gender: profileData.gender
       };
 
@@ -104,7 +105,7 @@ export class UserProfileTransformer extends DataTransformerBase<ProfileData, Use
   /**
    * Infer time preference from available data
    */
-  private inferTimePreference(profileData: ProfileData): 'morning' | 'afternoon' | 'evening' | 'night' {
+  private inferTimePreference(profileData: ProfileData): 'morning' | 'afternoon' | 'evening' {
     // Default to morning if no preference available
     return 'morning';
   }

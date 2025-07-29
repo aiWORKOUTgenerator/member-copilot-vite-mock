@@ -3,8 +3,8 @@ import { User, Shield, Target, Eye, Zap, Settings } from 'lucide-react';
 import { ProfilePage, ProfilePageProps } from './components/Profile';
 import { LiabilityWaiverPage } from './components/LiabilityWaiver';
 import type { LiabilityWaiverPageProps } from './components/LiabilityWaiver/types/liability-waiver.types';
-import WorkoutFocusPage from './components/WorkoutFocusPage';
-import type WorkoutFocusPageProps from './components/WorkoutFocusPage';
+import WorkoutFocusPage from './components/WorkoutFocus/WorkoutFocusPage';
+import type { WorkoutFocusPageProps } from './components/WorkoutFocus/WorkoutFocusPage';
 import ReviewPage from './components/ReviewPage';
 import type { ReviewPageProps } from './components/ReviewPage';
 import WorkoutResultsPage from './components/WorkoutResultsPage';
@@ -27,7 +27,7 @@ type WorkoutType = 'quick' | 'detailed';
 import { ProfileData } from './components/Profile/types/profile.types';
 import { LiabilityWaiverData } from './components/LiabilityWaiver/types/liability-waiver.types';
 
-import { profileTransformers } from './utils/dataTransformers';
+import { UserProfileTransformer } from './services/ai/external/DataTransformer/transformers/UserProfileTransformer';
 
 type PageType = 'profile' | 'waiver' | 'focus' | 'review' | 'results' | 'devtools';
 
@@ -130,7 +130,8 @@ function useAIInitialization(profileData: ProfileData | null) {
               aiLogger.info('Fallback preferred activities saved');
               
               // Continue with the updated data
-              const userProfile = profileTransformers.convertProfileToUserProfileSimple(updatedProfileData);
+              const userProfileTransformer = new UserProfileTransformer();
+              const userProfile = userProfileTransformer.transform(updatedProfileData);
               
               // Try to initialize AI service if available
               try {
@@ -171,7 +172,8 @@ function useAIInitialization(profileData: ProfileData | null) {
         aiLogger.info('Profile data validation passed, converting to UserProfile');
 
         // Use memoized profile conversion to prevent unnecessary conversions
-        const userProfile = profileTransformers.convertProfileToUserProfileSimple(profileData);
+        const userProfileTransformer = new UserProfileTransformer();
+        const userProfile = userProfileTransformer.transform(profileData);
 
         aiLogger.info('UserProfile created successfully', {
           fitnessLevel: userProfile.fitnessLevel,

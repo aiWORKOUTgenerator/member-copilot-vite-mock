@@ -2,10 +2,12 @@
  * CoreFieldsRule Unit Tests
  */
 
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { CoreFieldsRule } from '../../rules/CoreFieldsRule';
 import { ValidationContext } from '../../core/ValidationContext';
-import { WorkoutGenerationRequest } from '../../../../../types/workout-generation.types';
-import { ValidationError } from '../../core/ValidationError';
+import { ValidationMetrics } from '../../metrics/ValidationMetrics';
+import { WorkoutGenerationRequest } from '../../../../types/workout-generation.types';
+import { UserProfile } from '../../../../types/user';
 
 describe('CoreFieldsRule', () => {
   let rule: CoreFieldsRule;

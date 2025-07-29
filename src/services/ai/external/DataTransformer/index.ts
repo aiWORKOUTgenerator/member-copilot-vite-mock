@@ -27,7 +27,7 @@ export { DEFAULT_VALUES, DERIVED_VALUE_MAPS } from './constants/DefaultValues';
 
 // Types exports
 export type { ProfileFields } from './types/profile.types';
-export type { ValidationResult } from './validators/ProfileDataValidator';
+export type { ValidationResult } from '../../../../types/core';
 export type { TransformedProfileData } from './transformers/ProfileDataTransformer';
 export type { WorkoutFocusData } from './transformers/WorkoutFocusTransformer';
 export type { PromptVariables } from './transformers/PromptVariableComposer';

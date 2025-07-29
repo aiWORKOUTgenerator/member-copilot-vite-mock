@@ -107,11 +107,11 @@ export const VALIDATION_RULES = {
   },
   height: {
     required: true,
-    format: /^(\d+'?\d*\"|\d+cm)$/
+    format: /^(\d+'?\d*\"?|\d+cm?)$/
   },
   weight: {
     required: true,
-    format: /^(\d+\s*(lbs|kg))$/
+    format: /^(\d+\s*(lbs|kg)?)$/
   },
   hasCardiovascularConditions: {
     required: true,

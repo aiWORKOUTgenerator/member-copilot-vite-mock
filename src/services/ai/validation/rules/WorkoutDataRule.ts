@@ -3,10 +3,9 @@
  * Ensures workout-specific data is valid and consistent
  */
 
-import { BaseValidationRule } from '../core/ValidationRule';
 import { ValidationContext } from '../core/ValidationContext';
-import { ValidationError } from '../core/ValidationError';
-import { ValidationWarning } from '../core/ValidationError';
+import { ValidationRule } from '../core/ValidationRule';
+import { isValidFitnessLevel } from '../../../../types/guards';
 
 // Constants for validation
 const WORKOUT_GENERATION_CONSTANTS = {
@@ -22,7 +21,7 @@ const WORKOUT_GENERATION_CONSTANTS = {
   }
 };
 
-export class WorkoutDataRule extends BaseValidationRule {
+export class WorkoutDataRule extends ValidationRule {
   constructor() {
     super('WorkoutDataRule', 20); // Priority 20 - runs after core fields
   }

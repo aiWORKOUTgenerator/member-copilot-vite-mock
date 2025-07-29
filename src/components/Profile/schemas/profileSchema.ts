@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ValidationResult } from '../../../types/core';
 
 // Base schema for the profile data with comprehensive validation
 export const profileSchema = z.object({
@@ -101,94 +102,117 @@ export const profileStepSchemas = {
 export type ProfileData = z.infer<typeof profileSchema>;
 export type StepValidationErrors = Record<string, string[]>;
 
-// Legacy types for backward compatibility
+// Step-specific data types
 export type ProfileStep1Data = z.infer<typeof stepSchemas[1]>;
 export type ProfileStep2Data = z.infer<typeof stepSchemas[2]>;
 export type ProfileStep3Data = z.infer<typeof stepSchemas[3]>;
 export type ProfileStep4Data = z.infer<typeof stepSchemas[4]>;
 export type ProfileStep5Data = z.infer<typeof stepSchemas[5]>;
 
-// Validation result interface
-export interface ValidationResult {
-  success: boolean;
-  errors: StepValidationErrors;
-  data?: unknown;
-}
-
-// Helper function to convert Zod error to our error format
+// Helper function to format Zod errors
 const formatZodError = (error: z.ZodError): StepValidationErrors => {
   const errors: StepValidationErrors = {};
-  
-  if (error.issues) {
-    error.issues.forEach((issue: z.ZodIssue) => {
-      const field = issue.path[0] as string;
-      if (!errors[field]) {
-        errors[field] = [];
-      }
-      errors[field].push(issue.message);
-    });
-  }
-  
+  error.errors.forEach(err => {
+    const field = err.path.join('.');
+    if (!errors[field]) {
+      errors[field] = [];
+    }
+    errors[field].push(err.message);
+  });
   return errors;
 };
 
-// Enhanced step validation function
+// Validation functions
 export const validateStep = (step: number | keyof typeof profileStepSchemas, data: Partial<ProfileData>): ValidationResult => {
-  // Handle both new numeric and legacy string step identifiers
-  let schema;
-  if (typeof step === 'number') {
-    schema = stepSchemas[step as keyof typeof stepSchemas];
-  } else {
-    schema = profileStepSchemas[step];
+  try {
+    const schema = typeof step === 'number' ? stepSchemas[step as keyof typeof stepSchemas] : profileStepSchemas[step];
+    const result = schema.safeParse(data);
+    
+    if (result.success) {
+      return {
+        isValid: true,
+        errors: [],
+        warnings: []
+      };
+    } else {
+      const fieldErrors = formatZodError(result.error);
+      const errors = Object.values(fieldErrors).flat();
+      
+      return {
+        isValid: false,
+        errors,
+        warnings: [],
+        fieldErrors
+      };
+    }
+  } catch (error) {
+    return {
+      isValid: false,
+      errors: [`Validation error: ${(error as Error).message}`],
+      warnings: []
+    };
   }
-  
-  if (!schema) {
-    return { success: true, errors: {} };
-  }
-
-  const result = schema.safeParse(data);
-  
-  if (result.success) {
-    return { success: true, errors: {}, data: result.data };
-  }
-
-  return { 
-    success: false, 
-    errors: formatZodError(result.error) 
-  };
 };
 
-// Full profile validation function
 export const validateFullProfile = (data: ProfileData): ValidationResult => {
-  const result = profileSchema.safeParse(data);
-  
-  if (result.success) {
-    return { success: true, errors: {}, data: result.data };
+  try {
+    const result = profileSchema.safeParse(data);
+    
+    if (result.success) {
+      return {
+        isValid: true,
+        errors: [],
+        warnings: []
+      };
+    } else {
+      const fieldErrors = formatZodError(result.error);
+      const errors = Object.values(fieldErrors).flat();
+      
+      return {
+        isValid: false,
+        errors,
+        warnings: [],
+        fieldErrors
+      };
+    }
+  } catch (error) {
+    return {
+      isValid: false,
+      errors: [`Validation error: ${(error as Error).message}`],
+      warnings: []
+    };
   }
-
-  return { 
-    success: false, 
-    errors: formatZodError(result.error) 
-  };
 };
 
-// Field-specific validation function
 export const validateField = (field: keyof ProfileData, value: unknown): ValidationResult => {
-  // Create a minimal schema for just this field
-  const pickObj = { [field]: true };
-  const fieldSchema = profileSchema.pick(pickObj as any);
-  const testData = { [field]: value } as Partial<ProfileData>;
-  
-  const result = fieldSchema.safeParse(testData);
-  
-  if (result.success) {
-    return { success: true, errors: {} };
+  try {
+    const fieldSchema = profileSchema.pick({ [field]: true } as any);
+    const result = fieldSchema.safeParse({ [field]: value });
+    
+    if (result.success) {
+      return {
+        isValid: true,
+        errors: [],
+        warnings: []
+      };
+    } else {
+      const fieldErrors = formatZodError(result.error);
+      const errors = Object.values(fieldErrors).flat();
+      
+      return {
+        isValid: false,
+        errors,
+        warnings: [],
+        fieldErrors
+      };
+    }
+  } catch (error) {
+    return {
+      isValid: false,
+      errors: [`Field validation error: ${(error as Error).message}`],
+      warnings: []
+    };
   }
-
-  return { 
-    success: false, 
-    errors: formatZodError(result.error) 
-  };
 };
 
 // Get step number for a given field (useful for error handling)
@@ -220,7 +244,7 @@ export const getStepForField = (field: keyof ProfileData): number => {
 // Helper to check if a step is complete
 export const isStepComplete = (step: number, data: Partial<ProfileData>): boolean => {
   const result = validateStep(step, data);
-  return result.success;
+  return result.isValid;
 };
 
 // Helper to get completion percentage

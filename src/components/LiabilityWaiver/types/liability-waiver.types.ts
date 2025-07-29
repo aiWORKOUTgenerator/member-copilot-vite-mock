@@ -4,11 +4,9 @@ export { LiabilityWaiverData };
 
 export type StepValidationErrors = Record<string, string[]>;
 
-export interface ValidationResult {
-  success: boolean;
-  errors: StepValidationErrors;
-  data?: any;
-}
+// Import ValidationResult from core types
+import { ValidationResult } from '../../../types/core';
+export type { ValidationResult };
 
 export interface StepProps {
   waiverData: LiabilityWaiverData;

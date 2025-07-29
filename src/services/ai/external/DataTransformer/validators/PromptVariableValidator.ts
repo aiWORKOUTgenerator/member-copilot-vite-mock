@@ -1,23 +1,8 @@
-import { PromptVariables } from '../transformers/PromptVariableComposer';
+import { PromptVariables } from '../types/prompt.types';
+import { ValidationResult } from '../../../../../types/core';
 import { VALIDATION_RULES } from '../constants/ValidationRules';
 import { validateProfileData } from './ProfileDataValidator';
 import { validateWorkoutData } from './WorkoutDataValidator';
-
-export interface ValidationResult {
-  isValid: boolean;
-  errors: string[];
-  warnings: string[];
-  missingFields: string[];
-  populatedFields: string[];
-  validationDetails: {
-    profile: ReturnType<typeof validateProfileData>;
-    workout: ReturnType<typeof validateWorkoutData>;
-    metadata: {
-      isValid: boolean;
-      errors: string[];
-    };
-  };
-}
 
 export function validatePromptVariables(data: PromptVariables): ValidationResult {
   const errors: string[] = [];

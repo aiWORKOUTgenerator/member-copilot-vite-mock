@@ -1,6 +1,7 @@
 // Shared types and interfaces for AI Service components
 import { PerWorkoutOptions, UserProfile, AIAssistanceLevel } from '../../../../types';
 import { AIInsight } from '../../../../types/insights';
+import { ValidationResult } from '../../../../types/core';
 
 // Core AI Service interfaces
 export interface GlobalAIContext {
@@ -88,22 +89,6 @@ export interface PrioritizedRecommendation {
     field?: string;
     value?: any;
     alternatives?: any[];
-  };
-}
-
-export interface ValidationResult {
-  isValid: boolean;
-  consistencyScore: number;
-  discrepancies: Array<{
-    component: string;
-    expected: any;
-    actual: any;
-    severity: 'low' | 'medium' | 'high';
-  }>;
-  performanceComparison: {
-    oldTime: number;
-    newTime: number;
-    memoryDifference: number;
   };
 }
 

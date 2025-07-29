@@ -13,7 +13,7 @@ import {
   AIAssistanceLevel
 } from '../../../types/user';
 import { ProfileData } from '../../../components/Profile/types/profile.types';
-import { profileTransformers } from '../../../utils/dataTransformers';
+import { UserProfileTransformer } from '../../ai/external/DataTransformer/transformers/UserProfileTransformer';
 
 /**
  * Service responsible for enhancing user profile data with AI-generated insights
@@ -25,7 +25,8 @@ export class UserProfileEnhancer {
    * Enhances basic profile data with AI-generated insights
    */
   static enhanceProfile(profileData: ProfileData): UserProfile {
-    return profileTransformers.convertProfileToUserProfileSimple(profileData);
+    const transformer = new UserProfileTransformer();
+    return transformer.transform(profileData);
   }
 
   private static mapExperienceToFitnessLevel(experienceLevel: ProfileData['experienceLevel']): FitnessLevel {
