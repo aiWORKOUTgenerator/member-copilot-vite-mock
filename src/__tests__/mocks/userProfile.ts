@@ -1,20 +1,12 @@
-import { UserProfile } from '../../types';
+import { ProfileData } from '../../components/Profile/types/profile.types';
 
-export const mockUserProfile: UserProfile = {
-  id: 'test-user-1',
-  fitnessLevel: 'intermediate',
-  goals: ['strength', 'endurance'],
-  preferences: {
-    workoutDuration: 45,
-    preferredEquipment: ['dumbbells', 'bodyweight'],
-    focusAreas: ['upper_body', 'core']
-  },
-  restrictions: {
-    injuries: [],
-    limitedMovements: []
-  },
-  experience: {
-    workoutsPerWeek: 3,
-    yearsTraining: 2
-  }
+export const mockProfileData: ProfileData = {
+  experienceLevel: 'some experience',
+  primaryGoal: 'build strength',
+  injuries: ['No Injuries'],
+  preferredActivities: ['strength training', 'cardio'],
+  availableEquipment: ['dumbbells', 'body weight'],
+  availableLocations: ['home', 'gym'],
+  calculatedFitnessLevel: 'intermediate',
+  calculatedWorkoutIntensity: 'moderate'
 }; 

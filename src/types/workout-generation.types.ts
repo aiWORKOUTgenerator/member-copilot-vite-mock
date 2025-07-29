@@ -3,6 +3,37 @@ import { ProfileData } from '../components/Profile/types/profile.types';
 import { LiabilityWaiverData } from '../components/LiabilityWaiver/types/liability-waiver.types';
 import { PerWorkoutOptions } from './core';
 import { UserProfile } from './user';
+import { PrioritizedRecommendation } from '../services/ai/core/types/AIServiceTypes';
+
+// ============================================================================
+// ERROR TYPES
+// ============================================================================
+
+/**
+ * Error codes for workout generation
+ */
+export type WorkoutGenerationErrorCode = 
+  | 'INVALID_DATA'
+  | 'API_ERROR'
+  | 'NETWORK_ERROR'
+  | 'TIMEOUT_ERROR'
+  | 'GENERATION_FAILED'
+  | 'SERVICE_UNAVAILABLE'
+  | 'RATE_LIMITED'
+  | 'INSUFFICIENT_DATA';
+
+/**
+ * Detailed error information for workout generation
+ */
+export interface WorkoutGenerationError {
+  code: WorkoutGenerationErrorCode;
+  message: string;
+  retryable: boolean;
+  retryAfter?: number;
+  recoverySuggestion?: string;
+  fallbackAvailable?: boolean;
+  details?: any;
+}
 
 // ============================================================================
 // WORKOUT PHASE INTERFACES
@@ -48,7 +79,7 @@ export interface GeneratedWorkout {
   description: string;
   totalDuration: number; // in seconds
   estimatedCalories: number;
-  difficulty: string;
+  difficulty: 'new to exercise' | 'some experience' | 'advanced athlete';
   equipment: string[];
   warmup: WorkoutPhase;
   mainWorkout: WorkoutPhase;
@@ -64,30 +95,46 @@ export interface GeneratedWorkout {
 }
 
 // ============================================================================
-// UNIFIED WORKOUT GENERATION REQUEST INTERFACE
+// GENERATION OPTIONS AND STATE
 // ============================================================================
 
 /**
- * Unified WorkoutGenerationRequest interface that serves both app-level and AI service needs
+ * Options for workout generation
  */
-export interface WorkoutGenerationRequest {
-  workoutType: 'quick' | 'detailed';
-  profileData: ProfileData;
-  waiverData?: LiabilityWaiverData;
-  workoutFocusData: PerWorkoutOptions;
-  userProfile: UserProfile;
-  
-  // AI Service-Level Enhancements
-  preferences?: WorkoutPreferences;
-  constraints?: WorkoutConstraints;
-  environmentalFactors?: EnvironmentalFactors;
-
-  // Workout Phase Data
-  warmup?: WorkoutPhase;
-  mainWorkout?: WorkoutPhase;
-  cooldown?: WorkoutPhase;
-  totalDuration?: number;
+export interface WorkoutGenerationOptions {
+  retryAttempts?: number;
+  retryDelay?: number; // milliseconds
+  timeout?: number; // milliseconds
+  useFallback?: boolean;
+  enableDetailedLogging?: boolean;
+  useExternalAI?: boolean;
+  fallbackToInternal?: boolean;
 }
+
+/**
+ * State for workout generation
+ */
+export interface WorkoutGenerationState {
+  status: WorkoutGenerationStatus;
+  generationProgress: number;
+  error: string | null;
+  retryCount: number;
+  lastError: WorkoutGenerationError | null;
+  generatedWorkout?: GeneratedWorkout | null;
+  lastGenerated?: Date | null;
+}
+
+/**
+ * Status of workout generation
+ */
+export type WorkoutGenerationStatus = 
+  | 'idle'
+  | 'validating'
+  | 'generating'
+  | 'enhancing'
+  | 'complete'
+  | 'error'
+  | 'cancelled';
 
 // ============================================================================
 // AI SERVICE ENHANCEMENT TYPES
@@ -98,7 +145,6 @@ export interface WorkoutPreferences {
   focus: string;
   intensity: 'low' | 'moderate' | 'high';
   equipment: string[];
-  location: 'home' | 'gym' | 'outdoor';
   music?: boolean;
   voiceGuidance?: boolean;
 }

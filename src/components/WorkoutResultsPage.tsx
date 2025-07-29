@@ -194,10 +194,16 @@ Generated on: ${generatedWorkout.generatedAt.toLocaleDateString()}
               />
             </div>
             <p className="text-sm text-gray-600 mt-3">
-              Status: {workoutGeneration.status === 'generating' ? 'Creating your personalized workout...' :
-                      workoutGeneration.status === 'enhancing' ? 'Adding finishing touches...' :
-                      workoutGeneration.status === 'validating' ? 'Validating your information...' :
-                      'Processing...'}
+              Status: {workoutGeneration.status === 'generating' ? 
+                (workoutGeneration.state.generationProgress < 30 ? 'Preparing your workout...' :
+                 workoutGeneration.state.generationProgress < 50 ? 'Analyzing your preferences...' :
+                 workoutGeneration.state.generationProgress < 70 ? 'Selecting optimal exercises...' :
+                 workoutGeneration.state.generationProgress < 85 ? 'Personalizing recommendations...' :
+                 workoutGeneration.state.generationProgress < 95 ? 'Adding finishing touches...' :
+                 'Almost ready!') :
+                workoutGeneration.status === 'enhancing' ? 'Adding finishing touches...' :
+                workoutGeneration.status === 'validating' ? 'Validating your information...' :
+                'Processing...'}
             </p>
           </div>
         </div>

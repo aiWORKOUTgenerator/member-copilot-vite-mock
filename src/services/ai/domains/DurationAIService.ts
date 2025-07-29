@@ -1,7 +1,8 @@
 // Duration AI Service - Domain-specific AI logic for workout duration analysis
 import { AIInsight } from '../../../types/insights';
-import { GlobalAIContext } from '../core/AIService';
+import { GlobalAIContext } from '../core/types/AIServiceTypes';
 import { dataTransformers } from '../../../utils/dataTransformers';
+import { FitnessLevel, TimePreference, IntensityLevel, AIAssistanceLevel } from '../../../types/user';
 
 // Configuration Constants - Extracted from magic numbers
 export const DURATION_CONSTANTS = {
@@ -63,6 +64,13 @@ interface DurationInsightRule {
   generateInsight: (value: number | undefined, context: GlobalAIContext) => AIInsight;
 }
 
+interface DurationAnalysisParams {
+  targetDuration: number;
+  fitnessLevel: FitnessLevel;
+  energyLevel: number;
+  focus: string;
+}
+
 export class DurationAIService {
   private readonly THRESHOLDS: DurationThresholds = {
     VERY_SHORT: DURATION_CONSTANTS.VERY_SHORT,
@@ -99,45 +107,18 @@ export class DurationAIService {
       })
     },
     {
-      condition: (value) => !!value && value >= this.THRESHOLDS.VERY_LONG,
+      condition: (value, context) => {
+        const fitnessLevel = context.userProfile.fitnessLevel;
+        return !!value && value > 60 && (fitnessLevel === 'beginner' || fitnessLevel === 'novice');
+      },
       generateInsight: (value, _context) => ({
-        id: this.generateInsightId('very_long_duration'),
+        id: this.generateInsightId('long_duration_beginner'),
         type: 'warning',
-        message: 'Very long duration - ensure adequate recovery and hydration',
-        confidence: DURATION_CONSTANTS.MEDIUM_HIGH_CONFIDENCE,
-        actionable: true,
-        relatedFields: ['customization_duration', 'customization_energy'],
-        recommendation: 'Consider breaks and proper hydration for longer sessions',
-        metadata: {
-          currentDuration: value
-        }
-      })
-    },
-    {
-      condition: (value) => !!value && value >= this.THRESHOLDS.SHORT && value <= this.THRESHOLDS.MODERATE,
-      generateInsight: (value, _context) => ({
-        id: this.generateInsightId('optimal_duration'),
-        type: 'encouragement',
-        message: 'Good duration choice - allows for effective workout without overexertion',
-        confidence: DURATION_CONSTANTS.MEDIUM_LOW_CONFIDENCE,
-        actionable: false,
-        relatedFields: ['customization_duration'],
-        recommendation: 'This duration works well for most workout types',
-        metadata: {
-          currentDuration: value
-        }
-      })
-    },
-    {
-      condition: (value) => !value || value === 0,
-      generateInsight: (value, _context) => ({
-        id: this.generateInsightId('no_duration'),
-        type: 'warning',
-        message: 'No duration specified - consider your available time',
+        message: 'Long duration for a beginner - start with shorter sessions',
+        recommendation: 'Consider starting with 30-45 minute sessions to build endurance',
         confidence: DURATION_CONSTANTS.MEDIUM_HIGH_CONFIDENCE,
         actionable: true,
         relatedFields: ['customization_duration'],
-        recommendation: 'Set a realistic duration based on your schedule',
         metadata: {
           currentDuration: value
         }
@@ -331,7 +312,7 @@ export class DurationAIService {
    * Generate unique insight ID
    */
   private generateInsightId(type: string): string {
-    return `duration_${type}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+    return `duration_${type}_${Date.now()}`;
   }
   
   /**
@@ -422,53 +403,131 @@ export class DurationAIService {
     // For now, return empty array
     return [];
   }
-  
+
   /**
-   * Main analysis method - generates comprehensive duration insights
+   * Map experience level to fitness level
    */
-  async analyze(duration: number | undefined, context: GlobalAIContext): Promise<AIInsight[]> {
+  private mapExperienceToFitnessLevel(fitnessLevel: FitnessLevel): string {
+    switch (fitnessLevel) {
+      case 'beginner':
+      case 'novice':
+        return 'beginner';
+      case 'intermediate':
+        return 'intermediate';
+      case 'advanced':
+      case 'adaptive':
+        return 'advanced';
+      default:
+        return 'intermediate';
+    }
+  }
+
+  /**
+   * Analyze duration for workout generation
+   */
+  public async analyzeDuration(params: DurationAnalysisParams): Promise<AIInsight[]> {
+    const context: GlobalAIContext = {
+      userProfile: {
+        fitnessLevel: params.fitnessLevel,
+        goals: [],
+        preferences: {
+          workoutStyle: [],
+          timePreference: 'morning' as TimePreference,
+          intensityPreference: 'moderate' as IntensityLevel,
+          advancedFeatures: false,
+          aiAssistanceLevel: 'moderate' as AIAssistanceLevel
+        },
+        basicLimitations: {
+          injuries: [],
+          availableEquipment: [],
+          availableLocations: []
+        },
+        enhancedLimitations: {
+          timeConstraints: params.targetDuration,
+          equipmentConstraints: [],
+          locationConstraints: [],
+          recoveryNeeds: {
+            restDays: 1,
+            sleepHours: 8,
+            hydrationLevel: 'moderate'
+          },
+          mobilityLimitations: [],
+          progressionRate: 'moderate'
+        },
+        workoutHistory: {
+          estimatedCompletedWorkouts: 0,
+          averageDuration: params.targetDuration,
+          preferredFocusAreas: [params.focus],
+          progressiveEnhancementUsage: {},
+          aiRecommendationAcceptance: 0.8,
+          consistencyScore: 0.8,
+          plateauRisk: 'low'
+        },
+        learningProfile: {
+          prefersSimplicity: true,
+          explorationTendency: 'moderate',
+          feedbackPreference: 'simple',
+          learningStyle: 'visual',
+          motivationType: 'intrinsic',
+          adaptationSpeed: 'moderate'
+        }
+      },
+      currentSelections: {
+        customization_focus: params.focus,
+        customization_duration: params.targetDuration,
+        customization_energy: {
+          rating: params.energyLevel,
+          categories: []
+        }
+      },
+      sessionHistory: [],
+      preferences: {
+        aiAssistanceLevel: 'moderate',
+        showLearningInsights: true,
+        autoApplyLowRiskRecommendations: true
+      }
+    };
+
+    const insights = await this.analyze(params.targetDuration, context);
+
+    // Convert insights to internal format
+    return insights.map(insight => ({
+      ...insight,
+      priority: insight.confidence && insight.confidence > DURATION_CONSTANTS.MEDIUM_HIGH_CONFIDENCE ? 'high' :
+                insight.confidence && insight.confidence > DURATION_CONSTANTS.MEDIUM_CONFIDENCE ? 'medium' : 'low'
+    }));
+  }
+
+  /**
+   * Legacy analyze method for backward compatibility
+   */
+  public async analyze(duration: number | undefined, context: GlobalAIContext): Promise<AIInsight[]> {
     const insights: AIInsight[] = [];
     
     // Apply base insights
-    for (const rule of this.BASE_INSIGHTS) {
+    this.BASE_INSIGHTS.forEach(rule => {
       if (rule.condition(duration, context)) {
         insights.push(rule.generateInsight(duration, context));
       }
-    }
+    });
     
     // Apply contextual insights
-    for (const rule of this.CONTEXTUAL_RULES) {
+    this.CONTEXTUAL_RULES.forEach(rule => {
       if (rule.condition(duration, context)) {
-        const insight = rule.generateInsight(duration, context);
-        // Avoid duplicates
-        if (!insights.some(existing => existing.id === insight.id)) {
-          insights.push(insight);
-        }
+        insights.push(rule.generateInsight(duration, context));
       }
-    }
+    });
     
     // Apply cross-component insights
-    for (const rule of this.CROSS_COMPONENT_RULES) {
+    this.CROSS_COMPONENT_RULES.forEach(rule => {
       if (rule.condition(duration, context)) {
-        const insight = rule.generateInsight(duration, context);
-        if (!insights.some(existing => existing.id === insight.id)) {
-          insights.push(insight);
-        }
+        insights.push(rule.generateInsight(duration, context));
       }
-    }
-    
-    // Add learning insights based on user history
-    const learningInsights = this.generateLearningInsights(duration, context);
-    insights.push(...learningInsights);
-    
-    // Sort by confidence and actionability
-    return insights.sort((a, b) => {
-      if (a.actionable && !b.actionable) return -1;
-      if (!a.actionable && b.actionable) return 1;
-      return (b.confidence ?? 0) - (a.confidence ?? 0);
     });
+    
+    // Add learning insights
+    insights.push(...this.generateLearningInsights(duration, context));
+    
+    return insights;
   }
-  
-  // Backward compatibility method removed
-  // Use analyze() method instead for duration insights
 } 

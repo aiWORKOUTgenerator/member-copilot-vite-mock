@@ -27,4 +27,29 @@ module.exports = {
   // Add fetch polyfill for Node.js environment
   setupFiles: ['<rootDir>/src/setupJest.ts'],
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
+  
+  // Coverage configuration
+  collectCoverage: process.env.CI === 'true',
+  collectCoverageFrom: [
+    'src/**/*.{ts,tsx}',
+    '!src/**/*.d.ts',
+    '!src/**/*.test.{ts,tsx}',
+    '!src/**/*.spec.{ts,tsx}',
+    '!src/**/__tests__/**',
+    '!src/**/__mocks__/**',
+    '!src/setupJest.ts'
+  ],
+  coverageReporters: [
+    'text-summary',
+    'lcov'
+  ],
+  coverageDirectory: 'coverage',
+  coverageThreshold: {
+    global: {
+      branches: 70,
+      functions: 70,
+      lines: 70,
+      statements: 70
+    }
+  }
 }; 

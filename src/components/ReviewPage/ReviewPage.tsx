@@ -25,6 +25,7 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
   onWorkoutGenerated 
 }) => {
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Progressive disclosure state - start with workout details expanded
   const [expandedSections, setExpandedSections] = useState<Record<SectionKey, boolean>>({
@@ -88,8 +89,9 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
       return;
     }
 
-    // Clear any previous errors
+    // Clear any previous errors and set loading state
     setGenerationError(null);
+    setIsGenerating(true);
 
     try {
       // Build the request
@@ -147,28 +149,19 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
         }
       };
 
-      // Start the generation process (don't await it)
-      workoutGeneration.generateWorkout(request).then((generatedWorkout) => {
-        aiLogger.debug('ReviewPage - Workout generation completed in background', {
-          hasGeneratedWorkout: !!generatedWorkout,
-          workoutId: generatedWorkout?.id,
-          workoutTitle: generatedWorkout?.title
-        });
-        if (generatedWorkout) {
-          onWorkoutGenerated(generatedWorkout);
-        }
-      }).catch((error) => {
-        aiLogger.error({
-          error: error instanceof Error ? error : new Error(String(error)),
-          context: 'background workout generation error',
-          component: 'ReviewPage',
-          severity: 'medium',
-          userImpact: true
-        });
+      // Start the generation process and wait for it to complete
+      const generatedWorkout = await workoutGeneration.generateWorkout(request);
+      
+      aiLogger.debug('ReviewPage - Workout generation completed', {
+        hasGeneratedWorkout: !!generatedWorkout,
+        workoutId: generatedWorkout?.id,
+        workoutTitle: generatedWorkout?.title
       });
-
-      // Immediately navigate to results page
-      onNavigate('results');
+      
+      if (generatedWorkout) {
+        onWorkoutGenerated(generatedWorkout);
+        onNavigate('results');
+      }
 
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
@@ -180,6 +173,8 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
         userImpact: true
       });
       setGenerationError(errorMsg);
+    } finally {
+      setIsGenerating(false);
     }
   }, [profileData, workoutFocusData, workoutType, workoutGeneration, onNavigate, onWorkoutGenerated]);
 
@@ -286,22 +281,61 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({
             <div className="flex justify-end">
               <button
                 onClick={handleGenerateWorkout}
-                disabled={!hasRequiredData}
+                disabled={!hasRequiredData || isGenerating}
                 className={`
                   flex items-center px-6 py-3 rounded-xl font-medium text-lg
                   transition-all duration-300 group
-                  ${hasRequiredData
+                  ${hasRequiredData && !isGenerating
                     ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 shadow-lg hover:shadow-xl'
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   }
                 `}
               >
-                <span className="text-lg">
-                  {workoutType === 'quick' ? 'Generate Workout' : 'Generate Detailed Workout'}
-                </span>
-                <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
+                {isGenerating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    <span className="text-lg">Generating...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-lg">
+                      {workoutType === 'quick' ? 'Generate Workout' : 'Generate Detailed Workout'}
+                    </span>
+                    <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
+                  </>
+                )}
               </button>
             </div>
+
+            {/* Progress Indicator */}
+            {(isGenerating || workoutGeneration.isGenerating) && (
+              <div className="mt-4 bg-white rounded-lg border border-gray-200 p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-gray-900">Generation Progress</h3>
+                  <span className="text-sm text-gray-600">
+                    {workoutGeneration.state.generationProgress}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${workoutGeneration.state.generationProgress}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-600 mt-2">
+                  Status: {workoutGeneration.status === 'generating' ? 
+                    (workoutGeneration.state.generationProgress < 30 ? 'Preparing your workout...' :
+                     workoutGeneration.state.generationProgress < 50 ? 'Analyzing your preferences...' :
+                     workoutGeneration.state.generationProgress < 70 ? 'Selecting optimal exercises...' :
+                     workoutGeneration.state.generationProgress < 85 ? 'Personalizing recommendations...' :
+                     workoutGeneration.state.generationProgress < 95 ? 'Adding finishing touches...' :
+                     'Almost ready!') :
+                    workoutGeneration.status === 'enhancing' ? 'Adding finishing touches...' :
+                    workoutGeneration.status === 'validating' ? 'Validating your information...' :
+                    'Processing...'}
+                </p>
+              </div>
+            )}
 
             {/* Development Fallback Button */}
             {process.env.NODE_ENV === 'development' && !hasRequiredData && (
