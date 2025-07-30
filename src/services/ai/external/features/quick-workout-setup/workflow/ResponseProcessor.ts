@@ -24,6 +24,38 @@ export class ResponseProcessor {
   private readonly parser: ResponseParser;
   private readonly normalizer: WorkoutNormalizer;
 
+  // Validation constants
+  private static readonly DURATION_TOLERANCE_SECONDS = 5 * 60; // 5 minutes in seconds
+  private static readonly ERROR_PENALTY = 4 * 5; // 20 points
+  private static readonly WARNING_PENALTY = 5; // 5 points
+  private static readonly MAX_VALIDATION_SCORE = 10 * 10; // 100 points
+  
+  // Structure scoring constants
+  private static readonly PHASE_COMPLETENESS_POINTS = 2 * 5; // 10 points per phase
+  private static readonly EXERCISE_POINTS_PER_EXERCISE = 5; // 5 points per exercise
+  private static readonly MAX_EXERCISE_POINTS = 4 * 10; // 40 points max
+  private static readonly METADATA_POINTS = {
+    title: 5,
+    description: 5,
+    reasoning: 2 * 5, // 10 points
+    personalizedNotes: 5,
+    safetyReminders: 5
+  };
+  
+  // Completeness scoring constants
+  private static readonly REQUIRED_FIELDS_WEIGHT = 5 * 10; // 50 points
+  private static readonly ENHANCEMENT_FIELDS_WEIGHT = 5 * 10; // 50 points
+  
+  // Consistency scoring constants
+  private static readonly DURATION_DIFF_PENALTIES = {
+    high: { threshold: 5 * 60, penalty: 4 * 5 }, // 5+ minute difference, 20 penalty
+    medium: { threshold: 2 * 60, penalty: 2 * 5 } // 2+ minute difference, 10 penalty
+  };
+  private static readonly EXERCISE_COUNT_PENALTIES = {
+    high: { threshold: 3, penalty: 3 * 5 }, // 3+ difference, 15 penalty
+    medium: { threshold: 1, penalty: 5 } // 1+ difference, 5 penalty
+  };
+
   constructor() {
     this.parser = new ResponseParser();
     this.normalizer = new WorkoutNormalizer();
@@ -185,7 +217,7 @@ export class ResponseProcessor {
     const totalPhaseDuration = (workout.warmup?.duration || 0) + (workout.mainWorkout?.duration || 0) + (workout.cooldown?.duration || 0);
     const expectedDuration = params.duration * 60; // Convert to seconds
     
-    if (Math.abs(totalPhaseDuration - expectedDuration) > 300) { // 5 minute tolerance
+    if (Math.abs(totalPhaseDuration - expectedDuration) > ResponseProcessor.DURATION_TOLERANCE_SECONDS) {
       warnings.push({ 
         field: 'duration', 
         message: `Total phase duration (${Math.round(totalPhaseDuration/60)}min) differs from expected (${params.duration}min)`,
@@ -194,10 +226,9 @@ export class ResponseProcessor {
     }
 
     // Calculate validation score
-    const maxScore = 100;
-    const errorPenalty = errors.length * 20;
-    const warningPenalty = warnings.length * 5;
-    const score = Math.max(0, maxScore - errorPenalty - warningPenalty);
+    const errorPenalty = errors.length * ResponseProcessor.ERROR_PENALTY;
+    const warningPenalty = warnings.length * ResponseProcessor.WARNING_PENALTY;
+    const score = Math.max(0, ResponseProcessor.MAX_VALIDATION_SCORE - errorPenalty - warningPenalty);
 
     return {
       isValid: errors.length === 0,
@@ -214,24 +245,24 @@ export class ResponseProcessor {
     let score = 0;
     
     // Phase completeness (30 points)
-    if (workout.warmup) score += 10;
-    if (workout.mainWorkout) score += 10;
-    if (workout.cooldown) score += 10;
+    if (workout.warmup) score += ResponseProcessor.PHASE_COMPLETENESS_POINTS;
+    if (workout.mainWorkout) score += ResponseProcessor.PHASE_COMPLETENESS_POINTS;
+    if (workout.cooldown) score += ResponseProcessor.PHASE_COMPLETENESS_POINTS;
     
     // Exercise completeness (40 points)
     const totalExercises = (workout.warmup?.exercises?.length || 0) + 
                           (workout.mainWorkout?.exercises?.length || 0) + 
                           (workout.cooldown?.exercises?.length || 0);
-    score += Math.min(40, totalExercises * 5);
+    score += Math.min(ResponseProcessor.MAX_EXERCISE_POINTS, totalExercises * ResponseProcessor.EXERCISE_POINTS_PER_EXERCISE);
     
     // Metadata completeness (30 points)
-    if (workout.title) score += 5;
-    if (workout.description) score += 5;
-    if (workout.reasoning) score += 10;
-    if (workout.personalizedNotes?.length) score += 5;
-    if (workout.safetyReminders?.length) score += 5;
+    if (workout.title) score += ResponseProcessor.METADATA_POINTS.title;
+    if (workout.description) score += ResponseProcessor.METADATA_POINTS.description;
+    if (workout.reasoning) score += ResponseProcessor.METADATA_POINTS.reasoning;
+    if (workout.personalizedNotes?.length) score += ResponseProcessor.METADATA_POINTS.personalizedNotes;
+    if (workout.safetyReminders?.length) score += ResponseProcessor.METADATA_POINTS.safetyReminders;
     
-    return Math.min(100, score);
+    return Math.min(ResponseProcessor.MAX_VALIDATION_SCORE, score);
   }
 
   /**
@@ -239,12 +270,11 @@ export class ResponseProcessor {
    */
   private calculateCompletenessScore(workout: GeneratedWorkout): number {
     let score = 0;
-    const maxScore = 100;
     
     // Required fields (50 points)
     const requiredFields = ['id', 'title', 'description', 'warmup', 'mainWorkout', 'cooldown'];
     const presentFields = requiredFields.filter(field => workout[field as keyof GeneratedWorkout]);
-    score += (presentFields.length / requiredFields.length) * 50;
+    score += (presentFields.length / requiredFields.length) * ResponseProcessor.REQUIRED_FIELDS_WEIGHT;
     
     // Optional enhancement fields (50 points)
     const enhancementFields = ['reasoning', 'personalizedNotes', 'progressionTips', 'safetyReminders'];
@@ -252,16 +282,16 @@ export class ResponseProcessor {
       const value = workout[field as keyof GeneratedWorkout];
       return Array.isArray(value) ? value.length > 0 : !!value;
     });
-    score += (presentEnhancements.length / enhancementFields.length) * 50;
+    score += (presentEnhancements.length / enhancementFields.length) * ResponseProcessor.ENHANCEMENT_FIELDS_WEIGHT;
     
-    return Math.min(maxScore, score);
+    return Math.min(ResponseProcessor.MAX_VALIDATION_SCORE, score);
   }
 
   /**
    * Calculate consistency score
    */
   private calculateConsistencyScore(workout: GeneratedWorkout, durationResult: DurationStrategyResult): number {
-    let score = 100;
+    let score = ResponseProcessor.MAX_VALIDATION_SCORE;
     
     // Duration consistency
     const totalPhaseDuration = (workout.warmup?.duration || 0) + 
@@ -270,8 +300,11 @@ export class ResponseProcessor {
     const expectedDuration = durationResult.adjustedDuration * 60;
     const durationDiff = Math.abs(totalPhaseDuration - expectedDuration);
     
-    if (durationDiff > 300) score -= 20; // 5+ minute difference
-    else if (durationDiff > 120) score -= 10; // 2+ minute difference
+    if (durationDiff > ResponseProcessor.DURATION_DIFF_PENALTIES.high.threshold) {
+      score -= ResponseProcessor.DURATION_DIFF_PENALTIES.high.penalty;
+    } else if (durationDiff > ResponseProcessor.DURATION_DIFF_PENALTIES.medium.threshold) {
+      score -= ResponseProcessor.DURATION_DIFF_PENALTIES.medium.penalty;
+    }
     
     // Exercise count consistency with duration config
     const config = durationResult.config;
@@ -282,8 +315,11 @@ export class ResponseProcessor {
     const expectedExerciseCount = config.exerciseCount.total;
     const exerciseCountDiff = Math.abs(actualExerciseCount - expectedExerciseCount);
     
-    if (exerciseCountDiff > 3) score -= 15;
-    else if (exerciseCountDiff > 1) score -= 5;
+    if (exerciseCountDiff > ResponseProcessor.EXERCISE_COUNT_PENALTIES.high.threshold) {
+      score -= ResponseProcessor.EXERCISE_COUNT_PENALTIES.high.penalty;
+    } else if (exerciseCountDiff > ResponseProcessor.EXERCISE_COUNT_PENALTIES.medium.threshold) {
+      score -= ResponseProcessor.EXERCISE_COUNT_PENALTIES.medium.penalty;
+    }
     
     return Math.max(0, score);
   }

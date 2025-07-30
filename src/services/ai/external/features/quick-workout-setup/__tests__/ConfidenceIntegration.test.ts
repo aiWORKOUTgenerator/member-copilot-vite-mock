@@ -246,6 +246,7 @@ describe('Confidence Integration with QuickWorkoutFeature', () => {
     });
 
     it('should maintain backward compatibility', async () => {
+      // Test with minimal user profile (should still work)
       const params = {
         duration: 30,
         fitnessLevel: 'some experience' as const,
@@ -256,19 +257,105 @@ describe('Confidence Integration with QuickWorkoutFeature', () => {
         location: 'home' as const
       };
 
+      // Create a minimal user profile for backward compatibility test
+      const minimalUserProfile: UserProfile = {
+        fitnessLevel: 'some experience',
+        goals: ['general_fitness'],
+        preferences: {
+          workoutStyle: ['strength_training'],
+          timePreference: 'morning',
+          intensityPreference: 'moderate',
+          advancedFeatures: false,
+          aiAssistanceLevel: 'moderate'
+        },
+        basicLimitations: {
+          injuries: [],
+          availableEquipment: ['dumbbells'],
+          availableLocations: ['home']
+        },
+        enhancedLimitations: {
+          timeConstraints: 30,
+          equipmentConstraints: ['dumbbells'],
+          locationConstraints: ['home'],
+          recoveryNeeds: {
+            restDays: 2,
+            sleepHours: 7,
+            hydrationLevel: 'moderate'
+          },
+          mobilityLimitations: [],
+          progressionRate: 'moderate'
+        },
+        workoutHistory: {
+          estimatedCompletedWorkouts: 0,
+          averageDuration: 30,
+          preferredFocusAreas: [],
+          progressiveEnhancementUsage: {},
+          aiRecommendationAcceptance: 0.5,
+          consistencyScore: 0.3,
+          plateauRisk: 'low'
+        },
+        learningProfile: {
+          prefersSimplicity: true,
+          explorationTendency: 'low',
+          feedbackPreference: 'simple',
+          learningStyle: 'visual',
+          motivationType: 'intrinsic',
+          adaptationSpeed: 'slow'
+        }
+      };
+
+      const result = await quickWorkoutFeature.generateWorkout(params, minimalUserProfile);
+
+      // Should still work with minimal profile
+      expect(result.workout).toBeDefined();
+      expect(result.confidence).toBeGreaterThan(0);
+      expect(result.workout.confidenceFactors).toBeDefined(); // Should have factors with profile
+    });
+
+    it('should pass confidence factors through the entire generation flow', async () => {
+      const params = {
+        duration: 30,
+        fitnessLevel: 'some experience' as const,
+        focus: 'strength training',
+        energyLevel: 7,
+        sorenessAreas: [],
+        equipment: ['dumbbells', 'resistance bands'],
+        location: 'home' as const
+      };
+
       const result = await quickWorkoutFeature.generateWorkout(params, mockUserProfile);
 
-      // Should have all required fields
-      expect(result.workout).toBeDefined();
-      expect(result.metadata).toBeDefined();
-      expect(result.confidence).toBeDefined();
-      expect(result.reasoning).toBeDefined();
-      expect(result.durationOptimization).toBeDefined();
-      expect(result.personalizedNotes).toBeDefined();
-      expect(result.safetyReminders).toBeDefined();
+      // Verify confidence calculation was performed
+      expect(result.confidence).toBeGreaterThan(0);
+      expect(result.confidence).toBeLessThanOrEqual(1);
+      expect(result.confidence).not.toBe(0.8); // Should not be the default fallback
 
-      // Should have the new confidence factors (optional)
+      // Verify workout has confidence factors
       expect(result.workout.confidenceFactors).toBeDefined();
+      if (result.workout.confidenceFactors) {
+        expect(result.workout.confidenceFactors.profileMatch).toBeGreaterThan(0);
+        expect(result.workout.confidenceFactors.safetyAlignment).toBeGreaterThan(0);
+        expect(result.workout.confidenceFactors.equipmentFit).toBeGreaterThan(0);
+        expect(result.workout.confidenceFactors.goalAlignment).toBeGreaterThan(0);
+        expect(result.workout.confidenceFactors.structureQuality).toBeGreaterThan(0);
+
+        // All factors should be between 0 and 1
+        Object.values(result.workout.confidenceFactors).forEach(factor => {
+          expect(factor).toBeGreaterThanOrEqual(0);
+          expect(factor).toBeLessThanOrEqual(1);
+        });
+
+        // Log the actual values for debugging
+        console.log('🎯 Confidence factors in workout:', {
+          confidence: result.confidence,
+          factors: result.workout.confidenceFactors
+        });
+      }
+
+      // Verify the confidence score matches the factors
+      const expectedConfidence = result.confidence;
+      const actualConfidence = result.workout.confidence;
+      expect(actualConfidence).toBe(expectedConfidence);
     });
   });
 

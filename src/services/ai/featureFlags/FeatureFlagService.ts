@@ -52,12 +52,12 @@ const DEFAULT_AI_FLAGS: FeatureFlag[] = [
     name: 'AI Confidence Score System',
     description: 'Enable the new AI confidence calculation system for workout generation',
     enabled: true,
-    rolloutPercentage: 0, // Start at 0% for safe deployment
+    rolloutPercentage: 100, // Enabled for all users for development and testing
     metadata: {
       experimentId: 'ai_confidence_system_2024',
       startDate: new Date(),
       owner: 'ai_team',
-      notes: 'Phase 1 deployment - confidence calculation service integration'
+      notes: 'Phase 1 deployment - confidence calculation service integration - ENABLED FOR TESTING'
     }
   },
   {

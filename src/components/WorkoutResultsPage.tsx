@@ -1,10 +1,15 @@
 import React, { useState, useCallback } from 'react';
-import { Zap, ChevronLeft, AlertTriangle, RefreshCw, Clock, Target, TrendingUp } from 'lucide-react';
+import { Zap, ChevronLeft, AlertTriangle, RefreshCw, Target, HelpCircle, Info } from 'lucide-react';
 import { GeneratedWorkout } from '../services/ai/external/types/external-ai.types';
 import { UseWorkoutGenerationReturn } from '../hooks/useWorkoutGeneration';
 import { WorkoutDisplay } from './WorkoutDisplay';
 import { ErrorBoundary } from './shared/ErrorBoundary';
 import { aiLogger } from '../services/ai/logging/AILogger';
+import { 
+  ConfidenceExplanation, 
+  ImprovementActions, 
+  ConfidenceHelp 
+} from './confidence';
 
 export interface WorkoutResultsPageProps {
   onNavigate: (page: 'profile' | 'waiver' | 'focus' | 'review' | 'results') => void;
@@ -19,21 +24,38 @@ const WorkoutResultsPage: React.FC<WorkoutResultsPageProps> = ({
   workoutGeneration,
   onWorkoutUpdate 
 }) => {
-  // 🔍 DEBUG: Log what WorkoutResultsPage receives
-  aiLogger.debug('WorkoutResultsPage - Component rendered with props', {
-    hasGeneratedWorkout: !!generatedWorkout,
-    workoutId: generatedWorkout?.id,
-    workoutTitle: generatedWorkout?.title,
-    workoutKeys: generatedWorkout ? Object.keys(generatedWorkout) : 'N/A',
-    isGenerating: workoutGeneration.isGenerating,
-    hasError: workoutGeneration.hasError,
-    status: workoutGeneration.status,
-    error: workoutGeneration.state.error
-  });
-  
+  // Transparency features state
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showExplanation, setShowExplanation] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
-  const [downloadStatus, setDownloadStatus] = useState<'idle' | 'downloading' | 'complete'>('idle');
-  const [shareStatus, setShareStatus] = useState<'idle' | 'sharing' | 'complete'>('idle');
+
+  // Create a fallback user profile from available workout data
+  const confidenceUserProfile = generatedWorkout ? {
+    fitnessLevel: generatedWorkout.difficulty,
+    experience: generatedWorkout.difficulty, // Map difficulty to experience
+    goals: ['general_fitness'], // Default goal since not available in workout
+    equipment: generatedWorkout.equipment,
+    injuries: [], // Not available in workout data
+    limitations: [] // Not available in workout data
+  } : undefined;
+
+  // Handle improvement action clicks
+  const handleImprovementAction = useCallback((suggestion: any) => {
+    aiLogger.debug('Improvement action clicked', {
+      action: suggestion.action,
+      category: suggestion.category,
+      impact: suggestion.impact
+    });
+
+    // Navigate to appropriate page based on suggestion
+    if (suggestion.deepLink) {
+      if (suggestion.deepLink.includes('profile')) {
+        onNavigate('profile');
+      } else if (suggestion.deepLink.includes('focus')) {
+        onNavigate('focus');
+      }
+    }
+  }, [onNavigate]);
 
   // Handle workout regeneration
   const handleRegenerate = useCallback(async () => {
@@ -60,7 +82,6 @@ const WorkoutResultsPage: React.FC<WorkoutResultsPageProps> = ({
   const handleDownload = useCallback(async () => {
     if (!generatedWorkout) return;
     
-    setDownloadStatus('downloading');
     try {
       // Create a simple text version of the workout
       const workoutText = `
@@ -97,8 +118,6 @@ Generated on: ${generatedWorkout.generatedAt.toLocaleDateString()}
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      setDownloadStatus('complete');
-      setTimeout(() => setDownloadStatus('idle'), 2000);
     } catch (error) {
       aiLogger.error({
         error: error instanceof Error ? error : new Error(String(error)),
@@ -107,7 +126,6 @@ Generated on: ${generatedWorkout.generatedAt.toLocaleDateString()}
         severity: 'low',
         userImpact: false
       });
-      setDownloadStatus('idle');
     }
   }, [generatedWorkout]);
 
@@ -115,7 +133,6 @@ Generated on: ${generatedWorkout.generatedAt.toLocaleDateString()}
   const handleShare = useCallback(async () => {
     if (!generatedWorkout) return;
     
-    setShareStatus('sharing');
     try {
       const shareData = {
         title: generatedWorkout.title,
@@ -133,8 +150,6 @@ Generated on: ${generatedWorkout.generatedAt.toLocaleDateString()}
         alert('Workout details copied to clipboard!');
       }
 
-      setShareStatus('complete');
-      setTimeout(() => setShareStatus('idle'), 2000);
     } catch (error) {
       aiLogger.error({
         error: error instanceof Error ? error : new Error(String(error)),
@@ -143,7 +158,6 @@ Generated on: ${generatedWorkout.generatedAt.toLocaleDateString()}
         severity: 'low',
         userImpact: false
       });
-      setShareStatus('idle');
     }
   }, [generatedWorkout]);
 
@@ -393,6 +407,97 @@ Generated on: ${generatedWorkout.generatedAt.toLocaleDateString()}
           />
         </ErrorBoundary>
       )}
+
+      {/* Transparency Features */}
+      {generatedWorkout && (
+        <div className="space-y-6">
+          {/* Confidence Score Transparency */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 border border-gray-200/50">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Target className="w-6 h-6 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Understanding Your Confidence Score</h3>
+              </div>
+              <button
+                onClick={() => setShowHelpModal(true)}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 font-medium rounded-lg hover:bg-blue-50 transition-colors"
+              >
+                <HelpCircle className="w-4 h-4" />
+                Help
+              </button>
+            </div>
+
+            {/* Confidence Score Summary */}
+            <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">
+                    Your Confidence Score: {Math.round((generatedWorkout.confidence || 0.8) * 100)}%
+                  </h4>
+                  <p className="text-sm text-blue-700">
+                    This score shows how well this workout matches your profile and preferences.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowExplanation(!showExplanation)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-blue-600 hover:text-blue-700 font-medium rounded-lg hover:bg-blue-100 transition-colors"
+                >
+                  <Info className="w-4 h-4" />
+                  {showExplanation ? 'Hide Details' : 'Why This Score?'}
+                </button>
+              </div>
+            </div>
+
+            {/* Expandable Explanation */}
+            {showExplanation && (
+              <div className="mb-4">
+                <ConfidenceExplanation
+                  confidence={generatedWorkout.confidence || 0.8}
+                  factors={generatedWorkout.confidenceFactors}
+                  userProfile={confidenceUserProfile}
+                />
+              </div>
+            )}
+
+            {/* Improvement Actions */}
+            <div className="mb-4">
+              <ImprovementActions
+                confidence={generatedWorkout.confidence || 0.8}
+                factors={generatedWorkout.confidenceFactors}
+                userProfile={confidenceUserProfile}
+                onActionClick={handleImprovementAction}
+              />
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+              <div className="text-sm text-gray-600">
+                Want to improve your score? Update your profile preferences.
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onNavigate('profile')}
+                  className="px-4 py-2 text-sm text-blue-600 hover:text-blue-700 font-medium rounded-lg hover:bg-blue-50 transition-colors"
+                >
+                  Update Profile
+                </button>
+                <button
+                  onClick={() => onNavigate('focus')}
+                  className="px-4 py-2 text-sm text-green-600 hover:text-green-700 font-medium rounded-lg hover:bg-green-50 transition-colors"
+                >
+                  Adjust Preferences
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Help Modal */}
+      <ConfidenceHelp
+        isOpen={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+      />
 
       {/* Additional Actions */}
       <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-gray-200/50">
