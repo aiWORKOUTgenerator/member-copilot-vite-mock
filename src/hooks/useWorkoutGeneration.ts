@@ -16,6 +16,48 @@ import { transformToInternalContext } from '../utils/contextTransformers';
 import { generateFallbackWorkout } from '../utils/fallbackWorkoutGenerator';
 import { getErrorDetails } from '../utils/errorUtils';
 import { updateProgressWithDelay, simulateAIProgress } from '../utils/progressUtils';
+import { SelectionAnalysisFactory } from '../services/ai/domains/confidence/selection/SelectionAnalysisFactory';
+import { SelectionAnalysisContext } from '../services/ai/domains/confidence/selection/types/selection-analysis.types';
+
+// Simplified selection analysis type for hook state
+interface SelectionAnalysisResult {
+  overallScore: number;
+  factors: {
+    goalAlignment: { score: number; status: string; reasoning: string };
+    intensityMatch: { score: number; status: string; reasoning: string };
+    durationFit: { score: number; status: string; reasoning: string };
+    recoveryRespect: { score: number; status: string; reasoning: string };
+    equipmentOptimization: { score: number; status: string; reasoning: string };
+  };
+  insights: Array<{
+    id: string;
+    type: string;
+    title: string;
+    message: string;
+    factor: string;
+    priority: number;
+    actionable: boolean;
+  }>;
+  suggestions: Array<{
+    id: string;
+    action: string;
+    description: string;
+    impact: string;
+    estimatedScoreIncrease: number;
+    quickFix: boolean;
+    category: string;
+    timeRequired: string;
+    priority: number;
+  }>;
+  educationalContent: Array<{
+    id: string;
+    title: string;
+    content: string;
+    category: string;
+    priority: number;
+    learnMoreUrl?: string;
+  }>;
+}
 
 // Local state interface using external AI types
 interface WorkoutGenerationState {
@@ -26,6 +68,8 @@ interface WorkoutGenerationState {
   lastError: WorkoutGenerationError | null;
   generatedWorkout: GeneratedWorkout | null;
   lastGenerated: Date | null;
+  selectionAnalysis: SelectionAnalysisResult | null;
+  selectionAnalysisProgress: number;
 }
 
 // Enhanced return type interface - RESTORED FROM UN-REFACTORED VERSION
@@ -44,6 +88,10 @@ export interface UseWorkoutGenerationReturn {
   canRegenerate: boolean;
   hasError: boolean;
   isGenerating: boolean;
+  
+  // Selection Analysis
+  selectionAnalysis: SelectionAnalysisResult | null;
+  selectionAnalysisProgress: number;
 }
 
 export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
@@ -54,7 +102,9 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
     retryCount: 0,
     lastError: null,
     generatedWorkout: null,
-    lastGenerated: null
+    lastGenerated: null,
+    selectionAnalysis: null,
+    selectionAnalysisProgress: 0
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -68,6 +118,13 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
    */
   const handleProgressUpdate = useCallback((progress: number) => {
     setState(prev => ({ ...prev, generationProgress: progress }));
+  }, []);
+
+  /**
+   * Update selection analysis progress handler
+   */
+  const handleSelectionAnalysisProgress = useCallback((progress: number) => {
+    setState(prev => ({ ...prev, selectionAnalysisProgress: progress }));
   }, []);
 
   /**
@@ -108,11 +165,127 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
         retryCount: 0,
         lastError: null,
         generatedWorkout: null,
-        lastGenerated: null
+        lastGenerated: null,
+        selectionAnalysis: null,
+        selectionAnalysisProgress: 0
       });
 
       // Initial progress update
       await updateProgressWithDelay(handleProgressUpdate, 10, 300);
+
+      // Start selection analysis in parallel (non-blocking)
+      const selectionAnalysisPromise = (async () => {
+        const analysisStartTime = Date.now();
+        
+        try {
+          aiLogger.debug('Starting selection analysis', {
+            context: 'selection analysis',
+            component: 'useWorkoutGeneration',
+            userProfile: {
+              fitnessLevel: request.userProfile.fitnessLevel,
+              goalsCount: request.userProfile.goals?.length || 0,
+              basicLimitations: {
+                injuriesCount: request.userProfile.basicLimitations?.injuries?.length || 0,
+                availableEquipmentCount: request.userProfile.basicLimitations?.availableEquipment?.length || 0
+              }
+            },
+            workoutOptions: {
+              focus: request.workoutFocusData.customization_focus,
+              energy: request.workoutFocusData.customization_energy,
+              duration: request.workoutFocusData.customization_duration,
+              equipmentCount: request.workoutFocusData.customization_equipment?.length || 0
+            },
+            generationType: request.type
+          });
+
+          // Start progress tracking
+          handleSelectionAnalysisProgress(10);
+          
+          const analysisContext = {
+            generationType: request.type,
+            userExperience: (request.userProfile.fitnessLevel === 'beginner' ? 'beginner' : 
+                           request.userProfile.fitnessLevel === 'advanced' ? 'advanced' : 'intermediate') as 'beginner' | 'intermediate' | 'advanced' | 'first-time',
+            timeOfDay: (new Date().getHours() < 12 ? 'morning' : 
+                      new Date().getHours() < 17 ? 'afternoon' : 'evening') as 'morning' | 'afternoon' | 'evening'
+          };
+
+          aiLogger.debug('Selection analysis context created', {
+            context: 'selection analysis',
+            component: 'useWorkoutGeneration',
+            analysisContext
+          });
+          
+          const analysis = await SelectionAnalysisFactory.analyzeSelections(
+            request.userProfile,
+            request.workoutFocusData,
+            analysisContext
+          );
+          
+          const analysisTime = Date.now() - analysisStartTime;
+          
+          if (analysis && !abortControllerRef.current?.signal.aborted) {
+            handleSelectionAnalysisProgress(100);
+            setState(prev => ({ 
+              ...prev, 
+              selectionAnalysis: analysis
+            }));
+            
+            aiLogger.info('Selection analysis completed successfully', {
+              context: 'selection analysis',
+              component: 'useWorkoutGeneration',
+              analysisTime,
+              overallScore: analysis.overallScore,
+              insightsCount: analysis.insights?.length || 0,
+              suggestionsCount: analysis.suggestions?.length || 0,
+              educationalContentCount: analysis.educationalContent?.length || 0,
+              factors: Object.keys(analysis.factors || {}).map(factor => ({
+                factor,
+                score: analysis.factors[factor as keyof typeof analysis.factors]?.score || 0,
+                status: analysis.factors[factor as keyof typeof analysis.factors]?.status || 'unknown'
+              }))
+            });
+          } else if (abortControllerRef.current?.signal.aborted) {
+            aiLogger.debug('Selection analysis aborted', {
+              context: 'selection analysis',
+              component: 'useWorkoutGeneration',
+              analysisTime
+            });
+          } else {
+            aiLogger.warn('Selection analysis returned null result', {
+              context: 'selection analysis',
+              component: 'useWorkoutGeneration',
+              analysisTime,
+              possibleReasons: ['feature flag disabled', 'invalid input data', 'analysis service error']
+            });
+          }
+          
+          return analysis;
+        } catch (error) {
+          const analysisTime = Date.now() - analysisStartTime;
+          
+          aiLogger.error({
+            error: error instanceof Error ? error : new Error(String(error)),
+            context: 'selection analysis',
+            component: 'useWorkoutGeneration',
+            severity: 'medium',
+            userImpact: false,
+            metadata: {
+              analysisTime,
+              userProfile: {
+                fitnessLevel: request.userProfile.fitnessLevel,
+                goalsCount: request.userProfile.goals?.length || 0
+              },
+              workoutOptions: {
+                focus: request.workoutFocusData.customization_focus,
+                energy: request.workoutFocusData.customization_energy,
+                duration: request.workoutFocusData.customization_duration
+              }
+            }
+          });
+          
+          return null;
+        }
+      })();
 
       // Transform request to internal context
       const internalContext = transformToInternalContext(request);
@@ -340,7 +513,9 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
       retryCount: 0,
       lastError: null,
       generatedWorkout: null,
-      lastGenerated: null
+      lastGenerated: null,
+      selectionAnalysis: null,
+      selectionAnalysisProgress: 0
     });
     
     lastRequestRef.current = null;
@@ -403,6 +578,8 @@ export const useWorkoutGeneration = (): UseWorkoutGenerationReturn => {
     retryGeneration,
     canRegenerate,
     hasError,
-    isGenerating
+    isGenerating,
+    selectionAnalysis: state.selectionAnalysis,
+    selectionAnalysisProgress: state.selectionAnalysisProgress
   };
 }; 

@@ -1,0 +1,109 @@
+.insightMessage {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+  animation: slideInUp 0.4s ease-out;
+}
+
+.insightMessage:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.icon {
+  font-size: 1.25rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  color: white;
+  flex: 1;
+}
+
+.actionableBadge {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.message {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin: 0 0 12px 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.metadata {
+  display: flex;
+  gap: 16px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.factor,
+.priority {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Insight type colors */
+.positive {
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.warning {
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
+.improvement {
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+.educational {
+  border-color: rgba(139, 92, 246, 0.5);
+}
+
+.default {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .insightMessage {
+    padding: 12px;
+  }
+  
+  .metadata {
+    flex-direction: column;
+    gap: 8px;
+  }
+} 

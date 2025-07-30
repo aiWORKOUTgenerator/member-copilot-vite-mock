@@ -113,7 +113,9 @@ describe('WorkoutResultsPage - Transparency Features', () => {
       retryCount: 0,
       lastError: null,
       generatedWorkout: mockWorkout,
-      lastGenerated: new Date()
+      lastGenerated: new Date(),
+      selectionAnalysis: null,
+      selectionAnalysisProgress: 0
     },
     status: 'complete',
     generateWorkout: jest.fn(),
@@ -122,7 +124,9 @@ describe('WorkoutResultsPage - Transparency Features', () => {
     retryGeneration: jest.fn(),
     canRegenerate: true,
     hasError: false,
-    isGenerating: false
+    isGenerating: false,
+    selectionAnalysis: null,
+    selectionAnalysisProgress: 0
   };
 
   const mockProps = {
@@ -236,5 +240,229 @@ describe('WorkoutResultsPage - Transparency Features', () => {
     // Should still render transparency features
     expect(screen.getByText('Understanding Your Confidence Score')).toBeInTheDocument();
     expect(screen.getByTestId('improvement-actions')).toBeInTheDocument();
+  });
+
+  it('displays selection analysis during workout generation', () => {
+    const mockWorkoutGenerationWithAnalysis = {
+      ...mockWorkoutGeneration,
+      isGenerating: true,
+      state: {
+        ...mockWorkoutGeneration.state,
+        generationProgress: 50,
+        selectionAnalysis: {
+          overallScore: 0.85,
+          factors: {
+            goalAlignment: { score: 0.9, status: 'excellent', reasoning: 'Great alignment' },
+            intensityMatch: { score: 0.8, status: 'good', reasoning: 'Good match' },
+            durationFit: { score: 0.7, status: 'good', reasoning: 'Fits well' },
+            recoveryRespect: { score: 0.9, status: 'excellent', reasoning: 'Respects recovery' },
+            equipmentOptimization: { score: 0.8, status: 'good', reasoning: 'Optimized' }
+          },
+          insights: [
+            {
+              id: 'insight-1',
+              type: 'positive',
+              title: 'Excellent Selections!',
+              message: 'Your workout selections are perfectly aligned.',
+              factor: 'overall',
+              priority: 1,
+              actionable: false
+            }
+          ],
+          suggestions: [
+            {
+              id: 'suggestion-1',
+              action: 'Try different equipment',
+              description: 'Consider using more of your available equipment',
+              impact: 'medium',
+              estimatedScoreIncrease: 0.1,
+              quickFix: true,
+              category: 'equipment',
+              timeRequired: '5min',
+              priority: 1
+            }
+          ],
+          educationalContent: [
+            {
+              id: 'edu-1',
+              title: 'Understanding Workout Selection',
+              content: 'Learn how your choices impact workout effectiveness.',
+              category: 'selection',
+              priority: 1
+            }
+          ]
+        },
+        selectionAnalysisProgress: 75
+      },
+      selectionAnalysis: {
+        overallScore: 0.85,
+        factors: {
+          goalAlignment: { score: 0.9, status: 'excellent', reasoning: 'Great alignment' },
+          intensityMatch: { score: 0.8, status: 'good', reasoning: 'Good match' },
+          durationFit: { score: 0.7, status: 'good', reasoning: 'Fits well' },
+          recoveryRespect: { score: 0.9, status: 'excellent', reasoning: 'Respects recovery' },
+          equipmentOptimization: { score: 0.8, status: 'good', reasoning: 'Optimized' }
+        },
+        insights: [
+          {
+            id: 'insight-1',
+            type: 'positive',
+            title: 'Excellent Selections!',
+            message: 'Your workout selections are perfectly aligned.',
+            factor: 'overall',
+            priority: 1,
+            actionable: false
+          }
+        ],
+        suggestions: [
+          {
+            id: 'suggestion-1',
+            action: 'Try different equipment',
+            description: 'Consider using more of your available equipment',
+            impact: 'medium',
+            estimatedScoreIncrease: 0.1,
+            quickFix: true,
+            category: 'equipment',
+            timeRequired: '5min',
+            priority: 1
+          }
+        ],
+        educationalContent: [
+          {
+            id: 'edu-1',
+            title: 'Understanding Workout Selection',
+            content: 'Learn how your choices impact workout effectiveness.',
+            category: 'selection',
+            priority: 1
+          }
+        ]
+      },
+      selectionAnalysisProgress: 75
+    };
+
+    render(
+      <WorkoutResultsPage
+        onNavigate={mockProps.onNavigate}
+        generatedWorkout={null}
+        workoutGeneration={mockWorkoutGenerationWithAnalysis}
+        onWorkoutUpdate={mockProps.onWorkoutUpdate}
+      />
+    );
+
+    // Should show the selection analysis display during generation
+    expect(screen.getByText('Selection Analysis')).toBeInTheDocument();
+    expect(screen.getByText('Excellent')).toBeInTheDocument();
+  });
+
+  it('displays selection analysis results after workout generation', () => {
+    const mockWorkoutGenerationWithCompletedAnalysis = {
+      ...mockWorkoutGeneration,
+      isGenerating: false,
+      state: {
+        ...mockWorkoutGeneration.state,
+        generationProgress: 100,
+        selectionAnalysis: {
+          overallScore: 0.85,
+          factors: {
+            goalAlignment: { score: 0.9, status: 'excellent', reasoning: 'Great alignment' },
+            intensityMatch: { score: 0.8, status: 'good', reasoning: 'Good match' },
+            durationFit: { score: 0.7, status: 'good', reasoning: 'Fits well' },
+            recoveryRespect: { score: 0.9, status: 'excellent', reasoning: 'Respects recovery' },
+            equipmentOptimization: { score: 0.8, status: 'good', reasoning: 'Optimized' }
+          },
+          insights: [
+            {
+              id: 'insight-1',
+              type: 'positive',
+              title: 'Excellent Selections!',
+              message: 'Your workout selections are perfectly aligned.',
+              factor: 'overall',
+              priority: 1,
+              actionable: false
+            }
+          ],
+          suggestions: [
+            {
+              id: 'suggestion-1',
+              action: 'Try different equipment',
+              description: 'Consider using more of your available equipment',
+              impact: 'medium',
+              estimatedScoreIncrease: 0.1,
+              quickFix: true,
+              category: 'equipment',
+              timeRequired: '5min',
+              priority: 1
+            }
+          ],
+          educationalContent: [
+            {
+              id: 'edu-1',
+              title: 'Understanding Workout Selection',
+              content: 'Learn how your choices impact workout effectiveness.',
+              category: 'selection',
+              priority: 1
+            }
+          ]
+        },
+        selectionAnalysisProgress: 100
+      },
+      selectionAnalysis: {
+        overallScore: 0.85,
+        factors: {
+          goalAlignment: { score: 0.9, status: 'excellent', reasoning: 'Great alignment' },
+          intensityMatch: { score: 0.8, status: 'good', reasoning: 'Good match' },
+          durationFit: { score: 0.7, status: 'good', reasoning: 'Fits well' },
+          recoveryRespect: { score: 0.9, status: 'excellent', reasoning: 'Respects recovery' },
+          equipmentOptimization: { score: 0.8, status: 'good', reasoning: 'Optimized' }
+        },
+        insights: [
+          {
+            id: 'insight-1',
+            type: 'positive',
+            title: 'Excellent Selections!',
+            message: 'Your workout selections are perfectly aligned.',
+            factor: 'overall',
+            priority: 1,
+            actionable: false
+          }
+        ],
+        suggestions: [
+          {
+            id: 'suggestion-1',
+            action: 'Try different equipment',
+            description: 'Consider using more of your available equipment',
+            impact: 'medium',
+            estimatedScoreIncrease: 0.1,
+            quickFix: true,
+            category: 'equipment',
+            timeRequired: '5min',
+            priority: 1
+          }
+        ],
+        educationalContent: [
+          {
+            id: 'edu-1',
+            title: 'Understanding Workout Selection',
+            content: 'Learn how your choices impact workout effectiveness.',
+            category: 'selection',
+            priority: 1
+          }
+        ]
+      },
+      selectionAnalysisProgress: 100
+    };
+
+    render(
+      <WorkoutResultsPage
+        onNavigate={mockProps.onNavigate}
+        generatedWorkout={mockWorkout}
+        workoutGeneration={mockWorkoutGenerationWithCompletedAnalysis}
+        onWorkoutUpdate={mockProps.onWorkoutUpdate}
+      />
+    );
+
+    // Should show the selection analysis results section
+    expect(screen.getByText('Selection Analysis Results')).toBeInTheDocument();
+    expect(screen.getByText('Analysis completed during generation')).toBeInTheDocument();
   });
 }); 

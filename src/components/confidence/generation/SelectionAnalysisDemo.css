@@ -1,0 +1,298 @@
+/* Selection Analysis Demo Styles */
+
+.selection-analysis-demo {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Demo Header */
+.demo-header {
+  text-align: center;
+  margin-bottom: 32px;
+  padding: 24px;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.demo-header h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 12px 0;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.demo-header p {
+  font-size: 1.125rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Demo Controls */
+.demo-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.generate-button {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.generate-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.generate-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.status-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-label {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.status-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  text-transform: capitalize;
+}
+
+.status-value.idle {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.status-value.generating {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.status-value.complete {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.status-value.error {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* Demo Content */
+.demo-content {
+  display: grid;
+  gap: 24px;
+}
+
+/* Generation Progress */
+.generation-progress {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.generation-progress h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 16px 0;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Analysis Section */
+.analysis-section {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.analysis-section h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 16px 0;
+}
+
+/* Workout Result */
+.workout-result {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.workout-result h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 16px 0;
+}
+
+.workout-info {
+  display: grid;
+  gap: 8px;
+}
+
+.workout-info p {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.workout-info strong {
+  color: #1e293b;
+}
+
+/* Error Message */
+.error-message {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.error-message h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+}
+
+.error-message p {
+  font-size: 0.875rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .selection-analysis-demo {
+    padding: 16px;
+  }
+
+  .demo-header {
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+
+  .demo-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .demo-header p {
+    font-size: 1rem;
+  }
+
+  .demo-controls {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+    padding: 16px;
+  }
+
+  .generate-button {
+    width: 100%;
+  }
+
+  .status-info {
+    justify-content: center;
+  }
+
+  .demo-content {
+    gap: 16px;
+  }
+
+  .generation-progress,
+  .analysis-section,
+  .workout-result {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .selection-analysis-demo {
+    padding: 12px;
+  }
+
+  .demo-header {
+    padding: 12px;
+  }
+
+  .demo-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .demo-controls {
+    padding: 12px;
+  }
+
+  .generate-button {
+    padding: 10px 20px;
+    font-size: 0.875rem;
+  }
+
+  .generation-progress,
+  .analysis-section,
+  .workout-result {
+    padding: 12px;
+  }
+} 

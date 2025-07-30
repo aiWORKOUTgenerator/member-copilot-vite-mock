@@ -1,0 +1,244 @@
+/* Insight Message Component Styles */
+
+.insight-message {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+  transform: translateY(20px);
+  position: relative;
+  overflow: hidden;
+}
+
+.insight-message.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.insight-message:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Insight Header */
+.insight-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.insight-icon {
+  font-size: 1.25rem;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.insight-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+  flex: 1;
+  line-height: 1.3;
+}
+
+.actionable-badge {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: white;
+  white-space: nowrap;
+}
+
+/* Insight Message Text */
+.insight-message-text {
+  font-size: 0.875rem;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0 0 12px 0;
+}
+
+/* Insight Meta */
+.insight-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.insight-factor,
+.insight-priority {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Type-specific styling */
+.insight-message.insight-positive {
+  border-left: 4px solid #10b981;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+}
+
+.insight-message.insight-positive .insight-icon {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.insight-message.insight-warning {
+  border-left: 4px solid #f59e0b;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+.insight-message.insight-warning .insight-icon {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.insight-message.insight-suggestion {
+  border-left: 4px solid #3b82f6;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.insight-message.insight-suggestion .insight-icon {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.insight-message.insight-educational {
+  border-left: 4px solid #8b5cf6;
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+}
+
+.insight-message.insight-educational .insight-icon {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
+/* Hover effects */
+.insight-message.insight-positive:hover {
+  border-color: #059669;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+.insight-message.insight-warning:hover {
+  border-color: #d97706;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+}
+
+.insight-message.insight-suggestion:hover {
+  border-color: #2563eb;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.insight-message.insight-educational:hover {
+  border-color: #7c3aed;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+}
+
+/* Animation for new insights */
+.insight-message {
+  animation: insightSlideIn 0.5s ease-out;
+}
+
+@keyframes insightSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Pulse animation for actionable insights */
+.insight-message .actionable-badge {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .insight-message {
+    padding: 12px;
+  }
+
+  .insight-header {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .insight-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 1.125rem;
+  }
+
+  .insight-title {
+    font-size: 0.8125rem;
+  }
+
+  .insight-message-text {
+    font-size: 0.8125rem;
+    margin-bottom: 8px;
+  }
+
+  .insight-meta {
+    font-size: 0.6875rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .insight-message {
+    padding: 10px;
+  }
+
+  .insight-header {
+    gap: 6px;
+  }
+
+  .insight-icon {
+    width: 24px;
+    height: 24px;
+    font-size: 1rem;
+  }
+
+  .insight-title {
+    font-size: 0.75rem;
+  }
+
+  .insight-message-text {
+    font-size: 0.75rem;
+  }
+
+  .actionable-badge {
+    font-size: 0.5625rem;
+    padding: 1px 4px;
+  }
+} 

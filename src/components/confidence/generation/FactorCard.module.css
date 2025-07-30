@@ -1,0 +1,147 @@
+.factorCard {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+  animation: slideInUp 0.4s ease-out;
+}
+
+.factorCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  color: white;
+}
+
+.statusIcon {
+  font-size: 1.25rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.scoreSection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.scoreBar {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.scoreFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.8s ease-out;
+  animation: fillBar 0.8s ease-out;
+}
+
+.scoreText {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: white;
+  min-width: 40px;
+  text-align: right;
+}
+
+.reasoning {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Status color classes */
+.excellent {
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.excellent .scoreFill {
+  background: linear-gradient(90deg, #10b981, #059669);
+}
+
+.good {
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+.good .scoreFill {
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+}
+
+.warning {
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
+.warning .scoreFill {
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.poor {
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.poor .scoreFill {
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+}
+
+.default {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.default .scoreFill {
+  background: linear-gradient(90deg, #6b7280, #4b5563);
+}
+
+/* Animations */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fillBar {
+  from {
+    width: 0%;
+  }
+  to {
+    width: var(--target-width);
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .factorCard {
+    padding: 12px;
+  }
+  
+  .title {
+    font-size: 0.875rem;
+  }
+  
+  .reasoning {
+    font-size: 0.8rem;
+  }
+} 

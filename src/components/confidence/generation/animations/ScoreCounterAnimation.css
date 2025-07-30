@@ -1,0 +1,261 @@
+/* Enhanced Score Counter Animation Styles */
+
+.score-counter-animation {
+  position: relative;
+  display: inline-block;
+}
+
+.animated-score {
+  font-weight: 700;
+  font-size: 1.25rem;
+  transition: all 0.3s ease;
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.animated-score.animating {
+  animation: scorePulse 0.1s ease-in-out;
+}
+
+/* Score Color Classes */
+.animated-score.excellent {
+  color: #059669;
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+  border: 1px solid #10b981;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.animated-score.good {
+  color: #2563eb;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  border: 1px solid #3b82f6;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.animated-score.warning {
+  color: #d97706;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  border: 1px solid #f59e0b;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.animated-score.poor {
+  color: #dc2626;
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  border: 1px solid #ef4444;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+/* Animation Effects */
+.animated-score::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transition: left 0.5s ease;
+}
+
+.animated-score:hover::before {
+  left: 100%;
+}
+
+/* Pulse animation for excellent scores */
+.animated-score.excellent {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+  }
+}
+
+@keyframes scorePulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Pulse Ring for Excellent Scores */
+.pulse-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  border: 2px solid #10b981;
+  border-radius: 8px;
+  animation: pulseRing 2s infinite;
+  z-index: 1;
+}
+
+@keyframes pulseRing {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Confetti Animation */
+.confetti-container {
+  position: absolute;
+  top: -20px;
+  left: 0;
+  width: 100%;
+  height: 100px;
+  pointer-events: none;
+  z-index: 3;
+  overflow: hidden;
+}
+
+.confetti-piece {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  animation: confettiFall linear infinite;
+}
+
+.confetti-0 {
+  background: #3b82f6;
+}
+
+.confetti-1 {
+  background: #10b981;
+}
+
+.confetti-2 {
+  background: #f59e0b;
+}
+
+.confetti-3 {
+  background: #8b5cf6;
+}
+
+.confetti-4 {
+  background: #ef4444;
+}
+
+@keyframes confettiFall {
+  0% {
+    transform: translateY(-20px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* Celebration Animation for High Scores */
+.animated-score.excellent.celebrating {
+  animation: celebration 0.6s ease-out;
+}
+
+@keyframes celebration {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.2) rotate(-5deg);
+  }
+  50% {
+    transform: scale(1.1) rotate(5deg);
+  }
+  75% {
+    transform: scale(1.15) rotate(-3deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* Loading State Animation */
+.animated-score.loading {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: loadingShimmer 1.5s infinite;
+}
+
+@keyframes loadingShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .animated-score {
+    font-size: 1.125rem;
+    padding: 3px 6px;
+  }
+  
+  .confetti-container {
+    height: 80px;
+  }
+  
+  .confetti-piece {
+    width: 6px;
+    height: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .animated-score {
+    font-size: 1rem;
+    padding: 2px 4px;
+  }
+  
+  .confetti-container {
+    height: 60px;
+  }
+  
+  .confetti-piece {
+    width: 4px;
+    height: 4px;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .animated-score {
+    animation: none;
+  }
+  
+  .pulse-ring {
+    animation: none;
+  }
+  
+  .confetti-piece {
+    animation: none;
+  }
+  
+  .animated-score.celebrating {
+    animation: none;
+  }
+  
+  .animated-score.loading {
+    animation: none;
+  }
+} 

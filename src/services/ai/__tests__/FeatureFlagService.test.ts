@@ -284,6 +284,33 @@ describe('FeatureFlagService', () => {
       expect(results.size).toBe(1);
     });
   });
+
+  describe('AI Selection Analysis Flag', () => {
+    it('should have ai_selection_analysis flag registered and enabled', () => {
+      const config = service.exportConfiguration();
+      
+      expect(config.ai_selection_analysis).toBeDefined();
+      expect(config.ai_selection_analysis.enabled).toBe(true);
+      expect(config.ai_selection_analysis.rolloutPercentage).toBe(100);
+      expect(config.ai_selection_analysis.name).toBe('AI Selection Analysis');
+      expect(config.ai_selection_analysis.description).toContain('real-time analysis');
+    });
+
+    it('should enable ai_selection_analysis for all users', () => {
+      const mockUser: UserProfile = {
+        id: 'test-user',
+        fitnessLevel: 'beginner',
+        experience: 'beginner',
+        goals: ['weight_loss'],
+        equipment: ['dumbbells'],
+        injuries: [],
+        limitations: []
+      };
+
+      const result = service.isEnabled('ai_selection_analysis', mockUser);
+      expect(result).toBe(true);
+    });
+  });
 });
 
 describe('Singleton Instance', () => {

@@ -152,6 +152,19 @@ const DEFAULT_AI_FLAGS: FeatureFlag[] = [
     }
   },
   {
+    id: 'ai_selection_analysis',
+    name: 'AI Selection Analysis',
+    description: 'Enable real-time analysis of workout selections during generation',
+    enabled: true,
+    rolloutPercentage: 100, // Enable for all users
+    metadata: {
+      experimentId: 'ai_selection_analysis_2024',
+      startDate: new Date(),
+      owner: 'ai_team',
+      notes: 'Selection confidence analysis during workout generation - ENABLED FOR PRODUCTION'
+    }
+  },
+  {
     id: 'skip-onboarding-flow',
     name: 'Skip Onboarding for Returning Users',
     description: 'Skip profile and waiver steps for users who completed onboarding',

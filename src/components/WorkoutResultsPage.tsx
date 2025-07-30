@@ -10,6 +10,7 @@ import {
   ImprovementActions, 
   ConfidenceHelp 
 } from './confidence';
+import { SelectionAnalysisDisplay } from './confidence/generation/SelectionAnalysisDisplay';
 
 export interface WorkoutResultsPageProps {
   onNavigate: (page: 'profile' | 'waiver' | 'focus' | 'review' | 'results') => void;
@@ -293,6 +294,16 @@ Generated on: ${generatedWorkout.generatedAt.toLocaleDateString()}
               </div>
             </div>
           </div>
+
+          {/* Selection Analysis Display */}
+          <div className="mt-6">
+            <SelectionAnalysisDisplay
+              analysis={workoutGeneration.selectionAnalysis}
+              analysisProgress={workoutGeneration.selectionAnalysisProgress}
+              generationProgress={workoutGeneration.state.generationProgress}
+              isGenerating={workoutGeneration.isGenerating}
+            />
+          </div>
         </div>
       </div>
     );
@@ -406,6 +417,24 @@ Generated on: ${generatedWorkout.generatedAt.toLocaleDateString()}
             isRegenerating={isRegenerating}
           />
         </ErrorBoundary>
+      )}
+
+      {/* Selection Analysis Results */}
+      {workoutGeneration.selectionAnalysis && (
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 border border-gray-200/50">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Selection Analysis Results</h3>
+            <div className="text-sm text-gray-600">
+              Analysis completed during generation
+            </div>
+          </div>
+          <SelectionAnalysisDisplay
+            analysis={workoutGeneration.selectionAnalysis}
+            analysisProgress={100}
+            generationProgress={100}
+            isGenerating={false}
+          />
+        </div>
       )}
 
       {/* Transparency Features */}
